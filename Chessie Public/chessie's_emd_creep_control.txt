@@ -1,0 +1,13 @@
+@name Chessie's EMD Creep Control
+@inputs HumpMultIn RLCPT:entity
+@outputs HumpMultiplier
+@persist CreepLoad
+@trigger none
+if(first()|dupefinished()){
+    #Config
+    CreepLoad=2550 #At what load does creep control start kicking on?
+    #End of Config (that was fast)
+}
+interval(200)
+HumpMultiplier=(clamp((CreepLoad-RLCPT:wirelink()["Load1",number])+1,0,1))*(->HumpMultIn ? HumpMultIn : 1)
+

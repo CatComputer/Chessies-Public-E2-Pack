@@ -1,0 +1,735 @@
+@name Chessie's GE IFD (WIP)
+@inputs MEGP:wirelink OEGP:wirelink RLCPT:entity NightMode On BrightnessUp BrightnessDown
+@outputs DispSetBrightness
+@persist MPH Load PMPH EQRES:string BP:string BC:string REAR:string CFM:string MAINRES:string BackgroundColor:vector BorderColor:vector TextColor:vector PointerColor:vector UpperGraphBackColor:vector LowerGraphBackColor:vector
+@persist BrightBackColor:vector TextBoxBackColor:vector BrakeGraphsColor:vector UpperGraphColor:vector NightMode Brightness SetBrightness FuncPage
+@trigger none
+
+if(NightMode){
+    BackgroundColor=vec(0,80,105)
+    BorderColor=vec(255)
+    TextColor=vec(255)
+    PointerColor=vec(255,220,0)
+    BrightBackColor=vec(0,0,0)
+    UpperGraphBackColor=vec(0)
+    LowerGraphBackColor=vec(0,0,0)
+    TextBoxBackColor=vec(0)
+    BrakeGraphsColor=vec(50,140,210)
+    UpperGraphColor=vec(50,140,210)
+}
+else{
+    BackgroundColor=vec(0,160,180)
+    BorderColor=vec(0)
+    TextColor=vec(0)
+    PointerColor=vec(255,220,0)
+    BrightBackColor=vec(0,255,255)
+    UpperGraphBackColor=vec(200)
+    LowerGraphBackColor=vec(0,255,255)
+    TextBoxBackColor=vec(200)
+    BrakeGraphsColor=vec(0,255,0)
+    UpperGraphColor=vec(0,255,255)
+}
+if(first()|dupefinished()){
+    Brightness=0
+    DispSetBrightness=1
+}
+if(changed(NightMode)|first()|dupefinished()|~MEGP){
+    #no manual btw, figure it out yourself
+    
+    #Background Main
+    MEGP:egpClear()
+    
+    MEGP:egpBox(1,vec2(256),vec2(512))
+    MEGP:egpColor(1,BackgroundColor)
+    
+    #Outlines Main
+    MEGP:egpBoxOutline(2,vec2(185,122.5),vec2(350,225))
+    MEGP:egpColor(2,BorderColor)
+    MEGP:egpSize(2,4)
+    
+    MEGP:egpBoxOutline(3,vec2(185,337+6),vec2(350,225))
+    MEGP:egpColor(3,BorderColor)
+    MEGP:egpSize(3,4)
+
+    MEGP:egpBoxOutline(4,vec2(427,225+8),vec2(142,446))
+    MEGP:egpColor(4,BorderColor)
+    MEGP:egpSize(4,4)
+    
+    #Speedometer
+    
+    MEGP:egpBox(5,vec2(220,75),vec2(200-2,54-2))
+    MEGP:egpColor(5,UpperGraphBackColor)
+    MEGP:egpSize(5,0)
+    
+    MEGP:egpBox(6,vec2(220-100,75),vec2(6,54-2))
+    MEGP:egpColor(6,UpperGraphColor)
+    MEGP:egpSize(6,0)
+    
+    MEGP:egpBoxOutline(7,vec2(220,75),vec2(2,54))
+    MEGP:egpColor(7,BorderColor)
+    MEGP:egpSize(7,2)
+    
+    MEGP:egpBoxOutline(8,vec2(220,75),vec2(2+40,54))
+    MEGP:egpColor(8,BorderColor)
+    MEGP:egpSize(8,2)
+
+    MEGP:egpBoxOutline(9,vec2(220,75),vec2(2+80,54))
+    MEGP:egpColor(9,BorderColor)
+    MEGP:egpSize(9,2)
+    
+    MEGP:egpBoxOutline(10,vec2(220,75),vec2(2+120,54))
+    MEGP:egpColor(10,BorderColor)
+    MEGP:egpSize(10,2)
+    
+    MEGP:egpBoxOutline(11,vec2(220,75),vec2(2+160,54))
+    MEGP:egpColor(11,BorderColor)
+    MEGP:egpSize(11,2)
+    
+    MEGP:egpBoxOutline(12,vec2(220,75),vec2(2+200,54))
+    MEGP:egpColor(12,BorderColor)
+    MEGP:egpSize(12,2)
+
+    MEGP:egpBoxOutline(13,vec2(220,75),vec2(2+20,54))
+    MEGP:egpColor(13,BorderColor)
+    MEGP:egpSize(13,1)
+
+    MEGP:egpBoxOutline(14,vec2(220,75),vec2(2+60,54))
+    MEGP:egpColor(14,BorderColor)
+    MEGP:egpSize(14,1)
+
+    MEGP:egpBoxOutline(15,vec2(220,75),vec2(2+100,54))
+    MEGP:egpColor(15,BorderColor)
+    MEGP:egpSize(15,1)
+    
+    MEGP:egpBoxOutline(16,vec2(220,75),vec2(2+140,54))
+    MEGP:egpColor(16,BorderColor)
+    MEGP:egpSize(16,1)
+    
+    MEGP:egpBoxOutline(17,vec2(220,75),vec2(2+180,54))
+    MEGP:egpColor(17,BorderColor)
+    MEGP:egpSize(17,1)
+    
+    MEGP:egpBoxOutline(18,vec2(70,75),vec2(70,56))
+    MEGP:egpColor(18,BorderColor)
+    MEGP:egpSize(18,2)
+    
+    MEGP:egpBox(19,vec2(70,75),vec2(70-4,56-4))
+    MEGP:egpColor(19,BrightBackColor)
+    MEGP:egpSize(19,0)
+    
+    MEGP:egpBox(20,vec2(70,75-30),vec2(30-4,20-4))
+    MEGP:egpColor(20,TextBoxBackColor)
+    MEGP:egpSize(20,200)
+    
+    MEGP:egpBoxOutline(21,vec2(70,75-30),vec2(30-2,20-2))
+    MEGP:egpColor(21,BorderColor)
+    MEGP:egpSize(21,1)
+    
+    MEGP:egpTextLayout(22,"MPH",vec2(70-11,75-36),vec2(30,20))
+    MEGP:egpColor(22,TextColor)
+    MEGP:egpSize(22,12)
+    MEGP:egpAlign(22,0,0)
+    
+    MEGP:egpTextLayout(23,"00",vec2(37,60),vec2(70-4,70-4))
+    MEGP:egpColor(23,TextColor)
+    MEGP:egpSize(23,30)
+    MEGP:egpAlign(23,1,0)
+    
+    MEGP:egpTextLayout(24,"0   10  20  30  40  50  60  70  80  90 100",vec2(220-100-3,102),vec2(220-2,20))
+    MEGP:egpColor(24,TextColor)
+    MEGP:egpSize(24,12)
+    MEGP:egpAlign(24,0,0)
+    
+    #Amperage
+    
+    MEGP:egpBox(25,vec2(220,122.5+47.5),vec2(200-2,54-2))
+    MEGP:egpColor(25,UpperGraphBackColor)
+    MEGP:egpSize(25,0)
+    
+    MEGP:egpBox(26,vec2(220-20,122.5+47.5),vec2(4,54-2))
+    MEGP:egpColor(26,UpperGraphColor)
+    MEGP:egpSize(26,0)
+    
+    MEGP:egpBoxOutline(27,vec2(220,122.5+47.5),vec2(2,54))
+    MEGP:egpColor(27,BorderColor)
+    MEGP:egpSize(27,2)
+    
+    MEGP:egpBoxOutline(28,vec2(220,122.5+47.5),vec2(2+40,54))
+    MEGP:egpColor(28,BorderColor)
+    MEGP:egpSize(28,2)
+    
+    MEGP:egpBoxOutline(29,vec2(220,122.5+47.5),vec2(2+40*2,54))
+    MEGP:egpColor(29,BorderColor)
+    MEGP:egpSize(29,2)
+    
+    MEGP:egpBoxOutline(30,vec2(220,122.5+47.5),vec2(2+40*3,54))
+    MEGP:egpColor(30,BorderColor)
+    MEGP:egpSize(30,2)
+    
+    MEGP:egpBoxOutline(31,vec2(220,122.5+47.5),vec2(2+40*4,54))
+    MEGP:egpColor(31,BorderColor)
+    MEGP:egpSize(31,2)
+    
+    MEGP:egpBoxOutline(32,vec2(220,122.5+47.5),vec2(2+40*5,54))
+    MEGP:egpColor(32,BorderColor)
+    MEGP:egpSize(32,2)
+    
+    MEGP:egpTextLayout(33,"12   9    6     3    0    3     6    9   12  15  18",vec2(220-100-6,198),vec2(220-2,20))
+    MEGP:egpColor(33,TextColor)
+    MEGP:egpSize(33,12)
+    MEGP:egpAlign(33,0,0)
+    
+    MEGP:egpBoxOutline(34,vec2(70,122.5+47.5),vec2(70,56))
+    MEGP:egpColor(34,BorderColor)
+    MEGP:egpSize(34,2)
+    
+    MEGP:egpBox(35,vec2(70,122.5+47.5),vec2(70-4,56-4))
+    MEGP:egpColor(35,vec(0,255,0))
+    MEGP:egpSize(35,0)
+    
+    MEGP:egpBox(36,vec2(70,122.5+47.5-30),vec2(34-4,20-4))
+    MEGP:egpColor(36,TextBoxBackColor)
+    MEGP:egpSize(36,200)
+    
+    MEGP:egpBoxOutline(37,vec2(70,122.5+47.5-30),vec2(34-2,20-2))
+    MEGP:egpColor(37,BorderColor)
+    MEGP:egpSize(37,1)
+    
+    MEGP:egpTextLayout(38,"00",vec2(37,65+95),vec2(70-4,70-4))
+    MEGP:egpColor(38,vec(0))
+    MEGP:egpSize(38,22)
+    MEGP:egpAlign(38,1,0)
+    
+    MEGP:egpTextLayout(39,"Amps",vec2(67-11,170-36),vec2(30,20))
+    MEGP:egpColor(39,TextColor)
+    MEGP:egpSize(39,12)
+    MEGP:egpAlign(39,0,0)
+    
+    MEGP:egpBoxOutline(41,vec2(220,122.5+47.5),vec2(2+20,54))
+    MEGP:egpColor(41,BorderColor)
+    MEGP:egpSize(41,1)
+    
+    MEGP:egpBoxOutline(42,vec2(220,122.5+47.5),vec2(2+20*3,54))
+    MEGP:egpColor(42,BorderColor)
+    MEGP:egpSize(42,1)
+    
+    MEGP:egpBoxOutline(43,vec2(220,122.5+47.5),vec2(2+20*5,54))
+    MEGP:egpColor(43,BorderColor)
+    MEGP:egpSize(43,1)
+    
+    MEGP:egpBoxOutline(44,vec2(220,122.5+47.5),vec2(2+20*7,54))
+    MEGP:egpColor(44,BorderColor)
+    MEGP:egpSize(44,1)
+    
+    MEGP:egpBoxOutline(45,vec2(220,122.5+47.5),vec2(2+20*9,54))
+    MEGP:egpColor(45,BorderColor)
+    MEGP:egpSize(45,1)
+    
+    MEGP:egpBox(46,vec2(138,122.5+10),vec2(35-2,20-2))
+    MEGP:egpColor(46,BrightBackColor)
+    MEGP:egpSize(46,0)
+    
+    MEGP:egpBox(47,vec2(302,122.5+10),vec2(35-2,20-2))
+    MEGP:egpColor(47,BrightBackColor)
+    MEGP:egpSize(47,0)
+    
+    MEGP:egpBoxOutline(48,vec2(138,122.5+10),vec2(35,20))
+    MEGP:egpColor(48,BorderColor)
+    MEGP:egpSize(48,1)
+    
+    MEGP:egpBoxOutline(49,vec2(302,122.5+10),vec2(35,20))
+    MEGP:egpColor(49,BorderColor)
+    MEGP:egpSize(49,1)
+    
+    MEGP:egpTextLayout(50,"Brake",vec2(138-17.5,122.5+5),vec2(35,20))
+    MEGP:egpColor(50,TextColor)
+    MEGP:egpSize(50,10)
+    MEGP:egpAlign(50,1,0)
+    
+    MEGP:egpTextLayout(51,"Motor",vec2(302-17.5,122.5+5),vec2(35,20))
+    MEGP:egpColor(51,TextColor)
+    MEGP:egpSize(51,10)
+    MEGP:egpAlign(51,1,0)
+
+    #Speedometer Pointer (because i forgot to do it earlier and i'm too lazy to change all of the indexes)
+    
+    MEGP:egpBox(52,vec2(220-100,40),vec2(10))
+    MEGP:egpAngle(52,45)
+    MEGP:egpColor(52,PointerColor)
+    
+    MEGP:egpBox(53,vec2(5,-5),vec2(14))
+    MEGP:egpAngle(53,45)
+    MEGP:egpColor(53,BackgroundColor)
+    MEGP:egpParent(53,52)
+    
+    #Brake Graph
+    
+    MEGP:egpBox(54,vec2(185,337+6),vec2(350-8,225-8))
+    MEGP:egpColor(54,LowerGraphBackColor)
+    MEGP:egpSize(54,4)
+    
+    MEGP:egpBox(57,vec2(162,250+7),vec2(5,20))
+    MEGP:egpColor(57,BrakeGraphsColor)
+    
+    MEGP:egpBox(58,vec2(162,250+30*1+7),vec2(5,20))
+    MEGP:egpColor(58,BrakeGraphsColor)
+    
+    MEGP:egpBox(59,vec2(162,250+30*2+7),vec2(5,20))
+    MEGP:egpColor(59,BrakeGraphsColor)
+    
+    MEGP:egpBox(60,vec2(162,250+30*3+7),vec2(5,20))
+    MEGP:egpColor(60,BrakeGraphsColor)
+    
+    MEGP:egpBox(61,vec2(162,250+30*4+7),vec2(5,20))
+    MEGP:egpColor(61,BrakeGraphsColor)
+    
+    MEGP:egpBoxOutline(55,vec2(185,225+8+87.5),vec2(350,175))
+    MEGP:egpColor(55,BorderColor)
+    MEGP:egpSize(55,4)
+    
+    MEGP:egpBoxOutline(56,vec2(160,337+6),vec2(4,225-8))
+    MEGP:egpColor(56,BorderColor)
+    MEGP:egpSize(56,2)
+    
+    MEGP:egpBoxOutline(80,vec2(259,225+8+87.5),vec2(2,175))
+    MEGP:egpColor(80,BorderColor)
+    MEGP:egpSize(80,2)
+    
+    MEGP:egpBoxOutline(81,vec2(259,225+8+87.5),vec2(2+50,175))
+    MEGP:egpColor(81,BorderColor)
+    MEGP:egpSize(81,2)
+    
+    MEGP:egpBoxOutline(82,vec2(259,225+8+87.5),vec2(2+100,175))
+    MEGP:egpColor(82,BorderColor)
+    MEGP:egpSize(82,2)
+    
+    MEGP:egpBoxOutline(83,vec2(259,225+8+87.5),vec2(2+150,175))
+    MEGP:egpColor(83,BorderColor)
+    MEGP:egpSize(83,2)
+    
+    MEGP:egpBoxOutline(84,vec2(259,225+8+87.5),vec2(2+200,175))
+    MEGP:egpColor(84,BorderColor)
+    MEGP:egpSize(84,2)
+    
+    MEGP:egpTextLayout(85,"20  40  60  80 100 120 140",vec2(176,422),vec2(220-2,20))
+    MEGP:egpColor(85,TextColor)
+    MEGP:egpSize(85,16)
+    MEGP:egpAlign(85,0,0)
+    
+    MEGP:egpTextLayout(86,"Eq. Reservoir",vec2(60,250),vec2(220-2,200))
+    MEGP:egpColor(86,TextColor)
+    MEGP:egpSize(86,14)
+    
+    MEGP:egpTextLayout(87,"Brake Pipe",vec2(60,250+30*1),vec2(220-2,200))
+    MEGP:egpColor(87,TextColor)
+    MEGP:egpSize(87,14)
+    
+    MEGP:egpTextLayout(88,"Brake Cylinder",vec2(60,250+30*2),vec2(220-2,200))
+    MEGP:egpColor(88,TextColor)
+    MEGP:egpSize(88,14)
+    
+    MEGP:egpTextLayout(89,"Last Car",vec2(60,250+30*3),vec2(220-2,200))
+    MEGP:egpColor(89,TextColor)
+    MEGP:egpSize(89,14)
+    
+    MEGP:egpTextLayout(90,"Air Flow Cfm",vec2(60,250+30*4),vec2(220-2,200))
+    MEGP:egpColor(90,TextColor)
+    MEGP:egpSize(90,14)
+    
+    MEGP:egpTextLayout(91,"Main Reservoir",vec2(60,422),vec2(220-2,200))
+    MEGP:egpColor(91,TextColor)
+    MEGP:egpSize(91,14)
+    
+    MEGP:egpTextLayout(92,"000",vec2(20,(250-4)),vec2(220-2,200))
+    MEGP:egpColor(92,TextColor)
+    MEGP:egpSize(92,20)
+    
+    MEGP:egpTextLayout(93,"000",vec2(20,(250+30*1)-4),vec2(220-2,200))
+    MEGP:egpColor(93,TextColor)
+    MEGP:egpSize(93,20)
+    
+    MEGP:egpTextLayout(94,"000",vec2(20,(250+30*2)-4),vec2(220-2,200))
+    MEGP:egpColor(94,TextColor)
+    MEGP:egpSize(94,20)
+    
+    MEGP:egpTextLayout(95,"000",vec2(20,(250+30*3)-4),vec2(220-2,200))
+    MEGP:egpColor(95,TextColor)
+    MEGP:egpSize(95,20)
+    
+    MEGP:egpTextLayout(96,"000",vec2(20,(250+30*4)-4),vec2(220-2,200))
+    MEGP:egpColor(96,TextColor)
+    MEGP:egpSize(96,20)
+    
+    MEGP:egpTextLayout(97,"000",vec2(20,422-4),vec2(220-2,200))
+    MEGP:egpColor(97,TextColor)
+    MEGP:egpSize(97,20)
+    
+    #Crab Signal (62-79 free)
+    MEGP:egpBox(62,vec2(427,300),vec2(126-4,80-4))
+    MEGP:egpColor(62,BrightBackColor)
+    
+    MEGP:egpBoxOutline(63,vec2(427,300),vec2(126,80))
+    MEGP:egpColor(63,BorderColor)
+    MEGP:egpSize(63,2)
+    
+    MEGP:egpBox(64,vec2(427,300-76/2),vec2(40-4,30-4))
+    MEGP:egpColor(64,TextBoxBackColor)
+    
+    MEGP:egpBoxOutline(65,vec2(427,300-76/2),vec2(40,30))
+    MEGP:egpColor(65,BorderColor)
+    MEGP:egpSize(65,2)
+    
+    MEGP:egpTextLayout(66,"Mode",vec2(415,295-76/2),vec2(220-2,200))
+    MEGP:egpColor(66,TextColor)
+    MEGP:egpSize(66,12)
+    
+    MEGP:egpTextLayout(67,"***",vec2(404,290),vec2(220-2,200))
+    MEGP:egpColor(67,TextColor)
+    MEGP:egpSize(67,30)
+    
+    MEGP:egpBox(68,vec2(427,360),vec2(126-4,30-4))
+    MEGP:egpColor(68,vec(255,220,0))
+    
+    MEGP:egpBoxOutline(69,vec2(427,360),vec2(126,30))
+    MEGP:egpColor(69,BorderColor)
+    MEGP:egpSize(69,2)
+    
+    MEGP:egpTextLayout(70,"CS Inoperative",vec2(384,353),vec2(220-2,200))
+    MEGP:egpColor(70,vec(0))
+    MEGP:egpSize(70,14)
+    
+    #Screen Cover
+    MEGP:egpBox(98,vec2(256),vec2(512))
+    MEGP:egpColor(98,vec(0))
+    
+}
+if(changed(NightMode)|first()|dupefinished()|~OEGP){
+    OEGP:egpClear()
+    #Second Display
+    #Background
+    OEGP:egpBox(100,vec2(256),vec2(512))
+    OEGP:egpColor(100,BackgroundColor)
+    #Borders
+    OEGP:egpBoxOutline(101,vec2(512-70-12,132),vec2(140,240))
+    OEGP:egpColor(101,BorderColor)
+    OEGP:egpSize(101,4)
+    
+    OEGP:egpBoxOutline(102,vec2(256+53,132),vec2(110,240))
+    OEGP:egpColor(102,BorderColor)
+    OEGP:egpSize(102,4)
+    
+    OEGP:egpBoxOutline(103,vec2(256-53,132),vec2(110,240))
+    OEGP:egpColor(103,BorderColor)
+    OEGP:egpSize(103,4)
+    
+    OEGP:egpBoxOutline(104,vec2(0+70+12,132),vec2(140,240))
+    OEGP:egpColor(104,BorderColor)
+    OEGP:egpSize(104,4)
+    
+    OEGP:egpBoxOutline(105,vec2(256,281),vec2(300,50))
+    OEGP:egpColor(105,BorderColor)
+    OEGP:egpSize(105,4)
+    
+    OEGP:egpBoxOutline(106,vec2(256-150-44-6,281),vec2(88,50))
+    OEGP:egpColor(106,BorderColor)
+    OEGP:egpSize(106,4)
+    
+    OEGP:egpBoxOutline(107,vec2(256+150+44+6,281),vec2(88,50))
+    OEGP:egpColor(107,BorderColor)
+    OEGP:egpSize(107,4)
+    
+    OEGP:egpBoxOutline(108,vec2(256,281+25+72+6),vec2(488,144))
+    OEGP:egpColor(108,BorderColor)
+    OEGP:egpSize(108,4)
+    
+    #Function Box Backgrounds
+    OEGP:egpBox(109,vec2(256,281+25+72+6),vec2(488-8,144-8))
+    OEGP:egpColor(109,BrightBackColor)
+
+    OEGP:egpBox(110,vec2(256-150-44-6,281),vec2(88-8,50-8))
+    OEGP:egpColor(110,BrightBackColor)
+    
+    OEGP:egpBox(111,vec2(256,281),vec2(300-8,50-8))
+    OEGP:egpColor(111,BrightBackColor)
+
+    OEGP:egpBox(112,vec2(256+150+44+6,281),vec2(88-8,50-8))
+    OEGP:egpColor(112,BrightBackColor)
+    
+    #Top-Right Data Meters
+    #Backgrounds
+    OEGP:egpBox(113,vec2(512-70-12+30,132-80),vec2(50-2,35-2))
+    OEGP:egpColor(113,BrightBackColor)
+    
+    OEGP:egpBox(114,vec2(512-70-12-30,132-80),vec2(50-2,35-2))
+    OEGP:egpColor(114,vec(0,255,0))
+    
+    OEGP:egpBox(115,vec2(512-70-12+30,132-27.5),vec2(50-2,35-2))
+    OEGP:egpColor(115,BrightBackColor)
+    
+    OEGP:egpBox(116,vec2(512-70-12-30,132-27.5),vec2(50-2,35-2))
+    OEGP:egpColor(116,BrightBackColor)
+    
+    OEGP:egpBox(117,vec2(512-70-12+30,132+27.5),vec2(50-2,35-2))
+    OEGP:egpColor(117,BrightBackColor)
+    
+    OEGP:egpBox(118,vec2(512-70-12-30,132+27.5),vec2(50-2,35-2))
+    OEGP:egpColor(118,BrightBackColor)
+    
+    OEGP:egpBox(119,vec2(512-70-12+30,132+80),vec2(50-2,35-2))
+    OEGP:egpColor(119,BrightBackColor)
+    
+    OEGP:egpBox(120,vec2(512-70-12-30,132+80),vec2(50-2,35-2))
+    OEGP:egpColor(120,BrightBackColor)
+
+    #Borders
+    OEGP:egpBoxOutline(121,vec2(512-70-12+30,132-80),vec2(50,35))
+    OEGP:egpColor(121,BorderColor)
+    OEGP:egpSize(121,1)
+    
+    OEGP:egpBoxOutline(122,vec2(512-70-12-30,132-80),vec2(50,35))
+    OEGP:egpColor(122,BorderColor)
+    OEGP:egpSize(122,1)
+    
+    OEGP:egpBoxOutline(123,vec2(512-70-12+30,132-27.5),vec2(50,35))
+    OEGP:egpColor(123,BorderColor)
+    OEGP:egpSize(123,1)
+    
+    OEGP:egpBoxOutline(124,vec2(512-70-12-30,132-27.5),vec2(50,35))
+    OEGP:egpColor(124,BorderColor)
+    OEGP:egpSize(124,1)
+    
+    OEGP:egpBoxOutline(125,vec2(512-70-12+30,132+80),vec2(50,35))
+    OEGP:egpColor(125,BorderColor)
+    OEGP:egpSize(125,1)
+    
+    OEGP:egpBoxOutline(126,vec2(512-70-12-30,132+80),vec2(50,35))
+    OEGP:egpColor(126,BorderColor)
+    OEGP:egpSize(126,1)
+    
+    OEGP:egpBoxOutline(127,vec2(512-70-12+30,132+27.5),vec2(50,35))
+    OEGP:egpColor(127,BorderColor)
+    OEGP:egpSize(127,1)
+    
+    OEGP:egpBoxOutline(128,vec2(512-70-12-30,132+27.5),vec2(50,35))
+    OEGP:egpColor(128,BorderColor)
+    OEGP:egpSize(128,1)
+    
+    #Labels
+    #Backgrounds
+    OEGP:egpBox(129,vec2(512-70-12-30,132-80-16),vec2(25-2,15-2))
+    OEGP:egpColor(129,TextBoxBackColor)
+    
+    OEGP:egpBox(130,vec2(512-70-12+30,132-80-16),vec2(25-2,15-2))
+    OEGP:egpColor(130,TextBoxBackColor)
+    
+    OEGP:egpBox(131,vec2(512-70-12-30,132-27.5-16),vec2(40-2,15-2))
+    OEGP:egpColor(131,TextBoxBackColor)
+    
+    OEGP:egpBox(132,vec2(512-70-12+30,132-27.5-16),vec2(40-2,15-2))
+    OEGP:egpColor(132,TextBoxBackColor)
+    
+    OEGP:egpBox(133,vec2(512-70-12-30,132+27.5-16),vec2(40-2,15-2))
+    OEGP:egpColor(133,TextBoxBackColor)
+    
+    OEGP:egpBox(134,vec2(512-70-12+30,132+27.5-16),vec2(40-2,15-2))
+    OEGP:egpColor(134,TextBoxBackColor)
+    
+    OEGP:egpBox(135,vec2(512-70-12-30,132+80-16),vec2(40-2,15-2))
+    OEGP:egpColor(135,TextBoxBackColor)
+    
+    OEGP:egpBox(136,vec2(512-70-12+30,132+80-16),vec2(40-2,15-2))
+    OEGP:egpColor(136,TextBoxBackColor)
+    
+    #Borders
+    OEGP:egpBoxOutline(137,vec2(512-70-12-30,132-80-16),vec2(25,15))
+    OEGP:egpColor(137,BorderColor)
+    OEGP:egpSize(137,1)
+    
+    OEGP:egpBoxOutline(138,vec2(512-70-12+30,132-80-16),vec2(25,15))
+    OEGP:egpColor(138,BorderColor)
+    OEGP:egpSize(138,1)
+    
+    OEGP:egpBoxOutline(139,vec2(512-70-12-30,132-27.5-16),vec2(40,15))
+    OEGP:egpColor(139,BorderColor)
+    OEGP:egpSize(139,1)
+    
+    OEGP:egpBoxOutline(140,vec2(512-70-12+30,132-27.5-16),vec2(40,15))
+    OEGP:egpColor(140,BorderColor)
+    OEGP:egpSize(140,1)
+    
+    OEGP:egpBoxOutline(141,vec2(512-70-12-30,132+27.5-16),vec2(40,15))
+    OEGP:egpColor(141,BorderColor)
+    OEGP:egpSize(141,1)
+    
+    OEGP:egpBoxOutline(142,vec2(512-70-12+30,132+27.5-16),vec2(40,15))
+    OEGP:egpColor(142,BorderColor)
+    OEGP:egpSize(142,1)
+    
+    OEGP:egpBoxOutline(143,vec2(512-70-12-30,132+80-16),vec2(40,15))
+    OEGP:egpColor(143,BorderColor)
+    OEGP:egpSize(143,1)
+    
+    OEGP:egpBoxOutline(144,vec2(512-70-12+30,132+80-16),vec2(40,15))
+    OEGP:egpColor(144,BorderColor)
+    OEGP:egpSize(144,1)
+    
+    #Text
+    OEGP:egpText(145,"Amps",vec2(512-70-12-30-10,132-80-16-5))
+    OEGP:egpColor(145,TextColor)
+    OEGP:egpSize(145,9)
+    
+    OEGP:egpText(146,"Mph",vec2(512-70-12+30-8,132-80-16-5))
+    OEGP:egpColor(146,TextColor)
+    OEGP:egpSize(146,9)
+    
+    OEGP:egpText(147,"Main Res",vec2(512-70-12-30-15,132-27.5-16-5))
+    OEGP:egpColor(147,TextColor)
+    OEGP:egpSize(147,9)
+    
+    OEGP:egpText(148,"Brk Pipe",vec2(512-70-12+30-15,132-27.5-16-5))
+    OEGP:egpColor(148,TextColor)
+    OEGP:egpSize(148,9)
+    
+    OEGP:egpText(149,"Eq Res",vec2(512-70-12-30-11,132+27.5-16-5))
+    OEGP:egpColor(149,TextColor)
+    OEGP:egpSize(149,9)
+    
+    OEGP:egpText(150,"Brk Cyl",vec2(512-70-12+30-13,132+27.5-16-5))
+    OEGP:egpColor(150,TextColor)
+    OEGP:egpSize(150,9)
+    
+    OEGP:egpText(151,"Air Flow",vec2(512-70-12-30-14,132+80-16-5))
+    OEGP:egpColor(151,TextColor)
+    OEGP:egpSize(151,9)
+    
+    OEGP:egpText(152,"Last Car",vec2(512-70-12+30-14,132+80-16-5))
+    OEGP:egpColor(152,TextColor)
+    OEGP:egpSize(152,9)
+    
+    #Numbers
+    OEGP:egpTextLayout(153,"0",vec2(512-70-30-37,132-80-8),vec2(50,35))
+    OEGP:egpAlign(153,1,0)
+    OEGP:egpColor(153,vec(0))
+    OEGP:egpSize(153,16)
+    
+    OEGP:egpTextLayout(154,"0",vec2(512-70+30-37,132-80-8),vec2(50,35))
+    OEGP:egpAlign(154,1,0)
+    OEGP:egpColor(154,TextColor)
+    OEGP:egpSize(154,16)
+    
+    OEGP:egpTextLayout(155,"0",vec2(512-70-30-37,132-27.5-8),vec2(50,35))
+    OEGP:egpAlign(155,1,0)
+    OEGP:egpColor(155,TextColor)
+    OEGP:egpSize(155,16)
+    
+    OEGP:egpTextLayout(156,"0",vec2(512-70+30-37,132-27.5-8),vec2(50,35))
+    OEGP:egpAlign(156,1,0)
+    OEGP:egpColor(156,TextColor)
+    OEGP:egpSize(156,16)
+    
+    OEGP:egpTextLayout(157,"0",vec2(512-70-30-37,132+27.5-8),vec2(50,35))
+    OEGP:egpAlign(157,1,0)
+    OEGP:egpColor(157,TextColor)
+    OEGP:egpSize(157,16)
+    
+    OEGP:egpTextLayout(158,"0",vec2(512-70+30-37,132+27.5-8),vec2(50,35))
+    OEGP:egpAlign(158,1,0)
+    OEGP:egpColor(158,TextColor)
+    OEGP:egpSize(158,16)
+    
+    OEGP:egpTextLayout(159,"0",vec2(512-70-30-37,132+80-8),vec2(50,35))
+    OEGP:egpAlign(159,1,0)
+    OEGP:egpColor(159,TextColor)
+    OEGP:egpSize(159,16)
+    
+    OEGP:egpTextLayout(160,"***",vec2(512-70+30-37,132+80-8),vec2(50,35))
+    OEGP:egpAlign(160,1,0)
+    OEGP:egpColor(160,TextColor)
+    OEGP:egpSize(160,16)
+    
+    #Screen Cover
+    OEGP:egpBox(250,vec2(256),vec2(512))
+    OEGP:egpColor(250,vec(0))
+
+    
+}
+interval(250)
+#Value Grabber 9000(+1)
+if(On){
+    SetBrightness=DispSetBrightness
+    if(changed(BrightnessUp)&BrightnessUp){
+        DispSetBrightness+=0.1
+    }
+    if(changed(BrightnessDown)&BrightnessDown){
+        DispSetBrightness-=0.1
+    }
+    if(DispSetBrightness<0.1){
+        DispSetBrightness=0.1
+    }
+    if(DispSetBrightness>1){
+        DispSetBrightness=1
+    }
+}
+else{
+    SetBrightness=0
+}
+Brightness+=clamp((SetBrightness-Brightness),-0.17,0.08)
+RLCPTW=RLCPT:wirelink()
+MPH=RLCPTW["MPH",number]
+PMPH=round(MPH,1)
+Load=floor(RLCPTW["Load1",number])
+EQRES=format("%03d",RLCPTW["EqualRes",number]:toString())
+BP=format("%03d",RLCPTW["BrakePipe",number]:toString())
+BC=format("%03d",RLCPTW["Cyl",number]:toString())
+REAR="***"
+CFM=format("%03d",RLCPTW["CFM",number]:toString())
+MAINRES=format("%03d",RLCPTW["MainRes",number]:toString())
+#Main Display
+#Speedometer
+MEGP:egpPos(6,vec2(220-100+(clamp(PMPH,0,100)),75))
+MEGP:egpSize(6,vec2(clamp(PMPH,0,100)*2,54-2))
+MEGP:egpSetText(23,PMPH>=10 ? floor(PMPH):toString() : (PMPH!=floor(PMPH) ? PMPH:toString() : PMPH:toString()+".0"))
+MEGP:egpPos(52,vec2(220-100+clamp(floor(PMPH),0,100)*2,40))
+#Loadmeter
+MEGP:egpPos(26,vec2(220-20+(clamp(Load,-1200,1800)/30),122.5+47.5))
+MEGP:egpSize(26,vec2(abs(clamp(Load,-1200,1800))/15,54-2))
+MEGP:egpSetText(38,Load:toString())
+#Brake Graph
+#Eq Res
+MEGP:egpPos(57,vec2(162+(round(EQRES:toNumber(),0)*1.23)/2,250+7))
+MEGP:egpSize(57,vec2((round(EQRES:toNumber(),0)*1.23),20))
+MEGP:egpSetText(92,EQRES)
+#BP
+MEGP:egpPos(58,vec2(162+(round(BP:toNumber(),0)*1.23)/2,250+7+30*1))
+MEGP:egpSize(58,vec2((round(BP:toNumber(),0)*1.23),20))
+MEGP:egpSetText(93,BP)
+#BC
+MEGP:egpPos(59,vec2(162+(round(BC:toNumber(),0)*1.23)/2,250+7+30*2))
+MEGP:egpSize(59,vec2((round(BC:toNumber(),0)*1.23),20))
+MEGP:egpSetText(94,BC)
+#Rear Car
+MEGP:egpPos(60,vec2(162+(round(REAR:toNumber(),0)*1.23)/2,250+7+30*3))
+MEGP:egpSize(60,vec2((round(REAR:toNumber(),0)*1.23),20))
+MEGP:egpSetText(95,REAR)
+#CFM
+MEGP:egpPos(61,vec2(162+(round(CFM:toNumber(),0)*1.23)/2,250+7+30*4))
+MEGP:egpSize(61,vec2((round(CFM:toNumber(),0)*1.23),20))
+MEGP:egpSetText(96,CFM)
+#Main Res
+MEGP:egpSetText(97,MAINRES)
+#Screen Cover
+MEGP:egpAlpha(98,-Brightness*255+255)
+
+
+
+#Second Display
+#Data Meters
+OEGP:egpSetText(153,Load:toString())
+OEGP:egpSetText(154,PMPH>=10 ? floor(PMPH):toString() : (PMPH!=floor(PMPH) ? PMPH:toString() : PMPH:toString()+".0"))
+OEGP:egpSetText(155,round(RLCPTW["MainRes",number],0):toString())
+OEGP:egpSetText(156,round(RLCPTW["BrakePipe",number],0):toString())
+OEGP:egpSetText(157,round(RLCPTW["EqualRes",number],0):toString())
+OEGP:egpSetText(158,round(RLCPTW["Cyl",number],0):toString())
+OEGP:egpSetText(159,round(RLCPTW["CFM",number],0):toString())
+#Screen Cover
+OEGP:egpAlpha(250,-Brightness*255+255)
