@@ -15,6 +15,19 @@ if(first()|dupefinished()|(~EGPL|~EGPR|~Number)){
     FuelCap=5000 #Max capacity of your fuel tank
     #End of Config
     
+    #[Instructions
+    In terms of buttons, here's how they work:
+        .lfb1
+        L is the display, can be L or R.
+        F specifies if it's a function key or not (top row key).
+        B is just button.
+        The number following all of that is the button you want to use, 0-9 for the non-functions, 1-8 for the functions.
+    Wiring:
+        Wiring should be relatively straight forward, Consist_Data is nothing to be worried about, I will be releasing GE Trip Optimizer at a later date that will use that.
+        Don't bother wiring FeedPressure unless your stand has a FeedPressure input.
+      ]#
+    
+    
     
     LPage=0
     LPageVar=0
@@ -1446,3 +1459,4 @@ switch(RPage){
     break
 }
 }
+
