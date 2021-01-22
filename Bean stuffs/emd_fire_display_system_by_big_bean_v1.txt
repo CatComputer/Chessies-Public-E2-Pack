@@ -1834,10 +1834,12 @@ if(chatClk(User) & Running){
         
         #Click sounds
         if("m":find(CMD:index(2))){
-            EGPMain:entity():soundPlay(2, 0.5, "monkssounds/buttons/button7.wav")
+            EGPMain:entity():soundPlay(2, 0.25, "titus's locomotive sound expansion pack/resources/ac4400cw/cab/switchesbuttons/smallbutton/s_ac4400cwbuttonclicksmallona03.wav")
+            timer("bOutM", 300)
         }
         if("s":find(CMD:index(2))){
-            EGPSec:entity():soundPlay(2, 0.5, "monkssounds/buttons/button6.wav")
+            EGPSec:entity():soundPlay(2, 0.25, "titus's locomotive sound expansion pack/resources/ac4400cw/cab/switchesbuttons/smallbutton/s_ac4400cwbuttonclicksmallona03.wav")
+            timer("bOutS", 300)
         }
     }
     
@@ -1848,3 +1850,9 @@ if(clk("butReset")){
     SB1 = SB2 = SB3 = SB4 = SB5 = SB6 = SB7 = SB8 = 0
 }
 
+if(clk("bOutM")){
+    EGPMain:entity():soundPlay(2, 0.25, "titus's locomotive sound expansion pack/resources/ac4400cw/cab/switchesbuttons/smallbutton/s_ac4400cwbuttonclicksmalloffa03.wav")
+}
+if(clk("bOutS")){
+    EGPSec:entity():soundPlay(2, 0.25, "titus's locomotive sound expansion pack/resources/ac4400cw/cab/switchesbuttons/smallbutton/s_ac4400cwbuttonclicksmalloffa03.wav")
+}
