@@ -1,8 +1,8 @@
 @name Chessie's GEVO SDIS V1
 @inputs RLCPT:entity EGPL:wirelink EGPR:wirelink CtlTable:table Consist_Data:table Number:string On FuelLevel
-@outputs BrakeCutIn FeedPressure
+@outputs BrakeCutIn FeedPressure Consist_Output:table TripOptimizerOn TripOptimizerSpeed Check PosX PosY
 @persist SpeedRedline SpeedYellowline Railroad:string LPage RPage LPageVar RPageVar Distance LastSaid:string Active D:wirelink LTopVisible RTopVisible DistMode NewBrakeCutIn NewIsolatedBraking NewFeedPressure IsolatedBraking
-@persist CountDown DistCountDown Dist InputDigit:string DistDigits:table DistReady FuelCap
+@persist CountDown DistCountDown Dist InputDigit:string DistDigits:table DistReady FuelCap SlowSpeedOn SetSlowSpeed MessageL:string LPageN:string MessageR:string RPageN:string TripReady TripDigits:table Brightness WorldData:table MPH
 @trigger On
 
 if(first()|dupefinished()|(~EGPL|~EGPR|~Number)){
@@ -10,8 +10,6 @@ if(first()|dupefinished()|(~EGPL|~EGPR|~Number)){
     EGPR:egpClear()
     #Config
     Railroad="R&K" #Railroad name
-    SpeedRedline=68 #Redline of your speedometer
-    SpeedYellowline=66 #Yellowline of your speedometer
     FuelCap=5000 #Max capacity of your fuel tank
     #End of Config
     
@@ -31,12 +29,26 @@ if(first()|dupefinished()|(~EGPL|~EGPR|~Number)){
     
     LPage=0
     LPageVar=0
+    RPage=0
+    RPageVar=0
     LastSaid=""
     FeedPressure=90
     NewFeedPressure=90
     DistMode=0
     CountDown=0
     DistReady=0
+    Active=0
+    LTopVisible=0
+    RTopVisible=0
+    TripOptimizerSpeed=25
+    TripOptimizerOn=0
+    SlowSpeedOn=0
+    SetSlowSpeed=5
+    TripDigits=table()
+    NewBrakeCutIn=0
+    NewIsolatedBraking=0
+    BrakeCutIn=0
+    IsolatedBraking=0
     
     #Funcs
     function void wirelink:egpBoxLabeled(Index, Pos:vector2, Size:vector2, Label:string, Color:vector){
@@ -71,200 +83,147 @@ if(first()|dupefinished()|(~EGPL|~EGPR|~Number)){
     function void wirelink:egpTopUpdate(){
     local D=This
     #Speedometer
-    A=1
-    D:egpWedge(A,vec2(256,80),vec2(64,64))
-    D:egpColor(A,vec(255,200,35))
-    D:egpSize(A,138+(SpeedYellowline*2.75))
-    D:egpAngle(A,200-(SpeedYellowline*2.75))
+    D:egpWedge(1,vec2(256,90),vec2(60,67))
+    D:egpSize(1,-28)
+    D:egpAngle(1,18)
+    D:egpColor(1,vec(220,40+120,30))
+    
+    D:egpWedge(2,vec2(256,90),vec2(60,67))
+    D:egpSize(2,-28)
+    D:egpAngle(2,10)
+    D:egpColor(2,vec(220,40,30))
 
-    A=2
-    D:egpWedge(A,vec2(256,80),vec2(64,64))
-    D:egpColor(A,vec(255,50,40))
-    D:egpSize(A,138+(SpeedRedline*2.75))
-    D:egpAngle(A,200-(SpeedRedline*2.75))
-    
-    A=3
-    D:egpCircle(A,vec2(256,80),vec2(62,62))
-    D:egpColor(A,vec(0))
-    
-    A=4
-    D:egpWedgeOutline(A,vec2(256,80),vec2(60,60))
-    D:egpSize(A,140)
-    D:egpAngle(A,200)
-    
-    A=5
-    D:egpCircle(A,vec2(256,80),vec2(60-1,60-1))
-    D:egpColor(A,vec(0))
-    
-    #5 marks
-    A=6
-    D:egpWedgeOutline(A,vec2(256,80),vec2(60,60))
-    D:egpSize(A,-110+82.5)
-    D:egpAngle(A,200-12.5)
+    D:egpCircle(3,vec2(256,90),vec2(60-4,74-4))
+    D:egpColor(3,vec(0))
 
-    A=7
-    D:egpWedgeOutline(A,vec2(256,80),vec2(60,60))
-    D:egpSize(A,-110+55)
-    D:egpAngle(A,200-12.5)
+    D:egpCircleOutline(4,vec2(256,90),vec2(60,74))
     
-    A=8
-    D:egpWedgeOutline(A,vec2(256,80),vec2(60,60))
-    D:egpSize(A,-110+27.5)
-    D:egpAngle(A,200-12.5)
-    
-    A=9
-    D:egpWedgeOutline(A,vec2(256,80),vec2(60,60))
-    D:egpSize(A,-110)
-    D:egpAngle(A,200-12.5)
-    
-    A=10
-    D:egpWedgeOutline(A,vec2(256,80),vec2(60,60))
-    D:egpSize(A,-110-27.5)
-    D:egpAngle(A,200-12.5)
-    
-    A=11
-    D:egpWedgeOutline(A,vec2(256,80),vec2(60,60))
-    D:egpSize(A,-110-55)
-    D:egpAngle(A,200-12.5)
-    
-    A=12
-    D:egpWedgeOutline(A,vec2(256,80),vec2(60,60))
-    D:egpSize(A,-110-82.5)
-    D:egpAngle(A,200-12.5)
-    
-    A=13
-    D:egpCircle(A,vec2(256,80),vec2(60-4,60-4))
-    D:egpColor(A,vec(0))
+    D:egpBox(5,vec2(256,143),vec2(140,80))
+    D:egpColor(5,vec(0))
     
     #10 marks
-    A=14
-    D:egpWedgeOutline(A,vec2(256,80),vec2(60,60))
-    D:egpSize(A,-110+82.5)
-    D:egpAngle(A,200)
-
-    A=15
-    D:egpWedgeOutline(A,vec2(256,80),vec2(60,60))
-    D:egpSize(A,-110+55)
-    D:egpAngle(A,200)
+    D:egpLine(6,vec2(256+(cos(-190+25*0)*54),90+(sin(-190+25*0)*68)),vec2(256+(cos(-190+25*0)*60),90+(sin(-190+25*0)*74)))
+    D:egpLine(7,vec2(256+(cos(-190+25*1)*54),90+(sin(-190+25*1)*68)),vec2(256+(cos(-190+25*1)*60),90+(sin(-190+25*1)*74)))
+    D:egpLine(8,vec2(256+(cos(-190+25*2)*54),90+(sin(-190+25*2)*68)),vec2(256+(cos(-190+25*2)*60),90+(sin(-190+25*2)*74)))
+    D:egpLine(9,vec2(256+(cos(-190+25*3)*54),90+(sin(-190+25*3)*68)),vec2(256+(cos(-190+25*3)*60),90+(sin(-190+25*3)*74)))
+    D:egpLine(10,vec2(256+(cos(-190+25*4)*54),90+(sin(-190+25*4)*68)),vec2(256+(cos(-190+25*4)*60),90+(sin(-190+25*4)*74)))
+    D:egpLine(11,vec2(256+(cos(-190+25*5)*54),90+(sin(-190+25*5)*68)),vec2(256+(cos(-190+25*5)*60),90+(sin(-190+25*5)*74)))
+    D:egpLine(12,vec2(256+(cos(-190+25*6)*54),90+(sin(-190+25*6)*68)),vec2(256+(cos(-190+25*6)*60),90+(sin(-190+25*6)*74)))
+    D:egpLine(13,vec2(256+(cos(-190+25*7)*54),90+(sin(-190+25*7)*68)),vec2(256+(cos(-190+25*7)*60),90+(sin(-190+25*7)*74)))
+    D:egpLine(14,vec2(256+(cos(-190+25*8)*54),90+(sin(-190+25*8)*68)),vec2(256+(cos(-190+25*8)*60),90+(sin(-190+25*8)*74)))
     
-    A=16
-    D:egpWedgeOutline(A,vec2(256,80),vec2(60,60))
-    D:egpSize(A,-110+27.5)
-    D:egpAngle(A,200)
+    #5 marks
+    D:egpLine(15,vec2(256+(cos(-190+25*0.5)*58),90+(sin(-190+25*0.5)*72)),vec2(256+(cos(-190+25*0.5)*60),90+(sin(-190+25*0.5)*74)))
+    D:egpLine(16,vec2(256+(cos(-190+25*1.5)*58),90+(sin(-190+25*1.5)*72)),vec2(256+(cos(-190+25*1.5)*60),90+(sin(-190+25*1.5)*74)))
+    D:egpLine(17,vec2(256+(cos(-190+25*2.5)*58),90+(sin(-190+25*2.5)*72)),vec2(256+(cos(-190+25*2.5)*60),90+(sin(-190+25*2.5)*74)))
+    D:egpLine(18,vec2(256+(cos(-190+25*3.5)*58),90+(sin(-190+25*3.5)*72)),vec2(256+(cos(-190+25*3.5)*60),90+(sin(-190+25*3.5)*74)))
+    D:egpLine(19,vec2(256+(cos(-190+25*4.5)*58),90+(sin(-190+25*4.5)*72)),vec2(256+(cos(-190+25*4.5)*60),90+(sin(-190+25*4.5)*74)))
+    D:egpLine(20,vec2(256+(cos(-190+25*5.5)*58),90+(sin(-190+25*5.5)*72)),vec2(256+(cos(-190+25*5.5)*60),90+(sin(-190+25*5.5)*74)))
+    D:egpLine(21,vec2(256+(cos(-190+25*6.5)*58),90+(sin(-190+25*6.5)*72)),vec2(256+(cos(-190+25*6.5)*60),90+(sin(-190+25*6.5)*74)))
+    D:egpLine(22,vec2(256+(cos(-190+25*7.5)*58),90+(sin(-190+25*7.5)*72)),vec2(256+(cos(-190+25*7.5)*60),90+(sin(-190+25*7.5)*74)))
     
-    A=17
-    D:egpWedgeOutline(A,vec2(256,80),vec2(60,60))
-    D:egpSize(A,-110)
-    D:egpAngle(A,200)
+    #Some numbers (i hope you didn't get sick of trig yet)
+    D:egpTextLayout(23,"0",vec2(256+((cos(-190+25*0)*46)-10),90+((sin(-190+25*0)*60)-5)),vec2(20,10))
+    D:egpAlign(23,1,1)
+    D:egpSize(23,10)
     
-    A=18
-    D:egpWedgeOutline(18,vec2(256,80),vec2(60,60))
-    D:egpSize(18,-110-27.5)
-    D:egpAngle(18,200)
+    D:egpTextLayout(24,"10",vec2(256+((cos(-190+25*1)*46)-10),90+((sin(-190+25*1)*60)-5)),vec2(20,10))
+    D:egpAlign(24,1,1)
+    D:egpSize(24,10)
     
-    A=19
-    D:egpWedgeOutline(19,vec2(256,80),vec2(60,60))
-    D:egpSize(19,-110-55)
-    D:egpAngle(19,200)
+    D:egpTextLayout(25,"20",vec2(256+((cos(-190+25*2)*46)-10),90+((sin(-190+25*2)*60)-5)),vec2(20,10))
+    D:egpAlign(25,1,1)
+    D:egpSize(25,10)
     
-    A=20
-    D:egpWedgeOutline(20,vec2(256,80),vec2(60,60))
-    D:egpSize(20,-110-82.5)
-    D:egpAngle(20,200)
+    D:egpTextLayout(26,"30",vec2(256+((cos(-190+25*3)*46)-10),90+((sin(-190+25*3)*60)-5)),vec2(20,10))
+    D:egpAlign(26,1,1)
+    D:egpSize(26,10)
     
-    A=21
-    D:egpWedgeOutline(21,vec2(256,80),vec2(60,60))
-    D:egpSize(21,-27.5)
-    D:egpAngle(21,6.75)
+    D:egpTextLayout(27,"40",vec2(256+((cos(-190+25*4)*46)-10),90+((sin(-190+25*4)*60)-5)),vec2(20,10))
+    D:egpAlign(27,1,1)
+    D:egpSize(27,10)
     
-    A=22
-    D:egpCircle(22,vec2(256,80),vec2(60-8,60-8))
-    D:egpColor(22,vec(0))
+    D:egpTextLayout(28,"50",vec2(256+((cos(-190+25*5)*46)-10),90+((sin(-190+25*5)*60)-5)),vec2(20,10))
+    D:egpAlign(28,1,1)
+    D:egpSize(28,10)
     
-    #Pointer
-    A=23
-    D:egpCircle(A,vec2(256,80),vec2(4,4))
-    A=24
-    D:egpTriangle(A,vec2(0,-3),vec2(0,3),vec2(-45,0))
-    D:egpParent(A,23)
+    D:egpTextLayout(29,"60",vec2(256+((cos(-190+25*6)*46)-10),90+((sin(-190+25*6)*60)-5)),vec2(20,10))
+    D:egpAlign(29,1,1)
+    D:egpSize(29,10)
     
-    #Text (time to trig :D)
-    A=25
-    D:egpTextLayout(A,"40",vec2(256-25-(sin(0)*45),80-25-(cos(0)*45)),vec2(50,50))
-    D:egpAlign(A,1,1)
-    D:egpSize(A,10)
+    D:egpTextLayout(30,"70",vec2(256+((cos(-190+25*7)*46)-10),90+((sin(-190+25*7)*60)-5)),vec2(20,10))
+    D:egpAlign(30,1,1)
+    D:egpSize(30,10)
     
-    A=26
-    D:egpTextLayout(A,"30",vec2(256-25-(sin(27.5)*45),80-25-(cos(27.5)*45)),vec2(50,50))
-    D:egpAlign(A,1,1)
-    D:egpSize(A,10)
+    D:egpTextLayout(31,"80",vec2(256+((cos(-190+25*8)*46)-10),90+((sin(-190+25*8)*60)-5)),vec2(20,10))
+    D:egpAlign(31,1,1)
+    D:egpSize(31,10)
     
-    A=27
-    D:egpTextLayout(A,"20",vec2(256-25-(sin(55)*45),80-25-(cos(55)*45)),vec2(50,50))
-    D:egpAlign(A,1,1)
-    D:egpSize(A,10)
+    D:egpCircle(32,vec2(256,90),vec2(6,6*1.233))
     
-    A=28
-    D:egpTextLayout(A,"10",vec2(256-25-(sin(82.5)*45),80-25-(cos(82.5)*45)),vec2(50,50))
-    D:egpAlign(A,1,1)
-    D:egpSize(A,10)
+    D:egpBox(33,vec2(256,90),vec2(0))
     
-    A=29
-    D:egpTextLayout(A,"0",vec2(256-25-(sin(110)*45),80-25-(cos(110)*45)),vec2(50,50))
-    D:egpAlign(A,1,1)
-    D:egpSize(A,10)
+    D:egpBox(34,vec2(0,25),vec2(2,50))
+    D:egpParent(34,32)
     
-    A=30
-    D:egpTextLayout(A,"50",vec2(256-25-(sin(-27.5)*45),80-25-(cos(-27.5)*45)),vec2(50,50))
-    D:egpAlign(A,1,1)
-    D:egpSize(A,10)
+    D:egpTextLayout(35,"0.00",vec2(256-40,120-40),vec2(80,80))
+    D:egpSize(35,18)
+    D:egpAlign(35,1,1)
     
-    A=31
-    D:egpTextLayout(A,"60",vec2(256-25-(sin(-55)*45),80-25-(cos(-55)*45)),vec2(50,50))
-    D:egpAlign(A,1,1)
-    D:egpSize(A,10)
-    
-    A=32
-    D:egpTextLayout(A,"70",vec2(256-25-(sin(-82.5)*45),80-25-(cos(-82.5)*45)),vec2(50,50))
-    D:egpAlign(A,1,1)
-    D:egpSize(A,10)
-    
-    A=33
-    D:egpTextLayout(A,"80",vec2(256-25-(sin(-110)*45),80-25-(cos(-110)*45)),vec2(50,50))
-    D:egpAlign(A,1,1)
-    D:egpSize(A,10)
-    
-    A=34
-    D:egpTextLayout(A,"0.00",vec2(256-50,90),vec2(100,50))
-    D:egpAlign(A,1,1)
-    D:egpSize(A,14)
-    
-    A=35
-    D:egpTextLayout(A,"mph",vec2(250,72),vec2(100,50))
-    D:egpAlign(A,1,2)
-    D:egpSize(A,8)
+    D:egpTextLayout(93,"mph",vec2(256+10,120-39),vec2(80,80))
+    D:egpSize(93,12)
+    D:egpAlign(93,1,1)
     
     #Text Boxes
-    D:egpBoxLabeled(36,vec2(10,20),vec2(84,64),"ER",vec(255))
-    D:egpBoxLabeled(39,vec2(96,20),vec2(84,64),"BP",vec(255))
+    D:egpBoxLabeled(36,vec2(10,26),vec2(84,58),"ER",vec(255))
+    D:egpBoxLabeled(39,vec2(96,26),vec2(84,58),"BP",vec(255))
     D:egpBoxLabeled(42,vec2(10,92),vec2(40,34),"Rear",vec(255))
     D:egpBoxLabeled(45,vec2(10+44,92),vec2(40,34),"Flow",vec(255))
     D:egpBoxLabeled(48,vec2(96,92),vec2(40,34),"Main",vec(255))
     D:egpBoxLabeled(51,vec2(96+44,92),vec2(40,34),"BC",vec(255))
-    D:egpBoxLabeled(54,vec2(330+55,20),vec2(55,30),"Distance",vec(255))
     D:egpBoxLabeled(57,vec2(330,20+38),vec2(110,30),"Consist",vec(255))
     D:egpBoxLabeled(60,vec2(330,20+38+38),vec2(110,30),"Effort Klb",vec(45,255,75))
-    D:egpBoxLabeled(63,vec2(330+55+55+4,20),vec2(55,30),Railroad,vec(255))
     D:egpBoxLabeled(66,vec2(330+55+55+4,20+38),vec2(55,30),"Reverser",vec(255))
     D:egpBoxLabeled(69,vec2(330+55+55+4,20+38+38),vec2(55,30),"Throttle",vec(45,255,75))
     
+    #Time & Date
+    D:egpText(54,"07:50:53",vec2(10,0))
+    D:egpSize(54,12)
+    D:egpColor(54,vec(120,200,255))
+    
+    D:egpText(55,"01/22/2021",vec2(75,0))
+    D:egpSize(55,12)
+    D:egpColor(55,vec(120,200,255))
+    
+    #Railroad & Numbah
+    D:egpText(56,Railroad+"  "+Number,vec2(438,0))
+    D:egpSize(56,12)
+    D:egpColor(56,vec(120,200,255))
+    
+    #Distance
+    D:egpText(64,"0 ft",vec2(382,0))
+    D:egpSize(64,12)
+    D:egpColor(64,vec(255))
+    
+    D:egpBox(84,vec2(365,8),vec2(0))
+    
+    D:egpTriangle(85,vec2(-4,-4),vec2(4,-4),vec2(0,4))
+    D:egpSize(85,12)
+    D:egpParent(85,84)
+    D:egpColor(85,vec(120,200,255))
+    
+    D:egpTriangleOutline(86,vec2(-4,-4),vec2(4,-4),vec2(0,4))
+    D:egpSize(86,1)
+    D:egpParent(86,84)
+    D:egpColor(86,vec(50,120,140))
+    
     #Brake Texts
-    D:egpTextLayout(72,"ER",vec2(10,20),vec2(84,64))
+    D:egpTextLayout(72,"ER",vec2(10,26),vec2(84,58))
     D:egpAlign(72,1,1)
     D:egpSize(72,38)
     D:egpFont(72,"Arial")
     
-    D:egpTextLayout(73,"BP",vec2(96,20),vec2(84,64))
+    D:egpTextLayout(73,"BP",vec2(96,26),vec2(84,58))
     D:egpAlign(73,1,1)
     D:egpSize(73,38)
     D:egpFont(73,"Arial")
@@ -318,108 +277,30 @@ if(first()|dupefinished()|(~EGPL|~EGPR|~Number)){
     D:egpBox(83,vec2(403,20+38+38+15),vec2(57,1))
     D:egpColor(83,vec(255))
     
-    D:egpBox(84,vec2(403-56/2,20+38+38+17),vec2(4,1))
-    D:egpColor(84,vec(255))
-    D:egpAngle(84,90)
-    
-    D:egpBox(85,vec2(403+56/2,20+38+38+17),vec2(4,1))
-    D:egpColor(85,vec(255))
-    D:egpAngle(85,90)
-    
-    D:egpBox(86,vec2(403-56/6,20+38+38+17),vec2(4,1))
-    D:egpColor(86,vec(255))
-    D:egpAngle(86,90)
-    
-    D:egpBox(87,vec2(403+56/6,20+38+38+17),vec2(4,1))
-    D:egpColor(87,vec(255))
-    D:egpAngle(87,90)
-    
-    D:egpBox(88,vec2(403+3,20+38+38+16),vec2(2,1))
-    D:egpColor(88,vec(255))
-    D:egpAngle(88,90)
-    
-    D:egpBox(89,vec2(403-3,20+38+38+16),vec2(2,1))
-    D:egpColor(89,vec(255))
-    D:egpAngle(89,90)
-    
-    D:egpBox(90,vec2(403-10-6,20+38+38+16),vec2(2,1))
-    D:egpColor(90,vec(255))
-    D:egpAngle(90,90)
-    
-    D:egpBox(91,vec2(403-10-12,20+38+38+16),vec2(2,1))
-    D:egpColor(91,vec(255))
-    D:egpAngle(91,90)
-    
-    D:egpBox(92,vec2(403+10+6,20+38+38+16),vec2(2,1))
-    D:egpColor(92,vec(255))
-    D:egpAngle(92,90)
-    
-    D:egpBox(93,vec2(403+10+12,20+38+38+16),vec2(2,1))
-    D:egpColor(93,vec(255))
-    D:egpAngle(93,90)
-    
-    D:egpTextLayout(94,"0",vec2(403-56/2-5,20+38+38+19),vec2(10,10))
+    D:egpTextLayout(94,"0",vec2(403-56/2-7,20+38+38+19),vec2(14,10))
     D:egpAlign(94,1,1)
     D:egpFont(94,"Arial")
     D:egpColor(94,vec(255))
     D:egpSize(94,10)
     
-    D:egpTextLayout(95,"6",vec2(403-56/6-5,20+38+38+19),vec2(10,10))
-    D:egpAlign(95,1,1)
-    D:egpFont(95,"Arial")
-    D:egpColor(95,vec(255))
-    D:egpSize(95,10)
-    
-    D:egpTextLayout(96,"12",vec2(403+56/6-5,20+38+38+19),vec2(10,10))
-    D:egpAlign(96,1,1)
-    D:egpFont(96,"Arial")
-    D:egpColor(96,vec(255))
-    D:egpSize(96,10)
-    
-    D:egpTextLayout(97,"18",vec2(403+56/2-5,20+38+38+19),vec2(10,10))
+    D:egpTextLayout(97,"180",vec2(403+56/2-7,20+38+38+19),vec2(14,10))
     D:egpAlign(97,1,1)
     D:egpFont(97,"Arial")
     D:egpColor(97,vec(255))
     D:egpSize(97,10)
     
-    
-    #Distance & Loco Number
-    D:egpTextLayout(98,"0",vec2(330+55,20),vec2(55,30))
-    D:egpAlign(98,1,1)
-    D:egpFont(98,"Arial")
-    D:egpColor(98,vec(255))
-    D:egpSize(98,16)
-    
-    D:egpTextLayout(99,Number,vec2(330+114,20),vec2(55,30))
-    D:egpAlign(99,1,1)
-    D:egpFont(99,"Arial")
-    D:egpColor(99,vec(255))
-    D:egpSize(99,16)
-    
     #Consist Effort
-    D:egpTextLayout(100,"0:1",vec2(367,62),vec2(110,30))
+    D:egpTextLayout(100,"0:1",vec2(350,65),vec2(110,30))
     D:egpAlign(100,0,0)
     D:egpFont(100,"Arial")
     D:egpColor(100,vec(255))
-    D:egpSize(100,12)
+    D:egpSize(100,16)
     
-    D:egpTextLayout(101,"200",vec2(386,62),vec2(110,30))
+    D:egpTextLayout(101,"200",vec2(386,65),vec2(110,30))
     D:egpAlign(101,0,0)
     D:egpFont(101,"Arial")
     D:egpColor(101,vec(45,255,75))
-    D:egpSize(101,12)
-    
-    D:egpTextLayout(102,"Lead:  Idle",vec2(336,74),vec2(110,30))
-    D:egpAlign(102,0,0)
-    D:egpFont(102,"Arial")
-    D:egpColor(102,vec(255))
-    D:egpSize(102,10)
-    
-    D:egpTextLayout(103,"Trail:  Idle",vec2(394,74),vec2(110,30))
-    D:egpAlign(103,0,0)
-    D:egpFont(103,"Arial")
-    D:egpColor(103,vec(255))
-    D:egpSize(103,10)
+    D:egpSize(101,16)
     
     #Messages & Levels & Screens
     D:egpBoxOutline(190,vec2(225,415),vec2(450,50))
@@ -428,12 +309,12 @@ if(first()|dupefinished()|(~EGPL|~EGPR|~Number)){
     
     D:egpTextLayout(193,"L1",vec2((512-62/2)-31,415-25),vec2(63,25))
     D:egpAlign(193,1,1)
-    D:egpColor(193,vec(235,245,255))
+    D:egpColor(193,vec(155,205,255))
     D:egpFont(193,"Arial")
     
     D:egpTextLayout(194,"0000-0",vec2((512-62/2)-31,415),vec2(63,25))
     D:egpAlign(194,1,1)
-    D:egpColor(194,vec(235,245,255))
+    D:egpColor(194,vec(155,205,255))
     D:egpFont(194,"Arial")
     
     D:egpTextLayout(195,"Ready",vec2(2,415-27),vec2(450,50))
@@ -442,37 +323,30 @@ if(first()|dupefinished()|(~EGPL|~EGPR|~Number)){
     D:egpFont(195,"Arial")
     D:egpSize(195,16)
     }
-    timer("clk",500)
+    timer("run",800)
 }
-if(clk("clk")){
+if(clk("run")){
     Active=1
 }
 if(Active){
-    
-
-if(On){
-    interval(100)
+    timer("clk", 250)
 }
-if(On&~On){
-    EGPL:egpRemove(300)
-    EGPR:egpRemove(300)
-    LPage=0
-    LPageVar=0
-    RPage=0
-    RPageVar=0
-}
-elseif(!On&~On){
-    EGPL:egpBox(300,vec2(256),vec2(512))
-    EGPL:egpColor(300,vec(0,0,0))
-
-    EGPR:egpBox(300,vec2(256),vec2(512))
-    EGPR:egpColor(300,vec(0,0,0))
-}
+if(Active){
+interval(100)
 RLCPTW=RLCPT:wirelink()
+MPH=RLCPTW["MPH",number]
 #Left Display Top
 #Speedo
-EGPL:egpAngle(23,20-(clamp(RLCPTW["MPH",number],0,80)*2.75))
-EGPL:egpSetText(34,(RLCPTW["MPH",number]:toString()!="-0" ? (round(RLCPTW["MPH",number],2)<10 ? format("%.2f",RLCPTW["MPH",number]) : format("%.1f",RLCPTW["MPH",number])) : "0.00"))
+EGPL:egpPos(33,vec2(256-(cos(-11+(MPH*2.52))*60),90-(sin(-11+(MPH*2.52))*74)))
+
+PosX=(EGPL:egpPos(33)-EGPL:egpPos(32)):x()
+PosY=(EGPL:egpPos(33)-EGPL:egpPos(32)):y()
+EGPL:egpAngle(32,vec2(PosY,PosX):toAngle())
+
+EGPL:egpPos(34,vec2(0,EGPL:egpPos(33):distance(EGPL:egpPos(32))/2))
+EGPL:egpSize(34,vec2(2,EGPL:egpPos(33):distance(EGPL:egpPos(32))))
+
+EGPL:egpSetText(35,(MPH:toString()!="-0" ? (round(MPH,2)<10 ? format("%.2f",MPH) : format("%.1f",MPH)) : "0.00"))
 #Brakes
 EGPL:egpSetText(72,round(RLCPTW["EqualRes",number],0):toString())
 EGPL:egpSetText(73,round(RLCPTW["BrakePipe",number],0):toString())
@@ -480,6 +354,13 @@ EGPL:egpSetText(74,"---")
 EGPL:egpSetText(75,round(RLCPTW["CFM",number],0):toString())
 EGPL:egpSetText(76,round(RLCPTW["MainRes",number],0):toString())
 EGPL:egpSetText(77,round(RLCPTW["Cyl",number],0):toString())
+
+#Date + Time
+WorldData=date()
+
+EGPL:egpSetText(54,format("%02d:%02d:%02d",time("hour"),time("min"),time("sec")))
+
+EGPL:egpSetText(55,format("%02d/%02d/%04d",WorldData["month",number],WorldData["day",number],WorldData["year",number]))
 
 #Throttle & Reverser
 EGPL:egpSetText(78,!CtlTable["SetDynamics",number] ? CtlTable["SetThrottle",number]!=0 ? "N"+CtlTable["SetThrottle",number]/12.5 : "Idle" : 
@@ -521,16 +402,22 @@ EGPL:egpSetText(103,"Trail:  "+(!CtlTable["SetDynamics",number] ? CtlTable["SetT
 CtlTable["SetDynamics",number]!=10 ? "D"+round(CtlTable["SetDynamics",number]/12.5,0):toString() : "Set"))
 
 #Distance
-EGPL:egpSetText(98,floor(Dist):toString())
-
+EGPL:egpSetText(64,floor(Dist):toString()+" ft")
+EGPL:egpAngle(84,180+CountDown*180)
 
 
 
 
 #Right Display Top
 #Speedo
-EGPR:egpAngle(23,20-(clamp(RLCPTW["MPH",number],0,80)*2.75))
-EGPR:egpSetText(34,(RLCPTW["MPH",number]:toString()!="-0" ? (round(RLCPTW["MPH",number],2)<10 ? format("%.2f",RLCPTW["MPH",number]) : format("%.1f",RLCPTW["MPH",number])) : "0.00"))
+EGPR:egpPos(33,vec2(256-(cos(-11+(MPH*2.52))*60),90-(sin(-11+(MPH*2.52))*74)))
+
+EGPR:egpAngle(32,vec2(PosY,PosX):toAngle())
+
+EGPR:egpPos(34,vec2(0,EGPL:egpPos(33):distance(EGPL:egpPos(32))/2))
+EGPR:egpSize(34,vec2(2,EGPL:egpPos(33):distance(EGPL:egpPos(32))))
+
+EGPR:egpSetText(35,(MPH:toString()!="-0" ? (round(MPH,2)<10 ? format("%.2f",MPH) : format("%.1f",MPH)) : "0.00"))
 #Brakes
 EGPR:egpSetText(72,round(RLCPTW["EqualRes",number],0):toString())
 EGPR:egpSetText(73,round(RLCPTW["BrakePipe",number],0):toString())
@@ -578,8 +465,14 @@ CtlTable["SetDynamics",number]!=10 ? "D"+round(CtlTable["SetDynamics",number]/12
 EGPR:egpSetText(103,"Trail:  "+(!CtlTable["SetDynamics",number] ? CtlTable["SetThrottle",number]!=0 ? "N"+CtlTable["SetThrottle",number]/12.5 : "Idle" : 
 CtlTable["SetDynamics",number]!=10 ? "D"+round(CtlTable["SetDynamics",number]/12.5,0):toString() : "Set"))
 
+#Date + Time
+EGPR:egpSetText(54,format("%02d:%02d:%02d",time("hour"),time("min"),time("sec")))
+
+EGPR:egpSetText(55,format("%02d/%02d/%04d",WorldData["month",number],WorldData["day",number],WorldData["year",number]))
+
 #Distance
-EGPR:egpSetText(98,floor(Dist):toString())
+EGPR:egpSetText(64,floor(Dist):toString()+" ft")
+EGPR:egpAngle(84,180+CountDown*180)
 
 
 
@@ -600,6 +493,12 @@ Button6Horizontal=320
 Button7Horizontal=384
 Button8Horizontal=448
 ]#
+
+EGPL:egpSetText(194,LPageN)
+EGPL:egpSetText(195,MessageL)
+        
+EGPR:egpSetText(194,RPageN)
+EGPR:egpSetText(195,MessageR)
 runOnChat(1)
 if(chatClk(owner())&(owner():lastSaid():sub(0,2)==".l"|owner():lastSaid():sub(0,2)==".r")){
     (EGPL:entity()):soundPlay(1,0,"monkssounds/buttons/button5.wav")
@@ -609,14 +508,6 @@ if(chatClk(owner())&(owner():lastSaid():sub(0,2)==".l"|owner():lastSaid():sub(0,
 }
 else{
     LastSaid=""
-}
-if((changed(LPage)|changed(LPageVar))&LTopVisible){
-    EGPL:egpClear()
-    EGPL:egpTopUpdate()
-}
-if((changed(RPage)|changed(RPageVar))&RTopVisible){
-    EGPR:egpClear()
-    EGPR:egpTopUpdate()
 }
 if(DistMode>2){
     DistMode=0
@@ -631,10 +522,13 @@ elseif(DistMode==2){
     Distance+=0
 }
 Dist=(CountDown ? clamp(DistCountDown-Distance,0,99999) : clamp(Distance,0,99999))
-
-if(changed(LPage)|changed(LPageVar)|changed(RPage)|changed(RPageVar)|changed(DistMode)){
-    timer("buttonclk",50)
+if(changed(LPage)|changed(LPageVar)){
+    EGPL:egpClear()
 }
+if(changed(RPage)|changed(RPageVar)){
+    EGPR:egpClear()
+}
+Consist_Output=table(TripOptimizerOn,TripOptimizerSpeed,Check,SlowSpeedOn*SetSlowSpeed,SlowSpeedOn*SetSlowSpeed)
 ####################################################################################################################################################                Left Display
 switch(LPage){
     case 0,####################################################################################################################################################     Main Page
@@ -643,20 +537,22 @@ switch(LPage){
                 LTopVisible=1
                 if(clk("buttonclk")){
                     stoptimer("buttonclk")
-                    EGPL:egpButton(104+3*0,"Air\nBrake",vec2(0,442),vec2(64,35),vec(255,245,235))
+                    EGPL:egpButton(104+3*0,"Air\nBrake",vec2(0,442),vec2(64,35),vec(245,250,255))
                     switch(DistMode){
                         case 0,
-                        EGPL:egpButton(104+3*1,"Distance\nStart",vec2(0,477),vec2(64,35),vec(235,245,255))
+                        EGPL:egpButton(104+3*1,"Distance\nStart",vec2(0,477),vec2(64,35),vec(155,205,255))
                         break
                         case 1,
-                        EGPL:egpButton(104+3*1,"Distance\nStop",vec2(0,477),vec2(64,35),vec(235,245,255))
+                        EGPL:egpButton(104+3*1,"Distance\nStop",vec2(0,477),vec2(64,35),vec(155,205,255))
                         break
                         case 2,
-                        EGPL:egpButton(104+3*1,"Distance\nReset",vec2(0,477),vec2(64,35),vec(235,245,255))
+                        EGPL:egpButton(104+3*1,"Distance\nReset",vec2(0,477),vec2(64,35),vec(155,205,255))
                         break
                     }
-                    EGPL:egpButton(104+3*2,"Distance\nSetup",vec2(64,477),vec2(64,35),vec(235,245,255))
-                    EGPL:egpButton(104+3*3,"More\nMenu",vec2(448,477),vec2(64,35),vec(235,245,255))
+                    EGPL:egpButton(104+3*2,"Distance\nSetup",vec2(64,477),vec2(64,35),vec(155,205,255))
+                    EGPL:egpButton(104+3*3,"More\nMenu",vec2(448,477),vec2(64,35),vec(155,205,255))
+                    EGPL:egpButton(104+3*4,"Speed\nControl",vec2(320,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*5,"Trip\nOptimizer",vec2(256,477),vec2(64,35),vec(155,205,255))
                     
                     
                     EGPL:egpBoxLabeled(200,vec2(10,200),vec2(100,30),"Rail Cleaner",vec(255))
@@ -720,6 +616,13 @@ switch(LPage){
                     
                     EGPL:egpSetText(194,"0000-0")
                     EGPL:egpSetText(195,"Ready")
+                    LPageN="0000-0"
+                }
+                if(TripOptimizerOn){
+                    MessageL="Auto Control Engaged\nSet Speed: "+TripOptimizerSpeed:toString()+" Mph"
+                }
+                else{
+                    MessageL="Ready"
                 }
                 if(changed(LastSaid)&LastSaid==".lb8"){
                     LPageVar=1
@@ -738,6 +641,14 @@ switch(LPage){
                     LPage=2
                     LPageVar=0
                 }
+                if(changed(LastSaid)&LastSaid==".lfb6"){
+                    LPage=3
+                    LPageVar=0
+                }
+                if(changed(LastSaid)&LastSaid==".lb5"){
+                    LPage=4
+                    LPageVar=0
+                }
                 EGPL:egpSetText(215,ceil(FuelLevel):toString()+" Gal")
                 
                 EGPL:egpPos(217,vec2(417+(FuelLevel/320)/(FuelCap/5000),375))
@@ -753,6 +664,8 @@ switch(LPage){
                     EGPL:egpButton(104+3*0,"Exit",vec2(448,442),vec2(64,35),vec(255,245,235))
                     EGPL:egpSetText(194,"0000-1")
                     EGPL:egpSetText(195,"Ready")
+                    LPageN="0000-1"
+                    MessageL="Ready"
                 }
                 if(LastSaid==".lfb8"){
                     LPageVar=0
@@ -766,8 +679,8 @@ switch(LPage){
                 LTopVisible=1
                 if(clk("buttonclk")){
                     stoptimer("buttonclk")
-                    EGPL:egpButton(104+3*0,"Change Setup",vec2(128,442),vec2(64,35),vec(255,245,235))
-                    EGPL:egpButton(104+3*1,"Exit",vec2(448,442),vec2(64,35),vec(255,245,235))
+                    EGPL:egpButton(104+3*0,"Change Setup",vec2(128,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*1,"Exit",vec2(448,442),vec2(64,35),vec(245,250,255))
                     EGPL:egpBoxOutline(200,vec2(256,200),vec2(490,32))
                     EGPL:egpTextLayout(201,"Electronic Air Brake Setup",vec2(11,184),vec2(490,32))
                     EGPL:egpAlign(201,1,1)
@@ -782,6 +695,8 @@ switch(LPage){
                     EGPL:egpFont(211,"Arial")
                     EGPL:egpSetText(194,"2000-0")
                     EGPL:egpSetText(195,"Ready")
+                    LPageN="2000-0"
+                    MessageL="Ready"
                 }
                 if(changed(LastSaid)&LastSaid==".lfb3"){
                     LPage=1
@@ -812,12 +727,12 @@ switch(LPage){
                 LTopVisible=1
                 if(clk("buttonclk")){
                     stoptimer("buttonclk")
-                    EGPL:egpButton(104+3*0,"Increase",vec2(0,442),vec2(64,35),vec(255,245,235))
-                    EGPL:egpButton(104+3*1,"Decrease",vec2(64,442),vec2(64,35),vec(255,245,235))
-                    EGPL:egpButton(104+3*2,"Cut In/Out",vec2(128,442),vec2(64,35),vec(255,245,235))
-                    EGPL:egpButton(104+3*3,"Lead/Trail",vec2(192,442),vec2(64,35),vec(255,245,235))
-                    EGPL:egpButton(104+3*4,"Save Changes",vec2(320,442),vec2(64,35),vec(255,245,235))
-                    EGPL:egpButton(104+3*5,"Exit",vec2(448,442),vec2(64,35),vec(255,245,235))
+                    EGPL:egpButton(104+3*0,"Increase",vec2(0,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*1,"Decrease",vec2(64,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*2,"Cut In/Out",vec2(128,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*3,"Lead/Trail",vec2(192,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*4,"Save Changes",vec2(320,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*5,"Exit",vec2(448,442),vec2(64,35),vec(245,250,255))
                     
                     EGPL:egpBoxOutline(200,vec2(256,200),vec2(490,32))
                     EGPL:egpTextLayout(201,"Electronic Air Brake Setup",vec2(11,184),vec2(490,32))
@@ -843,6 +758,8 @@ switch(LPage){
                     
                     EGPL:egpSetText(194,"2000-1")
                     EGPL:egpSetText(195,"Ready")
+                    LPageN="2000-1"
+                    MessageL="Ready"
                 }
                 if(LastSaid==".lfb8"){
                     LPage=0
@@ -905,16 +822,16 @@ switch(LPage){
                 if(clk("buttonclk")){
                     LTopVisible=1
                     stoptimer("buttonclk")
-                    EGPL:egpButton(104+3*0,"Modify\nPreset",vec2(192,442),vec2(64,35),vec(255,245,235))
+                    EGPL:egpButton(104+3*0,"Modify\nPreset",vec2(192,442),vec2(64,35),vec(245,250,255))
                     switch(DistMode){
                         case 0,
-                        EGPL:egpButton(104+3*1,"Distance\nStart",vec2(256,442),vec2(64,35),vec(255,245,235))
+                        EGPL:egpButton(104+3*1,"Distance\nStart",vec2(256,442),vec2(64,35),vec(245,250,255))
                         break
                         case 1,
-                        EGPL:egpButton(104+3*1,"Distance\nStop",vec2(256,442),vec2(64,35),vec(255,245,235))
+                        EGPL:egpButton(104+3*1,"Distance\nStop",vec2(256,442),vec2(64,35),vec(245,250,255))
                         break
                         case 2,
-                        EGPL:egpButton(104+3*1,"Distance\nReset",vec2(256,442),vec2(64,35),vec(255,245,235))
+                        EGPL:egpButton(104+3*1,"Distance\nReset",vec2(256,442),vec2(64,35),vec(245,250,255))
                         break
                     }
                     EGPL:egpButton(104+3*3,"Exit",vec2(448,442),vec2(64,35),vec(255,245,235))
@@ -945,6 +862,9 @@ switch(LPage){
                     
                     EGPL:egpSetText(194,"1200-0")
                     EGPL:egpSetText(195,"Ready")
+                    
+                    LPageN="1200-0"
+                    MessageL="Ready"
                 }
                 if(chatClk(owner())|clk("buttonclk")){
                     if(LastSaid==".lfb4"){
@@ -984,9 +904,9 @@ switch(LPage){
                     DistDigits=table()
                     LTopVisible=1
                     stoptimer("buttonclk")
-                    EGPL:egpButton(104+3*0,"Back\nSpace",vec2(192,442),vec2(64,35),vec(255,245,235))
-                    EGPL:egpButton(104+3*2,"Save\nPreset",vec2(384,442),vec2(64,35),vec(255,245,235))
-                    EGPL:egpButton(104+3*3,"Cancel",vec2(448,442),vec2(64,35),vec(255,245,235))
+                    EGPL:egpButton(104+3*0,"Back\nSpace",vec2(192,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*2,"Save\nPreset",vec2(384,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*3,"Cancel",vec2(448,442),vec2(64,35),vec(245,250,255))
                     EGPL:egpBoxOutline(200,vec2(256,200),vec2(490,32))
                     EGPL:egpTextLayout(201,"Distance Counter Setup",vec2(11,184),vec2(490,32))
                     EGPL:egpAlign(201,1,1)
@@ -1017,6 +937,9 @@ switch(LPage){
                     
                     EGPL:egpSetText(194,"1200-1")
                     EGPL:egpSetText(195,"Use Number Keys To Enter New Preset Value, Back Space To Modify\nExisting Value.")
+                    
+                    LPageN="1200-1"
+                    MessageL="Use Number Keys To Enter New Preset Value, Back Space To Modify \nExisting Value."
                 }
                 if(chatClk(owner())|clk("buttonclk")){
                     if(LastSaid==".lfb4"){
@@ -1035,12 +958,210 @@ switch(LPage){
                         DistReady=0
                     }
                     if(DistDigits:count()<=4&DistReady){
-                        InputDigit=LastSaid:sub(4,5)
-                        DistDigits:pushNumber(InputDigit:toNumber())
+                        if(LastSaid:sub(0,3)==".lb"){
+                            InputDigit=LastSaid:sub(4,5)
+                            DistDigits:pushNumber(InputDigit:toNumber())
+                        }
                     }
                     EGPL:egpSetText(212,DistDigits[1,number]:toString()+DistDigits[2,number]:toString()+DistDigits[3,number]:toString()+DistDigits[4,number]:toString()+DistDigits[5,number]:toString())
                     EGPL:egpPos(211,vec2(96+(DistDigits:count()*19),300))
                     EGPL:egpColor(211,vec(36)*((DistDigits:count())<5))
+                }
+            break
+        }
+    break
+    case 3,####################################################################################################################################################     Speed Control
+        switch(LPageVar){
+            case 0,
+                if(clk("buttonclk")){
+                    LTopVisible=1
+                    stoptimer("buttonclk")
+                    EGPL:egpButton(104+3*0,"Slow Speed\nOn",vec2(0,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*1,"Up",vec2(128,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*2,"Current\nSpeed",vec2(192,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*3,"Down",vec2(256,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*4,"Exit",vec2(448,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*5,"Check\nConsist",vec2(128,477),vec2(64,35),vec(155,205,255))
+
+                    EGPL:egpBoxOutline(200,vec2(256,200+60),vec2(490,32))
+                    EGPL:egpTextLayout(201,"Slow Speed Control",vec2(11,184+60),vec2(490,32))
+                    EGPL:egpAlign(201,1,1)
+                    EGPL:egpSize(201,20)
+                    EGPL:egpFont(201,"Arial")
+                    
+                    EGPL:egpBoxLabeled(202,vec2(180,306),vec2(100,60),"Target Speed",vec(255))
+                    EGPL:egpBoxLabeled(205,vec2(290,306),vec2(180,60),"Speed Error",vec(255))
+                    
+                    EGPL:egpText(208,"Slow Speed",vec2(20,280))
+                    EGPL:egpSize(208,18)
+                    EGPL:egpFont(208,"Arial")
+                    
+                    EGPL:egpText(209,"On",vec2(50,296))
+                    EGPL:egpSize(209,14)
+                    EGPL:egpFont(209,"Arial")
+                    
+                    EGPL:egpText(210,"Off",vec2(48,336))
+                    EGPL:egpSize(210,14)
+                    EGPL:egpFont(210,"Arial")
+                    
+                    EGPL:egpCircle(211,vec2(56,324),vec2(8,8))
+
+                    EGPL:egpBox(212,vec2(12,0),vec2(18,6))
+                    EGPL:egpParent(212,211)
+                    
+                    EGPL:egpTextLayout(213,"0.0",vec2(180,306),vec2(100,60))
+                    EGPL:egpAlign(213,1,1)
+                    EGPL:egpSize(213,26)
+                    EGPL:egpFont(213,"Arial")
+                    
+                    EGPL:egpBox(214,vec2(290+90,306+45),vec2(180,20))
+                    EGPL:egpColor(214,vec(60,80,190))
+                    
+                    EGPL:egpBoxOutline(215,vec2(290+45,306+45),vec2(90,30))
+                    EGPL:egpBoxOutline(216,vec2(290+135,306+45),vec2(90,30))
+                    
+                    EGPL:egpCircleOutline(217,vec2(56,366),vec2(8,8))
+                    EGPL:egpCircle(218,vec2(56,366),vec2(6,6))
+                    
+                    LPageN="1320-0"
+                    MessageL="Slow Speed Control Unavailable, Consist Not Checked"
+                }
+                if(chatClk(owner())|clk("buttonclk")){
+                    if(LastSaid==".lfb1"){
+                        SlowSpeedOn=!SlowSpeedOn
+                    }
+                    if(LastSaid==".lfb3"&SetSlowSpeed<10){
+                        SetSlowSpeed+=0.5
+                    }
+                    if(LastSaid==".lfb4"){
+                        SetSlowSpeed=round(RLCPTW["MPH",number],0)
+                    }
+                    if(LastSaid==".lfb5"&SetSlowSpeed>0){
+                        SetSlowSpeed-=0.5
+                    }
+                    if(LastSaid==".lfb8"){
+                        LPage=0
+                        LPageVar=0
+                    }
+                    EGPL:egpAngle(211,-40+SlowSpeedOn*80)
+                    EGPL:egpSetText(213,format("%.1f",SetSlowSpeed))
+                    EGPL:egpAlpha(218,SlowSpeedOn*255)
+                    
+                    if(LastSaid==".lb3"){
+                        Check=1
+                        timer("off",500)
+                    }
+                }
+                if(clk("off")){
+                    Check=0
+                    stoptimer("off")
+                }
+                Consist_Output[3,number]=Check
+                if(Consist_Data[4,number]){
+                    MessageL="Checking Consist..."
+                }
+                elseif(Consist_Data[5,number]){
+                    MessageL="Consist Checked, Slow Speed Control Ready\nLoco Count: "+Consist_Data[2,number]:toString()+"\nTrain Weight: "+Consist_Data[6,number]:toString()
+                }
+                else{
+                    MessageL="Consist Not Checked, Auto Control Unavailable"
+                }
+                EGPL:egpPos(214,vec2(290+90-clamp((SetSlowSpeed-RLCPTW["MPH",number])*20,-45,45),306+45))
+                EGPL:egpSize(214,vec2(abs(clamp(((SetSlowSpeed-RLCPTW["MPH",number])*2)*20,-90,90)),20))
+            break
+        }
+    break
+    case 4,####################################################################################################################################################     Trip Optimizer
+        switch(LPageVar){
+            case 0,
+                if(clk("buttonclk")){
+                    LTopVisible=1
+                    stoptimer("buttonclk")
+                    EGPL:egpButton(104+3*0,"Distance\nStart",vec2(0,477),vec2(64,35),vec(155,205,255))
+                    EGPL:egpButton(104+3*1,"Check\nConsist",vec2(128,477),vec2(64,35),vec(155,205,255))
+                    EGPL:egpButton(104+3*2,"Enter\nSpeed",vec2(192,477),vec2(64,35),vec(155,205,255))
+                    EGPL:egpButton(104+3*3,"Auto\nControl",vec2(256,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*4,"Manual\nControl",vec2(384,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*5,"Exit",vec2(448,442),vec2(64,35),vec(245,250,255))
+                    
+                    LPageN="2550-0"
+                }
+                if(chatClk(owner())|clk("buttonclk")){
+                    if(LastSaid==".lfb8"){
+                        LPage=0
+                        LPageVar=0
+                    }
+                    if(LastSaid==".lfb5"&Consist_Data[5,number]){
+                        TripOptimizerOn=1
+                    }
+                    if(LastSaid==".lfb7"){
+                        TripOptimizerOn=0
+                    }
+                    if(LastSaid==".lb4"){
+                        LPage=4
+                        LPageVar=1
+                    }
+                    if(LastSaid==".lb3"){
+                        Check=1
+                        timer("off",500)
+                    }
+                }
+                    if(clk("off")){
+                        Check=0
+                        stoptimer("off")
+                    }
+                Consist_Output[3,number]=Check
+                if(Consist_Data[4,number]){
+                    MessageL="Checking Consist..."
+                }
+                elseif(Consist_Data[5,number]){
+                    MessageL="Consist Checked, Auto Control Ready\nLoco Count: "+Consist_Data[2,number]:toString()+"\nTrain Weight: "+Consist_Data[6,number]:toString()
+                }
+                else{
+                    MessageL="Consist Not Checked, Auto Control Unavailable"
+                }
+            break
+            case 1,
+                if(clk("buttonclk")){
+                    timer("ready",500)
+                    TripDigits=table()
+                    LTopVisible=1
+                    stoptimer("buttonclk")
+                    EGPL:egpButton(104+3*0,"Back\nSpace",vec2(192,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*1,"Save\nPreset",vec2(384,442),vec2(64,35),vec(245,250,255))
+                    EGPL:egpButton(104+3*2,"Cancel",vec2(448,442),vec2(64,35),vec(245,250,255))
+                    
+                    EGPL:egpBox(200,vec2(0,0),vec2(8,16))
+                    
+                    LPageN="2550-1"
+                }
+                MessageL="Use Number Keys To Enter New Preset Value, Back Space To Modify \nExisting Value.\nSet Speed: "+TripDigits[1,number]:toString()+TripDigits[2,number]:toString()
+                if(clk("ready")){
+                    stoptimer("ready")
+                    TripReady=1
+                }
+                if(chatClk(owner())|clk("buttonclk")){
+                    if(LastSaid==".lfb4"){
+                        timer("ready",100)
+                        TripReady=0
+                        TripDigits:removeNumber(TripDigits:count())
+                    }
+                    if(LastSaid==".lfb7"){
+                        TripOptimizerSpeed=(TripDigits[1,number]:toString()+TripDigits[2,number]:toString()):toNumber()
+                        LPage=4
+                        LPageVar=0
+                    }
+                    if(LastSaid==".lfb8"){
+                        LPage=4
+                        LPageVar=0
+                        TripReady=0
+                    }
+                    if(TripDigits:count()<=1&TripReady&(LastSaid:sub(0,3)==".lb")){
+                        InputDigit=LastSaid:sub(4,5)
+                        TripDigits:pushNumber(InputDigit:toNumber())
+                    }
+                    EGPL:egpPos(200,vec2(79+(TripDigits:count()*7),430))
+                    EGPL:egpColor(200,vec(36)*((TripDigits:count())<2))
                 }
             break
         }
@@ -1055,20 +1176,22 @@ switch(RPage){
                 RTopVisible=1
                 if(clk("buttonclk")){
                     stoptimer("buttonclk")
-                    EGPR:egpButton(104+3*0,"Air\nBrake",vec2(0,442),vec2(64,35),vec(255,245,235))
+                    EGPR:egpButton(104+3*0,"Air\nBrake",vec2(0,442),vec2(64,35),vec(245,250,255))
                     switch(DistMode){
                         case 0,
-                        EGPR:egpButton(104+3*1,"Distance\nStart",vec2(0,477),vec2(64,35),vec(235,245,255))
+                        EGPR:egpButton(104+3*1,"Distance\nStart",vec2(0,477),vec2(64,35),vec(155,205,255))
                         break
                         case 1,
-                        EGPR:egpButton(104+3*1,"Distance\nStop",vec2(0,477),vec2(64,35),vec(235,245,255))
+                        EGPR:egpButton(104+3*1,"Distance\nStop",vec2(0,477),vec2(64,35),vec(155,205,255))
                         break
                         case 2,
-                        EGPR:egpButton(104+3*1,"Distance\nReset",vec2(0,477),vec2(64,35),vec(235,245,255))
+                        EGPR:egpButton(104+3*1,"Distance\nReset",vec2(0,477),vec2(64,35),vec(155,205,255))
                         break
                     }
-                    EGPR:egpButton(104+3*2,"Distance\nSetup",vec2(64,477),vec2(64,35),vec(235,245,255))
-                    EGPR:egpButton(104+3*3,"More\nMenu",vec2(448,477),vec2(64,35),vec(235,245,255))
+                    EGPR:egpButton(104+3*2,"Distance\nSetup",vec2(64,477),vec2(64,35),vec(155,205,255))
+                    EGPR:egpButton(104+3*3,"More\nMenu",vec2(448,477),vec2(64,35),vec(155,205,255))
+                    EGPR:egpButton(104+3*4,"Speed\nControl",vec2(320,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*5,"Trip\nOptimizer",vec2(256,477),vec2(64,35),vec(155,205,255))
                     
                     
                     EGPR:egpBoxLabeled(200,vec2(10,200),vec2(100,30),"Rail Cleaner",vec(255))
@@ -1076,7 +1199,7 @@ switch(RPage){
                     EGPR:egpBoxLabeled(206,vec2(10,356),vec2(50,34),"Ind Brk",vec(255))
                     EGPR:egpBoxLabeled(209,vec2(10+50,356),vec2(50,34),"Auto Brk",vec(255))
                     EGPR:egpBoxLabeled(212,vec2(402,356),vec2(100,34),"Fuel",vec(255))
-                    
+ 
                     EGPR:egpText(215,"0 Gal",vec2(462,370))
                     EGPR:egpFont(215,"Arial")
                     EGPR:egpSize(215,10)
@@ -1132,6 +1255,13 @@ switch(RPage){
                     
                     EGPR:egpSetText(194,"0000-0")
                     EGPR:egpSetText(195,"Ready")
+                    RPageN="0000-0"
+                }
+                if(TripOptimizerOn){
+                    MessageR="Auto Control Engaged\nSet Speed: "+TripOptimizerSpeed:toString()+" Mph"
+                }
+                else{
+                    MessageR="Ready"
                 }
                 if(changed(LastSaid)&LastSaid==".rb8"){
                     RPageVar=1
@@ -1150,6 +1280,14 @@ switch(RPage){
                     RPage=2
                     RPageVar=0
                 }
+                if(changed(LastSaid)&LastSaid==".rfb6"){
+                    RPage=3
+                    RPageVar=0
+                }
+                if(changed(LastSaid)&LastSaid==".rb5"){
+                    RPage=4
+                    RPageVar=0
+                }
                 EGPR:egpSetText(215,ceil(FuelLevel):toString()+" Gal")
                 
                 EGPR:egpPos(217,vec2(417+(FuelLevel/320)/(FuelCap/5000),375))
@@ -1165,9 +1303,11 @@ switch(RPage){
                     EGPR:egpButton(104+3*0,"Exit",vec2(448,442),vec2(64,35),vec(255,245,235))
                     EGPR:egpSetText(194,"0000-1")
                     EGPR:egpSetText(195,"Ready")
+                    RPageN="0000-1"
+                    MessageR="Ready"
                 }
                 if(LastSaid==".rfb8"){
-                    LPageVar=0
+                    RPageVar=0
                 }
             break
         }
@@ -1178,8 +1318,8 @@ switch(RPage){
                 RTopVisible=1
                 if(clk("buttonclk")){
                     stoptimer("buttonclk")
-                    EGPR:egpButton(104+3*0,"Change Setup",vec2(128,442),vec2(64,35),vec(255,245,235))
-                    EGPR:egpButton(104+3*1,"Exit",vec2(448,442),vec2(64,35),vec(255,245,235))
+                    EGPR:egpButton(104+3*0,"Change Setup",vec2(128,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*1,"Exit",vec2(448,442),vec2(64,35),vec(245,250,255))
                     EGPR:egpBoxOutline(200,vec2(256,200),vec2(490,32))
                     EGPR:egpTextLayout(201,"Electronic Air Brake Setup",vec2(11,184),vec2(490,32))
                     EGPR:egpAlign(201,1,1)
@@ -1194,6 +1334,8 @@ switch(RPage){
                     EGPR:egpFont(211,"Arial")
                     EGPR:egpSetText(194,"2000-0")
                     EGPR:egpSetText(195,"Ready")
+                    RPageN="2000-0"
+                    MessageR="Ready"
                 }
                 if(changed(LastSaid)&LastSaid==".rfb3"){
                     RPage=1
@@ -1224,12 +1366,12 @@ switch(RPage){
                 RTopVisible=1
                 if(clk("buttonclk")){
                     stoptimer("buttonclk")
-                    EGPR:egpButton(104+3*0,"Increase",vec2(0,442),vec2(64,35),vec(255,245,235))
-                    EGPR:egpButton(104+3*1,"Decrease",vec2(64,442),vec2(64,35),vec(255,245,235))
-                    EGPR:egpButton(104+3*2,"Cut In/Out",vec2(128,442),vec2(64,35),vec(255,245,235))
-                    EGPR:egpButton(104+3*3,"Lead/Trail",vec2(192,442),vec2(64,35),vec(255,245,235))
-                    EGPR:egpButton(104+3*4,"Save Changes",vec2(320,442),vec2(64,35),vec(255,245,235))
-                    EGPR:egpButton(104+3*5,"Exit",vec2(448,442),vec2(64,35),vec(255,245,235))
+                    EGPR:egpButton(104+3*0,"Increase",vec2(0,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*1,"Decrease",vec2(64,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*2,"Cut In/Out",vec2(128,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*3,"Lead/Trail",vec2(192,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*4,"Save Changes",vec2(320,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*5,"Exit",vec2(448,442),vec2(64,35),vec(245,250,255))
                     
                     EGPR:egpBoxOutline(200,vec2(256,200),vec2(490,32))
                     EGPR:egpTextLayout(201,"Electronic Air Brake Setup",vec2(11,184),vec2(490,32))
@@ -1255,6 +1397,8 @@ switch(RPage){
                     
                     EGPR:egpSetText(194,"2000-1")
                     EGPR:egpSetText(195,"Ready")
+                    RPageN="2000-1"
+                    MessageR="Ready"
                 }
                 if(LastSaid==".rfb8"){
                     RPage=0
@@ -1317,16 +1461,16 @@ switch(RPage){
                 if(clk("buttonclk")){
                     RTopVisible=1
                     stoptimer("buttonclk")
-                    EGPR:egpButton(104+3*0,"Modify\nPreset",vec2(192,442),vec2(64,35),vec(255,245,235))
+                    EGPR:egpButton(104+3*0,"Modify\nPreset",vec2(192,442),vec2(64,35),vec(245,250,255))
                     switch(DistMode){
                         case 0,
-                        EGPR:egpButton(104+3*1,"Distance\nStart",vec2(256,442),vec2(64,35),vec(255,245,235))
+                        EGPR:egpButton(104+3*1,"Distance\nStart",vec2(256,442),vec2(64,35),vec(245,250,255))
                         break
                         case 1,
-                        EGPR:egpButton(104+3*1,"Distance\nStop",vec2(256,442),vec2(64,35),vec(255,245,235))
+                        EGPR:egpButton(104+3*1,"Distance\nStop",vec2(256,442),vec2(64,35),vec(245,250,255))
                         break
                         case 2,
-                        EGPR:egpButton(104+3*1,"Distance\nReset",vec2(256,442),vec2(64,35),vec(255,245,235))
+                        EGPR:egpButton(104+3*1,"Distance\nReset",vec2(256,442),vec2(64,35),vec(245,250,255))
                         break
                     }
                     EGPR:egpButton(104+3*3,"Exit",vec2(448,442),vec2(64,35),vec(255,245,235))
@@ -1357,6 +1501,9 @@ switch(RPage){
                     
                     EGPR:egpSetText(194,"1200-0")
                     EGPR:egpSetText(195,"Ready")
+                    
+                    RPageN="1200-0"
+                    MessageR="Ready"
                 }
                 if(chatClk(owner())|clk("buttonclk")){
                     if(LastSaid==".rfb4"){
@@ -1396,9 +1543,9 @@ switch(RPage){
                     DistDigits=table()
                     RTopVisible=1
                     stoptimer("buttonclk")
-                    EGPR:egpButton(104+3*0,"Back\nSpace",vec2(192,442),vec2(64,35),vec(255,245,235))
-                    EGPR:egpButton(104+3*2,"Save\nPreset",vec2(384,442),vec2(64,35),vec(255,245,235))
-                    EGPR:egpButton(104+3*3,"Cancel",vec2(448,442),vec2(64,35),vec(255,245,235))
+                    EGPR:egpButton(104+3*0,"Back\nSpace",vec2(192,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*2,"Save\nPreset",vec2(384,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*3,"Cancel",vec2(448,442),vec2(64,35),vec(245,250,255))
                     EGPR:egpBoxOutline(200,vec2(256,200),vec2(490,32))
                     EGPR:egpTextLayout(201,"Distance Counter Setup",vec2(11,184),vec2(490,32))
                     EGPR:egpAlign(201,1,1)
@@ -1429,6 +1576,9 @@ switch(RPage){
                     
                     EGPR:egpSetText(194,"1200-1")
                     EGPR:egpSetText(195,"Use Number Keys To Enter New Preset Value, Back Space To Modify\nExisting Value.")
+                    
+                    RPageN="1200-1"
+                    MessageR="Use Number Keys To Enter New Preset Value, Back Space To Modify \nExisting Value."
                 }
                 if(chatClk(owner())|clk("buttonclk")){
                     if(LastSaid==".rfb4"){
@@ -1447,8 +1597,10 @@ switch(RPage){
                         DistReady=0
                     }
                     if(DistDigits:count()<=4&DistReady){
-                        InputDigit=LastSaid:sub(4,5)
-                        DistDigits:pushNumber(InputDigit:toNumber())
+                        if(LastSaid:sub(0,3)==".rb"){
+                            InputDigit=LastSaid:sub(4,5)
+                            DistDigits:pushNumber(InputDigit:toNumber())
+                        }
                     }
                     EGPR:egpSetText(212,DistDigits[1,number]:toString()+DistDigits[2,number]:toString()+DistDigits[3,number]:toString()+DistDigits[4,number]:toString()+DistDigits[5,number]:toString())
                     EGPR:egpPos(211,vec2(96+(DistDigits:count()*19),300))
@@ -1457,6 +1609,220 @@ switch(RPage){
             break
         }
     break
+    case 3,####################################################################################################################################################     Speed Control
+        switch(RPageVar){
+            case 0,
+                if(clk("buttonclk")){
+                    RTopVisible=1
+                    stoptimer("buttonclk")
+                    EGPR:egpButton(104+3*0,"Slow Speed\nOn",vec2(0,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*1,"Up",vec2(128,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*2,"Current\nSpeed",vec2(192,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*3,"Down",vec2(256,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*4,"Exit",vec2(448,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*5,"Check\nConsist",vec2(128,477),vec2(64,35),vec(155,205,255))
+
+                    EGPR:egpBoxOutline(200,vec2(256,200+60),vec2(490,32))
+                    EGPR:egpTextLayout(201,"Slow Speed Control",vec2(11,184+60),vec2(490,32))
+                    EGPR:egpAlign(201,1,1)
+                    EGPR:egpSize(201,20)
+                    EGPR:egpFont(201,"Arial")
+                    
+                    EGPR:egpBoxLabeled(202,vec2(180,306),vec2(100,60),"Target Speed",vec(255))
+                    EGPR:egpBoxLabeled(205,vec2(290,306),vec2(180,60),"Speed Error",vec(255))
+                    
+                    EGPR:egpText(208,"Slow Speed",vec2(20,280))
+                    EGPR:egpSize(208,18)
+                    EGPR:egpFont(208,"Arial")
+                    
+                    EGPR:egpText(209,"On",vec2(50,296))
+                    EGPR:egpSize(209,14)
+                    EGPR:egpFont(209,"Arial")
+                    
+                    EGPR:egpText(210,"Off",vec2(48,336))
+                    EGPR:egpSize(210,14)
+                    EGPR:egpFont(210,"Arial")
+                    
+                    EGPR:egpCircle(211,vec2(56,324),vec2(8,8))
+
+                    EGPR:egpBox(212,vec2(12,0),vec2(18,6))
+                    EGPR:egpParent(212,211)
+                    
+                    EGPR:egpTextLayout(213,"0.0",vec2(180,306),vec2(100,60))
+                    EGPR:egpAlign(213,1,1)
+                    EGPR:egpSize(213,26)
+                    EGPR:egpFont(213,"Arial")
+                    
+                    EGPR:egpBox(214,vec2(290+90,306+45),vec2(180,20))
+                    EGPR:egpColor(214,vec(60,80,190))
+                    
+                    EGPR:egpBoxOutline(215,vec2(290+45,306+45),vec2(90,30))
+                    EGPR:egpBoxOutline(216,vec2(290+135,306+45),vec2(90,30))
+                    
+                    EGPR:egpCircleOutline(217,vec2(56,366),vec2(8,8))
+                    EGPR:egpCircle(218,vec2(56,366),vec2(6,6))
+                    
+                    RPageN="1320-0"
+                    MessageR="Slow Speed Control Unavailable, Consist Not Checked"
+                }
+                if(chatClk(owner())|clk("buttonclk")){
+                    if(LastSaid==".rfb1"){
+                        SlowSpeedOn=!SlowSpeedOn
+                    }
+                    if(LastSaid==".rfb3"&SetSlowSpeed<10){
+                        SetSlowSpeed+=0.5
+                    }
+                    if(LastSaid==".rfb4"){
+                        SetSlowSpeed=round(RLCPTW["MPH",number],0)
+                    }
+                    if(LastSaid==".rfb5"&SetSlowSpeed>0){
+                        SetSlowSpeed-=0.5
+                    }
+                    if(LastSaid==".rfb8"){
+                        RPage=0
+                        RPageVar=0
+                    }
+                    EGPR:egpAngle(211,-40+SlowSpeedOn*80)
+                    EGPR:egpSetText(213,format("%.1f",SetSlowSpeed))
+                    EGPR:egpAlpha(218,SlowSpeedOn*255)
+                    
+                    if(LastSaid==".rb3"){
+                        Check=1
+                        timer("off",500)
+                    }
+                }
+                if(clk("off")){
+                    Check=0
+                    stoptimer("off")
+                }
+                Consist_Output[3,number]=Check
+                if(Consist_Data[4,number]){
+                    MessageR="Checking Consist..."
+                }
+                elseif(Consist_Data[5,number]){
+                    MessageR="Consist Checked, Slow Speed Control Ready\nLoco Count: "+Consist_Data[2,number]:toString()+"\nTrain Weight: "+Consist_Data[6,number]:toString()
+                }
+                else{
+                    MessageR="Consist Not Checked, Auto Control Unavailable"
+                }
+                EGPR:egpPos(214,vec2(290+90-clamp((SetSlowSpeed-RLCPTW["MPH",number])*20,-45,45),306+45))
+                EGPR:egpSize(214,vec2(abs(clamp(((SetSlowSpeed-RLCPTW["MPH",number])*2)*20,-90,90)),20))
+            break
+        }
+    break
+    case 4,####################################################################################################################################################     Trip Optimizer
+        switch(RPageVar){
+            case 0,
+                if(clk("buttonclk")){
+                    RTopVisible=1
+                    stoptimer("buttonclk")
+                    EGPR:egpButton(104+3*0,"Distance\nStart",vec2(0,477),vec2(64,35),vec(155,205,255))
+                    EGPR:egpButton(104+3*1,"Check\nConsist",vec2(128,477),vec2(64,35),vec(155,205,255))
+                    EGPR:egpButton(104+3*2,"Enter\nSpeed",vec2(192,477),vec2(64,35),vec(155,205,255))
+                    EGPR:egpButton(104+3*3,"Auto\nControl",vec2(256,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*4,"Manual\nControl",vec2(384,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*5,"Exit",vec2(448,442),vec2(64,35),vec(245,250,255))
+                    
+                    RPageN="2550-0"
+                }
+                if(chatClk(owner())|clk("buttonclk")){
+                    if(LastSaid==".rfb8"){
+                        RPage=0
+                        RPageVar=0
+                    }
+                    if(LastSaid==".rfb5"&Consist_Data[5,number]){
+                        TripOptimizerOn=1
+                    }
+                    if(LastSaid==".rfb7"){
+                        TripOptimizerOn=0
+                    }
+                    if(LastSaid==".rb4"){
+                        RPage=4
+                        RPageVar=1
+                    }
+                    if(LastSaid==".rb3"){
+                        Check=1
+                        timer("off",500)
+                    }
+                }
+                    if(clk("off")){
+                        Check=0
+                        stoptimer("off")
+                    }
+                Consist_Output[3,number]=Check
+                if(Consist_Data[4,number]){
+                    MessageR="Checking Consist..."
+                }
+                elseif(Consist_Data[5,number]){
+                    MessageR="Consist Checked, Auto Control Ready\nLoco Count: "+Consist_Data[2,number]:toString()+"\nTrain Weight: "+Consist_Data[6,number]:toString()
+                }
+                else{
+                    MessageR="Consist Not Checked, Auto Control Unavailable"
+                }
+            break
+            case 1,
+                if(clk("buttonclk")){
+                    timer("ready",500)
+                    TripDigits=table()
+                    RTopVisible=1
+                    stoptimer("buttonclk")
+                    EGPR:egpButton(104+3*0,"Back\nSpace",vec2(192,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*1,"Save\nPreset",vec2(384,442),vec2(64,35),vec(245,250,255))
+                    EGPR:egpButton(104+3*2,"Cancel",vec2(448,442),vec2(64,35),vec(245,250,255))
+                    
+                    EGPR:egpBox(200,vec2(0,0),vec2(8,16))
+                    
+                    RPageN="2550-1"
+                }
+                MessageR="Use Number Keys To Enter New Preset Value, Back Space To Modify \nExisting Value.\nSet Speed: "+TripDigits[1,number]:toString()+TripDigits[2,number]:toString()
+                if(clk("ready")){
+                    stoptimer("ready")
+                    TripReady=1
+                }
+                if(chatClk(owner())|clk("buttonclk")){
+                    if(LastSaid==".rfb4"){
+                        timer("ready",100)
+                        TripReady=0
+                        TripDigits:removeNumber(TripDigits:count())
+                    }
+                    if(LastSaid==".rfb7"){
+                        TripOptimizerSpeed=(TripDigits[1,number]:toString()+TripDigits[2,number]:toString()):toNumber()
+                        RPage=4
+                        RPageVar=0
+                    }
+                    if(LastSaid==".rfb8"){
+                        RPage=4
+                        RPageVar=0
+                        TripReady=0
+                    }
+                    if(TripDigits:count()<=1&TripReady&(LastSaid:sub(0,3)==".rb")){
+                        InputDigit=LastSaid:sub(4,5)
+                        TripDigits:pushNumber(InputDigit:toNumber())
+                    }
+                    EGPR:egpPos(200,vec2(79+(TripDigits:count()*7),430))
+                    EGPR:egpColor(200,vec(36)*((TripDigits:count())<2))
+                }
+            break
+        }
+    break
 }
+}
+if(clk("clk")){
+    if((changed(LPage)|changed(LPageVar)|changed(RPage)|changed(RPageVar)|changed(DistMode))&Active){
+        timer("buttonclk",100)
+    }
+    if((chatClk(owner())|changed(LPage)|changed(LPageVar)|clk("buttonclk"))&LTopVisible){
+        EGPL:egpTopUpdate()
+    }
+    if((chatClk(owner())|changed(RPage)|changed(RPageVar)|clk("buttonclk"))&RTopVisible){
+        EGPR:egpTopUpdate()
+    }
+}
+if(clk("buttonclk")|chatClk(owner())){
+    EGPL:egpBox(300,vec2(256),vec2(512))
+    EGPL:egpColor(300,vec4(0,0,0,40))
+
+    EGPR:egpBox(300,vec2(256),vec2(512))
+    EGPR:egpColor(300,vec4(0,0,0,40))
 }
 
