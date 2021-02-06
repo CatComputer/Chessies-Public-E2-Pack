@@ -1,0 +1,119 @@
+@name Chessie's Consist Monitor & Smart Cruise Control
+@inputs Loco:entity RLCPT:entity Disp_Input:table CtlTable:table
+@outputs Consist_LBF TrainWeight T_OVR D_OVR PTWirelinks:table LocoCount RunningLocoCount SM_CON_DATA:table Pitch
+@persist Cons:array SmartConsistEquipped Checking PT1:entity PT2:entity PT3:entity PT4:entity Pitch PowerMult DynMult I E:entity SetSpeed SmartConsistOn Checked CheckConsist PitchChange TotalMass
+@trigger CheckConsist Disp_Input
+if(first()|dupefinished()){
+    
+    #[
+    Instructions:
+    
+    For starters, you have to modify parts of your stands to accomodate for this thing controlling your throttle and dynamic brake. Find the lines that say as follows:
+        CtlTable["SetThrottle",number]=SetThrottle
+        CtlTable["SetDynamics",number]=SetDynamics
+        
+    You will want to add inputs to your control stand e2, named T_OVR and D_OVR.
+    Now, about those lines, you should change them to this:
+        CtlTable["SetThrottle",number]=T_OVR ? T_OVR : SetThrottle
+        CtlTable["SetDynamics",number]=D_OVR ? D_OVR : SetDynamics
+        
+    That's all you have to do on the control stand side, now for some wiring
+    
+    Wire Loco:entity to your locomotive's body
+    Wire RLCPT:entity to your PT chip (you better use PT2)
+    Wire Disp_Input:table to SDIS or any display capable of controlling the E2
+    Wire CtlTable:table to your control stand's CtlTable output
+    
+    You're done! Now you just have to change the SINGLE config in this e2 (yay)
+    
+    ]#
+    PitchChange=1 #Does your loco pitch depend on the pitch or roll axis? (1 is roll, 0 is pitch)
+    
+    
+    TotalMass=0
+}
+interval(100)
+if(changed(CheckConsist)&CheckConsist){
+    PT1=noentity()
+    PT2=noentity()
+    PT3=noentity()
+    PT4=noentity()
+    Checking=1
+    Checked=0
+}
+if(Checking){
+    Cons=Loco:getConstraints()
+    ConCount=Cons:count()
+    I++
+    if(I>ConCount){
+        I=0
+        Checking=0
+        Checked=1
+    }
+}
+SmartConsistOn=Disp_Input[1,number]
+SetSpeed=Disp_Input[2,number]
+CheckConsist=Disp_Input[3,number]
+E=Cons[I,entity]
+if(changed(I)){
+if(E:model()=="models/cheeze/beta/white_button.mdl"&!PT1){
+    PT1=E
+}
+if(E:model()=="models/cheeze/beta/white_button.mdl"&(E!=PT1)&!PT2){
+    PT2=E
+}
+if(E:model()=="models/cheeze/beta/white_button.mdl"&(E!=PT1)&(E!=PT2)&!PT3){
+    PT3=E
+}
+if(E:model()=="models/cheeze/beta/white_button.mdl"&(E!=PT1)&(E!=PT2)&(E!=PT3)&!PT4){
+    PT4=E
+}
+if(!PT1:isValid()){
+    PT1=PT2
+}
+if(!PT2:isValid()){
+    PT2=PT3
+}
+if(!PT3:isValid()){
+    PT3=PT4
+}
+if(!PT4:isValid()){
+    PT4=noentity()
+}
+}
+PT1W=PT1:wirelink()
+PT2W=PT2:wirelink()
+PT3W=PT3:wirelink()
+PT4W=PT4:wirelink()
+PTWirelinks=table(PT1W,PT2W,PT3W,PT4W)
+Consist_LBF=PT1W["TE_LBF",number]+PT2W["TE_LBF",number]+PT3W["TE_LBF",number]+PT4W["TE_LBF",number]
+LocoCount=PTWirelinks:count()
+RunningLocoCount=PT1W["On1",number]+PT2W["On1",number]+PT3W["On1",number]+PT4W["On1",number]
+if(PitchChange){
+    Pitch=(Loco:angles():roll())
+}
+else{
+    Pitch=(Loco:angles():pitch())
+}
+local TotalMass=0
+foreach(K,V:entity=Cons){
+    TotalMass += V:mass()
+}
+TrainWeight=TotalMass
+if(SmartConsistOn&!Disp_Input[4,number]&!Disp_Input[5,number]){
+    PowerMult=(abs((TrainWeight/3500)*((Pitch*4.5)+4)))/LocoCount
+    DynMult=((TrainWeight/4800)*((-Pitch*2.8)+1))/LocoCount
+    T_OVR=ceil(floor(clamp(((SetSpeed-(RLCPT:wirelink()["MPH",number]))/20)*PowerMult,0,100))/12.5)*12.5
+    D_OVR=floor(clamp((((RLCPT:wirelink()["MPH",number])-SetSpeed)/7)*abs(DynMult),0,100))
+}
+elseif(Disp_Input[4,number]|Disp_Input[5,number]){
+    PowerMult=((abs((TrainWeight/3500)*((Pitch*4.5)+4)))/LocoCount)*3
+    DynMult=(((TrainWeight/4800)*((-Pitch*2.8)+1))/LocoCount)*5
+    T_OVR=(ceil(floor(clamp(((Disp_Input[4,number]-(RLCPT:wirelink()["MPH",number]))/20)*(PowerMult/2),0,100))/12.5)*12.5)*(Disp_Input[4,number]>0)
+    D_OVR=floor(clamp(((((RLCPT:wirelink()["MPH",number])-Disp_Input[5,number])/7)*abs(DynMult))*12,0,100))*(Disp_Input[5,number]>0)
+}
+else{
+    T_OVR=0
+    D_OVR=0
+}
+SM_CON_DATA=table(Consist_LBF,LocoCount,RunningLocoCount,Checking,Checked,TrainWeight)
