@@ -331,7 +331,7 @@ if(clk("run")){
 if(Active){
     timer("clk", 250)
 }
-if(Active){
+if(Active&On){
 interval(100)
 RLCPTW=RLCPT:wirelink()
 MPH=RLCPTW["MPH",number]
@@ -1807,7 +1807,7 @@ switch(RPage){
     break
 }
 }
-if(clk("clk")){
+if(clk("clk")&On){
     if((changed(LPage)|changed(LPageVar)|changed(RPage)|changed(RPageVar)|changed(DistMode))&Active){
         timer("buttonclk",100)
     }
@@ -1820,9 +1820,12 @@ if(clk("clk")){
 }
 if(clk("buttonclk")|chatClk(owner())){
     EGPL:egpBox(300,vec2(256),vec2(512))
-    EGPL:egpColor(300,vec4(0,0,0,40))
+    EGPL:egpColor(300,vec4(0,0,0,40+!On*255))
 
     EGPR:egpBox(300,vec2(256),vec2(512))
-    EGPR:egpColor(300,vec4(0,0,0,40))
+    EGPR:egpColor(300,vec4(0,0,0,40+!On*255))
+}
+if(~On){
+    reset()
 }
 
