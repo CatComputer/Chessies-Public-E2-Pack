@@ -1,0 +1,892 @@
+@name EMD Control panel Phase 1 by Big Bean - Public edition
+@inputs RLCPT:entity Prime Start Stop GNDReset Iso EmerStop FuelPump GenFieldStand  GField_B RadioHOTD_B HDLTS_B  HDLTFrontIn HDLTRearIn
+@outputs Prime1 Start1 Isolation1 Shutdown1 GenField GNDRelayOpen  RadioOn HOTDOn HDLTFrontOut HDLTRearOut BattState GF_B EStopTripped
+@persist StrtBell PrimeBell StopBell StopBellLenght [BellOnSnd BellOffSnd]:string StarterRunAmps PrimerAmps MaxAuxGenAmps AuxGenAmps
+@persist BattState EStopTripped GF_B BQ
+@persist Run RLCPTW:wirelink Load Throttle Reverser Dynamics Primed On EngSpeed MUMaster  StrtAng StpPos GNDPos IsoAng ESPos NeedleAng
+#[
+Welcome to the EMD Control panel - The panel, made by some random Bean man.
+As the name implies, it's the very early one used in dash 1 EMD units (GP28, GP38, GP40, etc.)
+No, it is not realistic by any means, but it looks cool so there you go
+
+You can complain to me about the holo count if you want to, I won't listen to you anyways so have fun.
+
+Now for some wiring:
+>Inputs:
+Prime, Start, Stop, GNDReset and EmerStop are all push buttons, so wire those accordingly
+Iso is the isolation switch, which is toggled
+FuelPump goes to the fuel pump switch on your control stand, without this on have fun starting
+GenFieldStand goes to the gen field switch on your control stand, this and the gen field breaker both need to be on for GenField to work
+----
+GField_B, RadioHOTD_B and HDLTS_B are the three breakers, also toggled
+HDLTFrontIn and HDLTRearIn go to your HDLT switch or button, this is for the HDLT breaker
+
+>Outputs:
+Prime1, Start1, Isolation1, Shutdown1 and GenField go to ye olde PT2
+RadioOn gets turned on with the RadioHOTD_B, so wire that up if you need to
+HOTDOn is the same deal
+HDLTFrontOut and HDLTRearOut go to the PT2's Lights_Forward and Lights_Backward respectively
+----
+All other outputs are just debug stuff so don't worry about those
+
+And that's all, hit me up if something's broken or if you're feeling like being annoying, adios
+]#
+E=entity()
+E:setAlpha(0)
+if(first()|dupefinished()){
+    
+    #Config:
+    #-------
+    StrtBell = 0 #Should this use a starting bell?
+    PrimeBell = 0 #Should this use a priming bell?
+    StopBell = 0 #Should this use a shutdown bell?
+    StopBellLenght = 5000 #Shutdown bell lenght in milliseconds.
+    BellOnSnd = "gsgtrainsounds/misc/cab/alarmbell_loop.wav" #On sound of the bell
+    BellOffSnd = "gsgtrainsounds/misc/cab/alarmbell_end.wav" #Off sound of the bell
+    
+    StarterRunAmps = 60 #Starter amp draw
+    PrimerAmps = 5 #Primer amp draw
+    MaxAuxGenAmps = 25 #Maximum amps produced by the generator at notch 8
+    
+    #Holo stuff
+    BaseCol = vec(80)
+    RimCol = vec(190)
+    ButtonRimCol = vec(150)
+    BreakerBackCol = vec(90)
+    
+    BaseMat = "models/proppertextures/acrylic_grimey"
+    RimMat = "models/proppertextures/acrylic"
+    ButtonRimMat = "models/proppertextures/aluminum"
+    BreakerBackMat = "models/proppertextures/acrylic"
+    #End of config#
+    #-------------#
+    
+    #Init:
+    #-----
+    StartBellOn = 0
+    PrimeBellOn = 0
+    StopBellOn = 0
+    
+    StrtAng = 180
+    IsoAng = 90
+    StpPos = 0.6
+    GNDPos = 0.6
+    ESPos = 0.6
+    NeedleAng = 180
+    
+    #Holo time:
+    #----------
+    #Base & Rim
+    A = 1
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(0,0,0.22)))
+    holoAng(A,E:toWorld(ang(0,0,0)))
+    holoModel(A,"models/holograms/cube.mdl")
+    holoColor(A,BaseCol)
+    holoMaterial(A,BaseMat)
+    holoScale(A,vec(2.15,1.4,0.04))
+    
+    A = 2
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(0,0,0.14)))
+    holoAng(A,E:toWorld(ang(0,0,0)))
+    holoModel(A,"models/holograms/cube.mdl")
+    holoColor(A,RimCol)
+    holoMaterial(A,RimMat)
+    holoScale(A,vec(2.2,1.45,0.02))
+    
+    #Start/prime switch
+    A = 3
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-8,4.6,0.2)))
+    holoAng(A,E:toWorld(ang(0,StrtAng,0)))
+    holoModel(A,"models/magtrainslocos/rotaryswitches/headlight_emd.mdl")
+    holoBodygroup(A,2,1)
+    
+    #Bolts
+    A = 4
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-6.6,6,0.55)))
+    holoAng(A,E:toWorld(ang(0,0,90)))
+    holoModel(A,"models/unionsparts/bolt_1.mdl")
+    holoScale(A,vec(0.1,0.1,0.1))
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/acrylic_lightgrey")
+    
+    A = 5
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-6.6,3.2,0.55)))
+    holoAng(A,E:toWorld(ang(0,0,90)))
+    holoModel(A,"models/unionsparts/bolt_1.mdl")
+    holoScale(A,vec(0.1,0.1,0.1))
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/acrylic_lightgrey")
+    
+    A = 6
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-9.4,3.2,0.55)))
+    holoAng(A,E:toWorld(ang(0,0,90)))
+    holoModel(A,"models/unionsparts/bolt_1.mdl")
+    holoScale(A,vec(0.1,0.1,0.1))
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/acrylic_lightgrey")
+    
+    A = 7
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-9.4,6,0.55)))
+    holoAng(A,E:toWorld(ang(0,0,90)))
+    holoModel(A,"models/unionsparts/bolt_1.mdl")
+    holoScale(A,vec(0.1,0.1,0.1))
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/acrylic_lightgrey")
+    
+    
+    #Shutdown button
+    A = 8
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-6.2,1.2,0.5)))
+    holoAng(A,E:toWorld(ang(0,0,0)))
+    holoModel(A,"models/holograms/cylinder.mdl")
+    holoColor(A,ButtonRimCol)
+    holoMaterial(A,ButtonRimMat)
+    holoScale(A,vec(0.15,0.15,0.01))
+    
+    A = 9
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-6.2,1.2,0.6)))
+    holoAng(A,E:toWorld(ang(0,0,0)))
+    holoModel(A,"models/holograms/hexagon.mdl")
+    holoColor(A,ButtonRimCol)
+    holoMaterial(A,ButtonRimMat)
+    holoScale(A,vec(0.14,0.14,0.01))
+    
+    A = 10
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-6.2,1.2,0.6)))
+    holoAng(A,E:toWorld(ang(0,0,0)))
+    holoModel(A,"models/holograms/hq_tube_thin.mdl")
+    holoColor(A,ButtonRimCol)
+    holoMaterial(A,ButtonRimMat)
+    holoScale(A,vec(0.11,0.11,0.07))
+    
+    A = 11
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-6.2,1.2,StpPos)))
+    holoAng(A,E:toWorld(ang(0,0,0)))
+    holoModel(A,"models/holograms/hq_cylinder.mdl")
+    holoColor(A,vec(220,10,30))
+    holoMaterial(A,"WTP/plastic_1")
+    holoScale(A,vec(0.099,0.099,0.07))
+    
+    
+    #Ground reset button
+    A = 12
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-6.2,-1.2,0.5)))
+    holoAng(A,E:toWorld(ang(0,0,0)))
+    holoModel(A,"models/holograms/cylinder.mdl")
+    holoColor(A,ButtonRimCol)
+    holoMaterial(A,ButtonRimMat)
+    holoScale(A,vec(0.15,0.15,0.01))
+    
+    A = 13
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-6.2,-1.2,0.6)))
+    holoAng(A,E:toWorld(ang(0,0,0)))
+    holoModel(A,"models/holograms/hexagon.mdl")
+    holoColor(A,ButtonRimCol)
+    holoMaterial(A,ButtonRimMat)
+    holoScale(A,vec(0.14,0.14,0.01))
+    
+    A = 14
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-6.2,-1.2,0.6)))
+    holoAng(A,E:toWorld(ang(0,0,0)))
+    holoModel(A,"models/holograms/hq_tube_thin.mdl")
+    holoColor(A,ButtonRimCol)
+    holoMaterial(A,ButtonRimMat)
+    holoScale(A,vec(0.11,0.11,0.07))
+    
+    A = 15
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-6.2,-1.2,GNDPos)))
+    holoAng(A,E:toWorld(ang(0,0,0)))
+    holoModel(A,"models/holograms/hq_cylinder.mdl")
+    holoColor(A,vec(180))
+    holoMaterial(A,"WTP/plastic_1")
+    holoScale(A,vec(0.099,0.099,0.07))
+    
+    
+    #Isolation switch
+    A = 16
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-8,-4.6,0.2)))
+    holoAng(A,E:toWorld(ang(0,IsoAng,0)))
+    holoModel(A,"models/magtrainslocos/rotaryswitches/headlight_emd.mdl")
+    holoBodygroup(A,2,1)
+    
+    A = 17
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-8.2,-5.95,0.53)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"plane")
+    holoMaterial(A,"basic_lables/isolation_decal")
+    holoScale(A,vec(0.43,0.43,1))
+    
+    #Bolts
+    A = 18
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-6.6,-6,0.55)))
+    holoAng(A,E:toWorld(ang(0,0,90)))
+    holoModel(A,"models/unionsparts/bolt_1.mdl")
+    holoScale(A,vec(0.1,0.1,0.1))
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/acrylic_lightgrey")
+    
+    A = 19
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-6.6,-3.2,0.55)))
+    holoAng(A,E:toWorld(ang(0,0,90)))
+    holoModel(A,"models/unionsparts/bolt_1.mdl")
+    holoScale(A,vec(0.1,0.1,0.1))
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/acrylic_lightgrey")
+    
+    A = 20
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-9.4,-3.2,0.55)))
+    holoAng(A,E:toWorld(ang(0,0,90)))
+    holoModel(A,"models/unionsparts/bolt_1.mdl")
+    holoScale(A,vec(0.1,0.1,0.1))
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/acrylic_lightgrey")
+    
+    A = 21
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-9.4,-6,0.55)))
+    holoAng(A,E:toWorld(ang(0,0,90)))
+    holoModel(A,"models/unionsparts/bolt_1.mdl")
+    holoScale(A,vec(0.1,0.1,0.1))
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/acrylic_lightgrey")
+    
+    
+    #Emergency shutdown button
+    A = 22
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(4,5,0.5)))
+    holoAng(A,E:toWorld(ang(0,0,0)))
+    holoModel(A,"models/holograms/cylinder.mdl")
+    holoColor(A,ButtonRimCol)
+    holoMaterial(A,ButtonRimMat)
+    holoScale(A,vec(0.15,0.15,0.01))
+    
+    A = 23
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(4,5,0.6)))
+    holoAng(A,E:toWorld(ang(0,0,0)))
+    holoModel(A,"models/holograms/hexagon.mdl")
+    holoColor(A,ButtonRimCol)
+    holoMaterial(A,ButtonRimMat)
+    holoScale(A,vec(0.14,0.14,0.01))
+    
+    A = 24
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(4,5,0.6)))
+    holoAng(A,E:toWorld(ang(0,0,0)))
+    holoModel(A,"models/holograms/hq_tube_thin.mdl")
+    holoColor(A,ButtonRimCol)
+    holoMaterial(A,ButtonRimMat)
+    holoScale(A,vec(0.11,0.11,0.07))
+    
+    A = 25
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(4,5,ESPos)))
+    holoAng(A,E:toWorld(ang(0,0,0)))
+    holoModel(A,"models/holograms/hq_cylinder.mdl")
+    holoColor(A,vec(230,10,30))
+    holoMaterial(A,"WTP/plastic_1")
+    holoScale(A,vec(0.099,0.099,0.07))
+    
+    A = 26
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(2.5,5,0.53)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"plane")
+    holoMaterial(A,"trans_train_stuff/cabstuff/labelplates/label_efco_engstop")
+    holoScale(A,vec(0.3,0.3,1))
+    
+    
+    #EMD Builders plate
+    A = 27
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(4,0,0.53)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"plane")
+    holoMaterial(A,"titus's_trainbuild_content_pack_1.1/signs/buildersplate")
+    holoScale(A,vec(0.5,0.5,1))
+    
+    
+    #Batt. charge state gauge
+    A = 28
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(9,0,0.6)))
+    holoAng(A,E:toWorld(ang(0,0,0)))
+    holoModel(A,"models/holograms/hq_tube_thin.mdl")
+    holoColor(A,ButtonRimCol)
+    holoMaterial(A,ButtonRimMat)
+    holoScale(A,vec(0.429,0.429,0.07))
+    
+    A = 29
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(9,0,0.5)))
+    holoAng(A,E:toWorld(ang(0,0,90)))
+    holoModel(A,"models/sprops/misc/sq_holes/t_sqhole_d0_12.mdl")
+    holoColor(A,vec(70))
+    holoMaterial(A,ButtonRimMat)
+    holoScale(A,vec(0.43,0.3,0.43))
+    
+    A = 30
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(7.9,0,0.5)))
+    holoAng(A,E:toWorld(ang(0,-90,90)))
+    holoModel(A,"models/sprops/geometry/t_hdisc_12.mdl")
+    holoColor(A,ButtonRimCol)
+    holoMaterial(A,ButtonRimMat)
+    holoScale(A,vec(0.42,0.3,0.4))
+    
+    A = 31
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(8,0,0.5)))
+    holoAng(A,E:toWorld(ang(0,0,0)))
+    holoModel(A,"models/holograms/hq_cylinder.mdl")
+    holoColor(A,vec(40))
+    holoMaterial(A,"WTP/plastic_1")
+    holoScale(A,vec(0.05,0.05,0.05))
+    
+    A = 32
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(9,0,0.6)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"plane")
+    holoMaterial(A,"models/gsgtrainprops/cab/gauge_battery_generic_1")
+    holoScale(A,vec(0.4,0.4,1))
+    
+    #Amp needle
+    A = 33
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(8,0,0.65)))
+    holoAng(A,E:toWorld(ang(0,NeedleAng,0)))
+    holoModel(A,"plane")
+    holoMaterial(A,"models/gsgtrainprops/cab/needle_load_emd_new_black")
+    holoScale(A,vec(0.46,0.46,1))
+    
+    
+    #Warning lights
+    #No power warning
+    A = 34
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(10,-4.2,0.7)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"models/led2.mdl")
+    holoMaterial(A,"models/proppertextures/bulb_blue_unlit")
+    holoScale(A,vec(0.6,0.6,0.5))
+    
+    A = 35
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(10,-4.2,0.3)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"models/holograms/hq_tube_thin.mdl")
+    holoColor(A,ButtonRimCol)
+    holoMaterial(A,ButtonRimMat)
+    holoScale(A,vec(0.1,0.1,0.05))
+    
+    A = 36
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(8.8,-4.2,0.6)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"plane")
+    holoMaterial(A,"titus/nopower")
+    holoScale(A,vec(0.8))
+    
+    
+    #Overheat warning indicator
+    A = 37
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(10,-6.4,0.7)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"models/led2.mdl")
+    holoMaterial(A,"models/proppertextures/bulb_red_unlit")
+    holoScale(A,vec(0.6,0.6,0.5))
+    
+    A = 38
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(10,-6.4,0.3)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"models/holograms/hq_tube_thin.mdl")
+    holoColor(A,ButtonRimCol)
+    holoMaterial(A,ButtonRimMat)
+    holoScale(A,vec(0.1,0.1,0.05))
+    
+    A = 39
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(8.95,-6.4,0.6)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"plane")
+    holoMaterial(A,"titus/hotengine")
+    holoScale(A,vec(0.8))
+    
+    
+    #GND Relay open warning
+    A = 40
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(10,4.2,0.7)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"models/led2.mdl")
+    holoMaterial(A,"models/proppertextures/bulb_offwhite_unlit")
+    holoScale(A,vec(0.6,0.6,0.5))
+    
+    A = 41
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(10,4.2,0.3)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"models/holograms/hq_tube_thin.mdl")
+    holoColor(A,ButtonRimCol)
+    holoMaterial(A,ButtonRimMat)
+    holoScale(A,vec(0.1,0.1,0.05))
+    
+    A = 42
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(8.8,4.2,0.6)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"plane")
+    holoMaterial(A,"titus/gndfault")
+    holoScale(A,vec(0.8))
+    
+    
+    #Breaker backplate
+    A = 43
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-1.15,0,0.3)))
+    holoAng(A,E:toWorld(ang(0,0,0)))
+    holoModel(A,"models/holograms/cube.mdl")
+    holoColor(A,BreakerBackCol)
+    holoMaterial(A,BreakerBackMat)
+    holoScale(A,vec(0.28,0.6,0.05))
+    
+    #Breakers
+    #Gen field breaker
+    A = 44
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-1.6,2.4,0.5)))
+    holoAng(A,E:toWorld(ang(0,90,90)))
+    holoModel(A,"models/titus's_propper_model_pack_2.4/propper/circuitbreakers/breaker_single.mdl")
+    
+    A = 45
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(0,2.4,0.65)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"plane")
+    holoMaterial(A,"cubics_pack/breakers/generator_field")
+    holoScale(A,vec(0.3,0.3,1))
+    
+    #HOTD & Radio breaker
+    A = 46
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-1.6,0,0.5)))
+    holoAng(A,E:toWorld(ang(0,90,90)))
+    holoModel(A,"models/titus's_propper_model_pack_2.4/propper/circuitbreakers/breaker_dual.mdl")
+    
+    A = 47
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(0,0,0.65)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"plane")
+    holoMaterial(A,"cubics_pack/breakers/radio_and_hotd")
+    holoScale(A,vec(0.25,0.25,1))
+    
+    #HDLT Breaker
+    A = 48
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-1.6,-2.4,0.5)))
+    holoAng(A,E:toWorld(ang(0,90,90)))
+    holoModel(A,"models/titus's_propper_model_pack_2.4/propper/circuitbreakers/breaker_single.mdl")
+    
+    A = 49
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(0,-2.4,0.65)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"plane")
+    holoMaterial(A,"cubics_pack/breakers/hdlts")
+    holoScale(A,vec(0.3,0.3,1))
+    
+    
+    #Labels & other shit I forgot to put on the panel
+    A = 50
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-7.7,1.2,0.6)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"plane")
+    holoMaterial(A,"titus/enginestop")
+    holoScale(A,vec(1,1,1))
+    
+    A = 51
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-7.7,-1.2,0.6)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"plane")
+    holoMaterial(A,"titus/groundreset")
+    holoScale(A,vec(1,1,1))
+    
+    A = 52
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-7.7,3.1,0.6)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"plane")
+    holoMaterial(A,"titus/start")
+    holoScale(A,vec(1,1,1))
+    
+    A = 53
+    holoCreate(A)
+    holoParent(A,E)
+    holoPos(A,E:toWorld(vec(-7.7,6.1,0.6)))
+    holoAng(A,E:toWorld(ang(0,180,0)))
+    holoModel(A,"plane")
+    holoMaterial(A,"titus/prime")
+    holoScale(A,vec(1,1,1))
+    
+
+    timer("start",1000)
+}
+
+#----------
+#Functions:
+#----------
+#E2 start & data gather
+if(clk("start")){
+    Run = 1
+}
+if(Run){
+    interval(100)
+    RLCPTW = RLCPT:wirelink()
+    Load = RLCPTW["Load1",number]
+    Throttle = RLCPTW["Throttle",number]
+    Reverser = RLCPTW["Reverser",number]
+    Dynamics = RLCPTW["Dynamics",number]
+    Primed = RLCPTW["Primed1",number]
+    On = RLCPTW["On1",number]
+    EngSpeed = RLCPTW["EngineSpeed1",number]
+    MUMaster = RLCPTW["MU_Master",number]
+    
+    #Battery current draw
+    if(!On){
+        if(Prime1 & FuelPump){
+            BattState = -PrimerAmps
+        }elseif(Start1 & !Isolation1 & Primed){
+            BattState = -StarterRunAmps
+        }else{
+            BattState = 0
+        }
+    }elseif(On){
+        AuxGenAmps += (max((EngSpeed / 8) * MaxAuxGenAmps + On * (MaxAuxGenAmps / 8), 0) - AuxGenAmps) / 5
+        if(Isolation1){
+            BattState = AuxGenAmps
+        }else{
+            BattState = 0
+        }
+    }
+}
+
+
+#All of the holo shit & sounds
+if(Run){
+    if(Start){ #Start/prime switch
+        StrtAng = StrtAng+(120-StrtAng)/max(2,0)
+    }elseif(Prime){
+        StrtAng = StrtAng+(240-StrtAng)/max(2,0)
+    }elseif(StrtAng > 0 | StrtAng < 0){
+        StrtAng = StrtAng+(180-StrtAng)/max(2,0)
+    }
+    holoAng(3,E:toWorld(ang(0,StrtAng,0)))
+    if((~Start & Start) | (~Prime & Prime)){
+        holoEntity(3):soundPlay(1,0.5,"trans_train_sounds/buttons/emd_slideswitches/slideswitch_on.wav")
+    }elseif((changed(Start | Prime) & (!Start & !Prime))){
+        holoEntity(3):soundPlay(2,0.5,"trans_train_sounds/buttons/emd_slideswitches/slideswitch_off.wav")
+    }
+    
+    
+    if(Stop){ #Stop button
+        StpPos = 0.4
+    }else{
+        StpPos = 0.6
+    }
+    holoPos(11,E:toWorld(vec(-6.2,1.2,StpPos)))
+    if(~Stop & Stop){
+        holoEntity(11):soundPlay(3,0.5,"trans_train_sounds/buttons/mom_lever1_pull.wav")
+    }elseif(~Stop & !Stop){
+        holoEntity(11):soundPlay(3,0.5,"trans_train_sounds/buttons/mom_lever1_rel.wav")
+    }
+    
+    if(GNDReset){ #GND reset button
+        GNDPos = 0.4
+    }else{
+        GNDPos = 0.6
+    }
+    holoPos(15,E:toWorld(vec(-6.2,-1.2,GNDPos)))
+    if(~GNDReset & GNDReset){
+        holoEntity(15):soundPlay(4,0.5,"trans_train_sounds/buttons/mom_lever1_pull.wav")
+    }elseif(~GNDReset & !GNDReset){
+        holoEntity(15):soundPlay(4,0.5,"trans_train_sounds/buttons/mom_lever1_rel.wav")
+    }
+    
+    
+    if(Iso){ #Start/prime switch
+        IsoAng = IsoAng+(180-IsoAng)/max(2,0)
+    }elseif(IsoAng > 0){
+        IsoAng = IsoAng+(90-IsoAng)/max(2,0)
+    }
+    holoAng(16,E:toWorld(ang(0,IsoAng,0)))
+    if(~Iso & Iso){
+        holoEntity(16):soundPlay(5,0.5,"trans_train_sounds/buttons/toggle_switch1_on.wav")
+    }elseif(~Iso & !Iso){
+        holoEntity(16):soundPlay(6,0.5,"trans_train_sounds/buttons/toggle_switch1_off.wav")
+    }
+    
+    
+    if(EmerStop){
+        ESPos = 0.4
+    }else{
+        ESPos = 0.6
+    }
+    holoPos(25,E:toWorld(vec(4,5,ESPos)))
+    if(~EmerStop & EmerStop){
+        holoEntity(25):soundPlay(7,0.5,"trans_train_sounds/buttons/mom_lever1_pull.wav")
+    }elseif(~EmerStop & !EmerStop){
+        holoEntity(25):soundPlay(7,0.5,"trans_train_sounds/buttons/mom_lever1_rel.wav")
+    }
+    
+    
+    #Breakers
+    if(changed(GF_B) & GF_B){ #Gen field breaker
+        holoBodygroup(44,1,1)
+        holoEntity(44):soundPlay(8,0.5,"trans_train_sounds/buttons/toggle_switch2_on.wav")
+    }elseif(changed(GF_B) & !GF_B){
+        holoBodygroup(44,1,0)
+        holoEntity(44):soundPlay(8,0.5,"trans_train_sounds/buttons/toggle_switch2_off.wav")
+    }
+    
+    if(changed(RadioHOTD_B) & RadioHOTD_B){ #Radio & HOTD Breaker
+        holoBodygroup(46,1,1)
+        holoEntity(46):soundPlay(9,0.5,"trans_train_sounds/buttons/toggle_switch2_on.wav")
+        RadioOn = 1
+        HOTDOn = 1
+    }elseif(changed(RadioHOTD_B) & !RadioHOTD_B){
+        holoBodygroup(46,1,0)
+        holoEntity(46):soundPlay(9,0.5,"trans_train_sounds/buttons/toggle_switch2_off.wav")
+        RadioOn = 0
+        HOTDOn = 0
+    }
+    
+    if(changed(HDLTS_B) & HDLTS_B){ #Headlight breaker
+        holoBodygroup(48,1,1)
+        holoEntity(48):soundPlay(10,0.5,"trans_train_sounds/buttons/toggle_switch2_on.wav")
+    }elseif(changed(HDLTS_B) & !HDLTS_B){
+        holoBodygroup(48,1,0)
+        holoEntity(48):soundPlay(10,0.5,"trans_train_sounds/buttons/toggle_switch2_off.wav")
+    }
+    
+    #Amp gauge needle angle
+    NeedleAng = NeedleAng+(clamp(180-BattState/2.247, 135, 225)-NeedleAng)/max(3,0)
+    holoAng(33,E:toWorld(ang(0,NeedleAng,0)))
+}
+
+
+#God that was boring, now the actual code part begins
+#RLCPT Outputs & other stuff
+if(~Start & Start & !Iso & !EStopTripped){ #Starting shit
+    Start1 = 1
+    if(StrtBell){
+        E:soundPlay(11,0,BellOnSnd)
+        soundStop(12)
+    }
+}elseif(~Start & !Start){
+    Start1 = 0
+    if(StrtBell){
+        E:soundPlay(12,0,BellOffSnd)
+        soundStop(11)
+    }
+}
+
+if(!Prime1 & Prime & !EStopTripped & FuelPump){ #Priming shit 
+    Prime1 = 1
+    if(PrimeBell){
+        E:soundPlay(13,0,BellOnSnd)
+        soundStop(14)
+    }
+}elseif(Prime1 & (!Prime | !FuelPump)){
+    Prime1 = 0
+    if(PrimeBell){
+        E:soundPlay(14,0,BellOffSnd)
+        soundStop(13)
+    }
+}
+
+if(~Stop & Stop){ #Shutdown shit
+    stoptimer("stopbell")
+    soundStop(15)
+    if(EngSpeed==0 & !Iso){
+        Shutdown1 = 1
+    }else{
+        Shutdown1 = 0
+    }
+    if(StopBell & !Iso){
+        timer("stopbell",StopBellLenght)
+        E:soundPlay(15,0,BellOnSnd)
+        soundStop(16)
+    }
+}elseif(~Stop & !Stop){
+    Shutdown1 = 0
+}
+if(clk("stopbell")){
+    stoptimer("stopbell")
+    E:soundPlay(16,0,BellOffSnd)
+    soundStop(15)
+}
+#----
+
+
+
+if((~GNDReset & GNDReset) & GNDRelayOpen){ #Ground relay restarting
+    GNDRelayOpen = 0
+    Isolation1 = Isolation1
+}
+
+if(Iso & !EStopTripped){ #Isolation whatever
+    Isolation1 = 1
+}elseif(!Iso | EStopTripped){
+    Isolation1 = 0
+}
+if(changed(Isolation1) & Isolation1){
+    E:soundPlay(17,0.5,"_jazzlok/switches/relay_01.wav")
+}elseif(changed(Isolation1) & !Isolation1){
+    E:soundPlay(17,0.5,"_jazzlok/switches/relay_02.wav")
+}
+    
+if(~EmerStop & EmerStop){ #The engine killing button
+    EStopTripped = 1
+    Isolation1 = 0
+    GNDRelayOpen = 1
+}
+if(EStopTripped){
+    if(EngSpeed==0){
+        Shutdown1 = 1
+    }
+    if(!On){
+        Shutdown1 = 0
+    }
+}
+if(changed(GNDReset) & GNDReset & !On){
+    EStopTripped = 0
+}
+#----
+
+
+if(changed(GField_B) & GField_B){ #Gen field breaker
+    GF_B = 1
+    GenField = 1
+}elseif(!GField_B){
+    GF_B = 0
+    GenField = 0
+}
+if((!GF_B | GNDRelayOpen) & !Load){
+    GenField = 0
+}
+#----
+
+
+#No power warning
+if(Throttle > 0 & Reverser != 0 & !Load){
+    NoPower = 1
+    holoMaterial(34, "models/proppertextures/bulb_blue_lit")
+}else{
+    NoPower = 0
+    holoMaterial(34, "models/proppertextures/bulb_blue_unlit")
+}
+
+#GND Relay tripped warning
+if(GNDRelayOpen){
+    holoMaterial(40, "models/proppertextures/bulb_offwhite_lit")
+}else{
+    holoMaterial(40, "models/proppertextures/bulb_offwhite_unlit")
+}
+#----
+
+
+#Warning bell
+if(changed(GNDRelayOpen) & GNDRelayOpen){
+    timer("bellReset", 3000)
+    if(!BQ){
+        soundStop(19)
+        E:soundPlay(18, 0, BellOnSnd)
+        BQ = 1
+    }
+}
+if(clk("bellReset")){
+    soundStop(18)
+    E:soundPlay(19, 2, BellOffSnd)
+    BQ = 0
+}
+#----
+
+
+if(HDLTS_B){ #Headlight breaker
+    HDLTFrontOut = HDLTFrontIn
+    HDLTRearOut = HDLTRearIn
+}else{
+    HDLTFrontOut = 0
+    HDLTRearOut = 0
+} 
