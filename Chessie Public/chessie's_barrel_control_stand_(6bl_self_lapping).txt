@@ -1,0 +1,248 @@
+@name Chessie's Barrel Control Stand (6BL Self Lapping)
+@inputs CtlTable:table MU_Master Bell ForceSand HdltBrt HdltDim FuelPump GenFld EngRun NumberLights Start BCI
+@persist SetReverser SetThrottle SetSelector SetBrakeNotch SetLBP BellA Sand
+@trigger none
+if(first()|dupefinished()){
+    Transition=1
+    entity():setAlpha(0)
+    A=1
+    holoCreate(A)
+    holoPos(A,entity():toWorld(vec(0,0,30)))
+    holoAng(A,entity():toWorld(ang(0,0,0)))
+    holoParent(A,entity())
+    holoScale(A,vec(1,1,1))
+    holoModel(A,"models/jazzie/trains/locomotives/emd/cab/barrel_control_stand.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/enamel_black")
+    holoEntity(A):setSubMaterial(2,"models/proppertextures/toolsblack")
+    holoEntity(A):setSubMaterial(3,Transition ? "models/proppertextures/aluminum" : "models/proppertextures/enamel_black")
+    holoEntity(A):setSubMaterial(4,Transition ? "models/proppertextures/brass" : "models/proppertextures/enamel_black")
+
+    A=2
+    holoCreate(A)
+    holoPos(A,entity():toWorld(vec(-1.3,-1.4,0.1+30)))
+    holoParent(A,entity())
+    holoScale(A,vec(1,1,1))
+    holoModel(A,"models/jazzie/trains/locomotives/emd/cab/barrel_control_stand_throttle.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(2,"models/proppertextures/brass")
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/brass")
+    
+    A=3
+    holoCreate(A)
+    holoPos(A,entity():toWorld(vec(-1.9,-0.8,1.8+30)))
+    holoParent(A,entity())
+    holoScale(A,vec(0.5))
+    holoModel(A,"models/anytrains/props/shapes/numberwheel.mdl")
+    holoColor(A,vec(255))
+    
+    A=4
+    holoCreate(A)
+    holoPos(A,entity():toWorld(vec(0,0,-6.15+30)))
+    holoParent(A,entity())
+    holoScale(A,vec(1,1,1))
+    holoModel(A,"models/jazzie/trains/locomotives/emd/cab/barrel_control_stand_reverser.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/brass")
+    #models/anytrains/props/shapes/numberwheel.mdl
+    A=5
+    holoCreate(A)
+    holoPos(A,entity():toWorld(vec(-1.3,1.4,0.1+30)))
+    holoParent(A,entity())
+    holoScale(A,vec(1,1,1))
+    holoModel(A,"models/jazzie/trains/locomotives/emd/cab/barrel_control_stand_transition.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(2,"models/proppertextures/brass")
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/brass")
+    holoAlpha(A,Transition*255)
+    
+    A=6
+    holoCreate(A)
+    holoPos(A,entity():toWorld(vec(-1.9,0.8,2.47+30)))
+    holoParent(A,entity())
+    holoScale(A,vec(0.5))
+    holoModel(A,"models/anytrains/props/shapes/numberwheel.mdl")
+    holoColor(A,vec(255))
+    holoAlpha(A,Transition*255)
+    
+    A=7
+    holoCreate(A)
+    holoPos(A,entity():toWorld(vec(3,-3,27)))
+    holoAng(A,entity():toWorld(ang(0,30,0)))
+    holoParent(A,entity())
+    holoScale(A,vec(1,1,1))
+    holoModel(A,"models/monkatraztrainprops/parts/6sl_standalone.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/enamel_black")
+    holoEntity(A):setSubMaterial(6,"models/proppertextures/invisible")
+    
+    A=8
+    holoCreate(A)
+    holoPos(A,holoEntity(7):toWorld(vec(3.7,29.8,14.2)))
+    holoParent(A,holoEntity(7))
+    holoScale(A,vec(1,1,1))
+    holoModel(A,"models/monkatraztrainprops/parts/stand_fm_mid_6sl-l-nc-sat_handles.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(3,"models/proppertextures/enamel_black")
+    holoBodygroup(A,0,1)
+    
+    A=9
+    holoCreate(A)
+    holoPos(A,holoEntity(7):toWorld(vec(-3,29.8,7.5)))
+    holoParent(A,holoEntity(7))
+    holoScale(A,vec(1,1,1))
+    holoModel(A,"models/monkatraztrainprops/parts/stand_fm_mid_6sl-l-nc-sat_handles.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(3,"models/proppertextures/brakehandle")
+    
+    A=10
+    holoCreate(A)
+    holoPos(A,holoEntity(7):toWorld(vec(0.7,29.8+4.3,10)))
+    holoParent(A,holoEntity(7))
+    holoScale(A,vec(1,1,1))
+    holoModel(A,"models/monkatraztrainprops/parts/stand_fm_mid_6sl-l-nc-sat_handles.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(3,"models/proppertextures/brass")
+    holoBodygroup(A,0,4)
+
+    A=11
+    holoCreate(A)
+    holoPos(A,holoEntity(7):toWorld(vec(0.7,29.8-4.3,10)))
+    holoParent(A,holoEntity(7))
+    holoScale(A,vec(1,1,1))
+    holoModel(A,"models/monkatraztrainprops/parts/stand_fm_mid_6sl-l-nc-sat_handles.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(3,"models/proppertextures/brass")
+    holoBodygroup(A,0,4)
+    
+    A=12
+    holoCreate(A)
+    holoPos(A,entity():toWorld(vec(0,1.75,19.5)))
+    holoAng(A,entity():toWorld(ang(0,0,0)))
+    holoParent(A,entity())
+    holoScale(A,vec(1,1,1))
+    holoModel(A,"models/jazzie/trains/locomotives/emd/cab/barrel_control_stand_switchbox.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/enamel_black")
+    holoEntity(A):setSubMaterial(2,"models/proppertextures/enamel_black")
+    holoClipEnabled(A,1,1)
+    holoClip(A,1,vec(0,7.5,0),vec(0,1,0),0)
+    
+    A=13
+    holoCreate(A)
+    holoPos(A,entity():toWorld(vec(0,1.75,19.5)))
+    holoAng(A,entity():toWorld(ang(0,0,0)))
+    holoParent(A,entity())
+    holoScale(A,vec(1,1,1))
+    holoModel(A,"models/jazzie/trains/locomotives/emd/cab/barrel_control_stand_switchbox.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/enamel_black")
+    holoClipEnabled(A,1,1)
+    holoClip(A,1,vec(0,7.5,0),vec(0,-1,0),0)
+    
+    A=14
+    holoCreate(A)
+    holoPos(A,entity():toWorld(vec(-4,10.2,19.5+6.85)))
+    holoAng(A,entity():toWorld(ang(0,-90,0)))
+    holoParent(A,entity())
+    holoScale(A,vec(0.6))
+    holoModel(A,"models/jazzie/trains/locomotives/emd/cab/bell_switch.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(2,"models/proppertextures/aluminum")
+    
+    A=15
+    holoCreate(A)
+    holoPos(A,entity():toWorld(vec(-4,10.2,19.5+5.2)))
+    holoAng(A,entity():toWorld(ang(0,-90,0)))
+    holoParent(A,entity())
+    holoScale(A,vec(0.6))
+    holoModel(A,"models/jazzie/trains/locomotives/emd/cab/bell_switch.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(2,"models/proppertextures/aluminum")
+    
+    A=16
+    holoCreate(A)
+    holoPos(A,entity():toWorld(vec(-4,10.2,19.5+3.5)))
+    holoAng(A,entity():toWorld(ang(0,-90,0)))
+    holoParent(A,entity())
+    holoScale(A,vec(0.6))
+    holoModel(A,"models/jazzie/trains/locomotives/emd/cab/bell_switch.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(2,"models/proppertextures/aluminum")
+    
+    A=17
+    holoCreate(A)
+    holoPos(A,entity():toWorld(vec(-4,10.2,19.5+1.8)))
+    holoAng(A,entity():toWorld(ang(0,-90,0)))
+    holoParent(A,entity())
+    holoScale(A,vec(0.6))
+    holoModel(A,"models/jazzie/trains/locomotives/emd/cab/bell_switch.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(2,"models/proppertextures/aluminum")
+    
+    A=18
+    holoCreate(A)
+    holoPos(A,entity():toWorld(vec(-4,10.2,19.5+0.1)))
+    holoAng(A,entity():toWorld(ang(0,-90,0)))
+    holoParent(A,entity())
+    holoScale(A,vec(0.6))
+    holoModel(A,"models/jazzie/trains/locomotives/emd/cab/bell_switch.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(2,"models/proppertextures/aluminum")
+    
+    A=19
+    holoCreate(A)
+    holoPos(A,entity():toWorld(vec(-4,10.2,19.5-1.5)))
+    holoAng(A,entity():toWorld(ang(0,-90,0)))
+    holoParent(A,entity())
+    holoScale(A,vec(0.6))
+    holoModel(A,"models/jazzie/trains/locomotives/emd/cab/bell_switch.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(2,"models/proppertextures/aluminum")
+    
+    A=20
+    holoCreate(A)
+    holoPos(A,entity():toWorld(vec(-4,9,19.5-5.8)))
+    holoAng(A,entity():toWorld(ang(0,-90,0)))
+    holoParent(A,entity())
+    holoScale(A,vec(1))
+    holoModel(A,"models/jazzie/trains/locomotives/emd/cab/bell_switch.mdl")
+    holoColor(A,vec(255))
+    holoEntity(A):setSubMaterial(2,"models/proppertextures/aluminum")
+}
+interval(100)
+holoAng(2,entity():toWorld(ang(0,-SetThrottle/1.3,0)))
+holoAng(3,entity():toWorld(ang(0,-SetThrottle*1.78+158-(clamp(SetThrottle,0,12.5)*4),0)))
+
+SetReverser+=(CtlTable["SetReverser",number]-SetReverser)/1.2
+SetSelector+=(CtlTable["SetSelector",number]-SetSelector)/1.2
+SetThrottle+=(CtlTable["SetThrottle",number]-SetThrottle)/1.2
+SetBrakeNotch+=(CtlTable["SetBrakeNotch",number]-SetBrakeNotch)/2
+SetLBP+=(CtlTable["SetLocoBrakePressure",number]-SetLBP)/2
+BellA+=(Bell-BellA)/1.3
+Sand+=(ForceSand-Sand)/1.3
+
+holoAng(4,entity():toWorld(ang(0,SetReverser*16.5,0)))
+
+holoAng(5,entity():toWorld(ang(0,70-SetSelector*20,0)))
+
+holoAng(6,entity():toWorld(ang(0,180-(CtlTable["SetSelector",number] ? 90+(SetSelector-1)*23 : 0),0)))
+
+holoAng(8,holoEntity(7):toWorld(ang(0,-62+SetBrakeNotch*16,0)))
+
+holoAng(9,holoEntity(7):toWorld(ang(0,-50+SetLBP*1.7,0)))
+holoBodygroup(9,0,2+CtlTable["SetBleeding",number])
+
+holoAng(10,holoEntity(7):toWorld(ang(0,-45+(Sand*90),0)))
+
+holoAng(11,holoEntity(7):toWorld(ang(0,-45+(BellA*90),0)))
+
+holoPos(14,entity():toWorld(vec(-4-HdltBrt*0.5,10.2,19.5+6.85)))
+holoPos(15,entity():toWorld(vec(-4-HdltDim*0.5,10.2,19.5+5.2)))
+holoPos(16,entity():toWorld(vec(-4-FuelPump*0.5,10.2,19.5+3.5)))
+holoPos(17,entity():toWorld(vec(-4-GenFld*0.5,10.2,19.5+1.8)))
+holoPos(18,entity():toWorld(vec(-4-EngRun*0.5,10.2,19.5+0.1)))
+holoPos(19,entity():toWorld(vec(-4-NumberLights*0.5,10.2,19.5-1.5)))
+holoPos(20,entity():toWorld(vec(-4.2+Start,9,19.5-5.8)))
+
+holoBodygroup(7,5,1-BCI)
