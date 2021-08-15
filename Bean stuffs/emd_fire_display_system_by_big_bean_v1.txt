@@ -4,11 +4,11 @@
 @outputs RX_EOTMPH RX_EOTBrakePipe EOTDSetID Running DrivenDistMI AlertEmergency BCI IsolatedBrakes
 #----
 #General variables
-@persist Run  Units SkipBoot UseAlerter AlerterMaxVolume AlerterResetKey:string SetToAmps MaxTE MaxContTE MaxTMCurrent MaxContTMCurrent MaxDynCurrent MaxContDynCurrent FuelTankCap GenMaxLoad NumOfTracMotors 
-@persist BrakePanelYeet LocoDataInfo:table
-@persist RLCPTW:wirelink [Driver Owner User]:entity [UnitsData SmoothTable]:table MainPage SecPage CanRun
+@persist Run  Units SkipBoot ShowCredits UseAlerter AlerterMaxVolume AlerterResetKey:string SetToAmps MaxTE MaxContTE MaxTMCurrent MaxContTMCurrent MaxDynCurrent MaxContDynCurrent FuelTankCap GenMaxLoad NumOfTracMotors 
+@persist BrakePanelYeet TimeFormat Timezone HasDST TimezoneName:string LocoDataInfo:table
+@persist RLCPTW:wirelink [Driver Owner User]:entity [UnitsData SmoothTable]:table MainPage SecPage CanRun OSLoaded OSLoadProgress
 @persist [LightBlue DarkBlue LightGreen LightRed OffWhite OnWhite OffRed OnRed OffYellow OnYellow OffBlue]:vector
-@persist BCI AlerterOn AlerterReset  DrivenDistMI Accel MPH1 MPH2 ACheck Speed1 Speed2 AETripped FirmwareVersion:string TMCurrent
+@persist BCI AlerterOn AlerterReset  DrivenDistMI Accel MPH1 MPH2 ACheck Speed1 Speed2 AETripped FirmwareVersion:string TMCurrent  Year Month Day Hours Minutes Seconds  HTZ HoursTZ DayTZ MonthTZ YearTZ
 #----
 #Add-on E2 vars
 @persist EOTDLinked EOTDSetID RearPres LowFuel
@@ -24,11 +24,10 @@
 @persist MB1 MB2 MB3 MB4 MB5 MB6 MB7 MB8 SB1 SB2 SB3 SB4 SB5 SB6 SB7 SB8
 #----
 @trigger none
-FirmwareVersion = "101.25"
+FirmwareVersion = "101.27"
 #----
-#[ This is a recreation of the EMD FIRE locomotive displays by, you guessed it, Big ol' Bean. Let's hope the lost braincells will be worth it...
-A disclaimer or something: This is the V1 version. You will not get the V2, because the public is about as trust-worthy as eating yogurt that expired 1 year ago 
-and expecting it to not give you some toilet issues...
+#[ This is a recreation of the EMD FIRE locomotive displays by, you guessed it, Big ol' Bean.
+A disclaimer or something: This is the V1 version. You will not get the V2, because I trust the public about as much as the Microsoft Support Indian Guy(tm) that's telling me I have a virus in my PC
 Also, the features in this version may not be realistic compared to the real life version, but I am not editing them even if you'll complain, so have fun :)
 
 Setup:
@@ -82,7 +81,7 @@ The syntax is .<command name>
 For main display buttons, the commands are .MB1 to .MB8
 For secondary display buttons, it's identical but .SB1, etc. instead of .MB1
 
-You may notice that some buttons do not do anything, despite them being Blue. This is because their actions aren't implemented for simplification.
+You may notice that some buttons do not do anything, despite them being Blue. This is because their actions aren't implemented for simplification (or because it's the public version)
 
 Anyways that's about it. Config is down there, you know what to do. Adios
 ]#
@@ -93,10 +92,9 @@ if(first()|dupefinished()){
     #-------
     #Config:
     #-------
-
-    Units = 0 #Changes the DEFAULT units of values displayed (you can change them any time "in-game" later (0 = Imperial US, 1 = Metric)
-    #Note that this applies to stuff in the config too, so for example, the Unit horsepower info will get converted to kW
+    Units = 0 #Changes the DEFAULT units of values displayed (you can change them any time "in-game" later (0 = Imperial US, 1 = Metric))
     SkipBoot = 0 #Skips the bootup sequence (WARNING: This option is kinda broken and should only be used for debugging!)
+    ShowCredits = 1 #If set to 1, shows the people responsible for creating this mess at the bootup of the system
     UseAlerter = 1 #For those who want to sleep during driving
     AlerterMaxVolume = 0.5 #Maximum volume of the alerter sound (set to 1 if you're deaf)
     AlerterResetKey = "T" #The key that you have to press to acknowledge that you're not dead
@@ -111,6 +109,10 @@ if(first()|dupefinished()){
     GenMaxLoad = 6000 #Maximum traction generator load
     NumOfTracMotors = 6 #Number of traction motors on your locomotive (Max is 6, because if you're using more than that, I'll call Doomguy and tell him to bring the chainsaw too)
     BrakePanelYeet = 0 #YEETs the shit out of the brake panel on the main display (so that you can use it in an SD75I)
+    TimeFormat = 0 #When 1, the time format will be set to the superior 24 hour format, otherwise it'll use the AM/PM type
+    Timezone = 0 #Sets your current timezone (UTC + this many hours, note that this has to be the non-daylight saving time timezone, because DST is automatic, if it is turned on)
+    HasDST = 0 #Tells the E2 whether or not the timezone has daylight saving, if it does, turn this to 1
+    TimezoneName = "UTC" #The name of the timezone you are in
     #Loco data config
     LocoDataInfo = table(
     "SD70MAC", #Unit name
@@ -260,7 +262,131 @@ if(first()|dupefinished()){
         return Out
     }
     
-    #The "main" function that loads all of the stuff on the EGP screens
+    
+    #A cool bootup thing for your eyes to enjoy
+    #------------------------------------------
+    function void wirelink:bootupScreenLoad(ShowOSScreen, SetupScreen){
+        local E = This
+        local White = vec(240)
+        local Blue = vec(0, 110, 230)
+        
+        if(ShowOSScreen){
+            #OS logo
+            local O = 1
+            E:egpTextLayout(O, "Bean", vec2(180, 370), vec2(844, 240))
+            E:egpFont(O, "Consolas Bold", 120)
+            E:egpAlign(O, 0, 1)
+            E:egpColor(O, White)
+            
+            O = 2
+            E:egpTextLayout(O, "OS", vec2(180, 370), vec2(664, 240))
+            E:egpFont(O, "Consolas", 120)
+            E:egpAlign(O, 2, 1)
+            E:egpColor(O, Blue)
+            
+            #Underline
+            O = 3
+            E:egpPoly(O, array(vec2(180, 570), vec2(844, 570), vec2(800, 590), vec2(224, 590)))
+            E:egpColor(O, White)
+            
+            #Loading bar (inside of the underline)
+            O = 4
+            local UpperPos = clamp(OSLoadProgress * 624, 0, 624)
+            local LowerPosFull = clamp(UpperPos, 0, 596)
+            local LowerVertical = (574 + clamp(12 * min(LowerPosFull, 28) / 28, 0, 12))
+            
+            local PosArray = array(
+            vec2(200, 574),
+            vec2(200 + UpperPos, 574),
+            vec2(200 + LowerPosFull, LowerVertical), #Delta 596, 568, Max 796
+            vec2(200 + min(LowerPosFull, 28), LowerVertical)
+            )
+            E:egpPoly(O, PosArray)
+            E:egpColor(O, Blue)
+            
+            #Loading text
+            O = 5
+            E:egpTextLayout(O, "Loading - Please wait...", vec2(0, 600), vec2(1024, 40))
+            E:egpFont(O, "Consolas", 20)
+            E:egpAlign(O, 1, 0)
+            
+            #Some other texts
+            O = 6
+            E:egpText(O, "System: v1.0.15 Pro", vec2(10, 1014))
+            E:egpFont(O, "Arial", 18)
+            E:egpAlign(O, 0, 2)
+            E:egpColor(O, White)
+            
+            #Do not steal my shit... bitch
+            O = 7
+            E:egpText(O, format("Copyright BeanTek %04d All Rights Reserved", time("year")), vec2(1014, 1014))
+            E:egpFont(O, "Arial Narrow", 18)
+            E:egpAlign(O, 2, 2)
+            E:egpColor(O, White)
+            
+            #Credits
+            if(ShowCredits){
+                O = 8
+                E:egpText(O, "Programmer:", vec2(10, 10))
+                E:egpFont(O, "Arial", 16)
+                E:egpAlign(O, 0, 0)
+                E:egpColor(O, White)
+                
+                O = 9
+                E:egpText(O, "Bug testing & help:", vec2(10, 50))
+                E:egpFont(O, "Arial", 16)
+                E:egpAlign(O, 0, 0)
+                E:egpColor(O, White)
+                
+                O = 10
+                E:egpText(O, "Information provider:", vec2(10, 90))
+                E:egpFont(O, "Arial", 16)
+                E:egpAlign(O, 0, 0)
+                E:egpColor(O, White)
+                
+                #Names
+                O = 11
+                E:egpText(O, "The Big Bean 125", vec2(190, 10))
+                E:egpFont(O, "Arial", 16)
+                E:egpAlign(O, 0, 0)
+                E:egpColor(O, Blue)
+                
+                O = 12
+                E:egpText(O, "Chessie Computer", vec2(260, 50))
+                E:egpFont(O, "Arial", 16)
+                E:egpAlign(O, 0, 0)
+                E:egpColor(O, Blue)
+                
+                O = 13
+                E:egpText(O, "Cubic Revolution", vec2(290, 90))
+                E:egpFont(O, "Arial", 16)
+                E:egpAlign(O, 0, 0)
+                E:egpColor(O, Blue)
+            }
+        }else{
+            #"Starting Applications" box
+            local O = 1
+            E:egpBox(O, vec2(512, 512), vec2(512, 300))
+            
+            O = 2
+            E:egpText(O, "Starting Applications...", vec2(512, 512))
+            E:egpFont(O, "Arial", 20)
+            E:egpAlign(O, 1, 1)
+            E:egpColor(O, vec(0))
+            
+            if(!SetupScreen){
+                #Firmware version indicator
+                O = 3
+                E:egpText(O, format("Firmware ver.: %s", FirmwareVersion), vec2(10, 1014))
+                E:egpFont(O, "Arial", 18)
+                E:egpAlign(O, 0, 2)
+            }
+        }
+    }
+    #----
+    
+    #The main function that loads all of the stuff on the EGP screens
+    #----------------------------------------------------------------
     function void wirelink:egpLoad(Page, UpperPanelLoad){
         local E = This
         
@@ -1045,14 +1171,16 @@ if(first()|dupefinished()){
     
     
     
-    #All the buttons presets on each page
+    #All the button presets on each page
+    #-----------------------------------
     function void wirelink:egpLoadButtons(Page, UpperPanelLoad){ #All the buttons presets on each page
         E = This
         
         if(UpperPanelLoad){ #Main display buttons
             E:egpButton(180, vec2(448, 980), vec2(126, 80), "Consist   Monitor", LightBlue)
             E:egpButton(183, vec2(576, 980), vec2(126, 80), "Crew  Message", LightBlue)
-            E:egpButton(186, vec2(960, 980), vec2(126, 80), "More Choices", LightGreen)
+            E:egpButton(186, vec2(832, 980), vec2(126, 80), "Change    Units", LightBlue)
+            E:egpButton(189, vec2(960, 980), vec2(126, 80), "More Choices", LightGreen)
         }
         #----
         
@@ -1114,26 +1242,91 @@ if(first()|dupefinished()){
     
     
     
-    #The function that changes stuff on the screens
+    #Updates whatever is displayed
+    #-----------------------------
     function void wirelink:egpUpdate(Page, UpperPanelLoad){
         local E = This
         
         #Time - Inception (11/10 film, would recommend)
-        local Month = monthNum2String(time("month"))
-        local Year = time("year")
-        local Day = time("day")
-        local Hour = time("hour")
-        local Min = time("min")
-        local AMPM = ((Hour >= 12 & Hour < 24) ? "PM" : "AM")
-        local HoursActual = ((Hour > 12 & Hour < 24) ? Hour - 12 : (Hour == 0 ? Hour + 12 : Hour))
+        Year = time("year")
+        Month = time("month")
+        Day = time("day")
+        Hours = time("hour")
+        Minutes = time("min")
+        Seconds = time("sec")
+        
+        #How many days there are in every month (includes leap-year)
+        DaysPerMonth = table(31, (!(Year % 4) ? 29 : 28), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+        
+        #The cool part (this basically makes sure all the different variables get shifted properly)
+        HTZ = (Hours + Minutes / 60) + (Timezone + (HasDST ? !time("isdst") : 0))
+        if(HTZ < 24 & HTZ >= 0){ #Normal hours
+            HoursTZ = HTZ
+        }elseif(HTZ >= 24){ #Hours in the next day
+            HoursTZ = HTZ - 24
+        }elseif(HTZ < 0){ #Hours in the previous day
+            HoursTZ = HTZ + 24
+        }
+        #---
+        
+        if(HTZ < 24 & HTZ >= 0){ #Normal date
+            DayTZ = Day
+            MonthTZ = Month
+            YearTZ = Year
+        }elseif(HTZ >= 24){ #Date the next day
+            if((Day + 1) > DaysPerMonth[Month, number]){
+                DayTZ = 1
+                if(Month + 1 > 12){ #Next year
+                    MonthTZ = 1
+                    YearTZ = (Year + 1)
+                }else{ #Next month
+                    MonthTZ = (Month + 1)
+                    YearTZ = Year
+                }
+            }else{ #Next day
+                DayTZ = Day + 1
+                MonthTZ = Month
+                YearTZ = Year
+            }
+        }elseif(HTZ < 0){ #Date the previous day
+            if((Day - 1) < 1){
+                if((Month - 1) < 1){ #Previous year
+                    YearTZ = Year - 1
+                    MonthTZ = 12
+                }else{ #Previous month
+                    MonthTZ = (Month - 1)
+                    YearTZ = Year
+                }
+                DayTZ = DaysPerMonth[MonthTZ, number]
+            }else{ #Previous day
+                DayTZ = (Day - 1)
+                MonthTZ = Month
+                YearTZ = Year
+            }
+        }
+        #---
+        
+        #AM/PM stuff (assuming you use that trash)
+        local AMPM = "AM"
+        local HoursActual = floor(HoursTZ)
+        if(!TimeFormat){
+            AMPM = ((HoursTZ >= 12 & HoursTZ < 24) ? "PM" : "AM")
+            HoursActual = floor((HoursTZ > 12 & HoursTZ < 24) ? HoursTZ - 12 : (HoursTZ == 0 ? HoursTZ + 12 : HoursTZ))
+        }
+        local MonthStr = monthNum2String(MonthTZ)
+        #---
         
         if(UpperPanelLoad){
             #Unit changing
             #Driven distance
             E:egpSetText(1, format("%.0f " + (Units ? UnitsData[2,string] : UnitsData[13,string]), DrivenDistMI * (Units ? UnitsData[7,number] : 1)))
             
-            E:egpSetText(3, format(Month + " %02d, %04d", Day, Year))
-            E:egpSetText(4, format("%02d:%02d " + AMPM + " UTC", HoursActual, Min))
+            E:egpSetText(3, format("%s %01d, %04d", MonthStr, Day, Year))
+            if(TimeFormat){
+                E:egpSetText(4, format("%02d:%02d:%02d %s", HoursActual, Minutes, Seconds, TimezoneName))
+            }else{
+                E:egpSetText(4, format("%02d:%02d %s %s", HoursActual, Minutes, AMPM, TimezoneName))
+            }
             
             #All of the unit changing
             local SpeedMult = (Units ? UnitsData[7,number] : 1)
@@ -1344,8 +1537,12 @@ if(first()|dupefinished()){
         if(!UpperPanelLoad){
             if(Page == 0 | Page == 5 | Page == 7){
                 #Date setting
-                E:egpSetText(1, format("%s %01d, %04d", Month, Day, Year))
-                E:egpSetText(2, format("%02d:%02d %s UTC", HoursActual, Min, AMPM))
+                E:egpSetText(1, format("%s %01d, %04d", MonthStr, Day, Year))
+                if(TimeFormat){
+                    E:egpSetText(2, format("%02d:%02d:%02d %s", HoursActual, Minutes, Seconds, TimezoneName))
+                }else{
+                    E:egpSetText(2, format("%02d:%02d %s %s", HoursActual, Minutes, AMPM, TimezoneName))
+                }
             }
             
             #Page speciffic updating
@@ -1408,29 +1605,40 @@ if(Run){
 
 #Display initialization
 if(Battery & !Running & !SkipBoot){
-    timer("start", 6000)
     EGPMain:egpResolution(vec2(0,0), vec2(1024,1024))
     EGPSec:egpResolution(vec2(0,0), vec2(1024,1024))
     
+    #Operating system load
+    if(!OSLoaded){
+        if(OSLoadProgress >= 1){
+            OSLoadProgress = 1
+            OSLoaded = 1
+            stoptimer("osLoadNext")
+            
+            EGPMain:egpClear()
+            EGPSec:egpClear()
+            
+            timer("startApps", randint(800, 1500))
+            #---
+        }else{ #Updating the load progress bar
+            timer("osLoadNext", randint(500, 1200))
+            if(clk("osLoadNext")){
+                OSLoadProgress += randint(5, 20) / 100
+            }
+            
+            EGPMain:bootupScreenLoad(1, 0)
+            EGPSec:egpClear()
+        }
+    }
+    
     #Loading screen
-    local O = 1
-    EGPMain:egpBox(O, vec2(512, 512), vec2(512, 300))
-    
-    O = 2
-    EGPMain:egpText(O, "Starting Applications...", vec2(512, 512))
-    EGPMain:egpFont(O, "Arial", 20)
-    EGPMain:egpAlign(O, 1, 1)
-    EGPMain:egpColor(O, vec(0))
-    
-    if(->EGPSec){
-        local O = 1
-        EGPSec:egpBox(O, vec2(512, 512), vec2(512, 300))
+    if(clk("startApps")){
+        EGPMain:bootupScreenLoad(0, 0)
+        if(->EGPSec){
+            EGPSec:bootupScreenLoad(0, 1)
+        }
         
-        O = 2
-        EGPSec:egpText(O, "Starting Applications...", vec2(512, 512))
-        EGPSec:egpFont(O, "Arial", 20)
-        EGPSec:egpAlign(O, 1, 1)
-        EGPSec:egpColor(O, vec(0))
+        timer("start", 6000)
     }
     
 }elseif(!Battery){ #Display shutdown
@@ -1461,7 +1669,7 @@ if(clk("start") | (SkipBoot & changed(Battery) & Battery)){
     }
 }
 if(Running){
-    timer("clkDisp", 400)
+    timer("clkDisp", 500)
 }else{
     stoptimer("clkDisp")
 }
@@ -1622,6 +1830,10 @@ if(clk("clk") & CanRun){ #Display running
             }else{
                 ABLockout = 0
             }
+        }
+        
+        if(MB7){ #Units change button
+            Units = !Units
         }
         #----
         
