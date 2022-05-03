@@ -1,52 +1,61 @@
 @name locomotive_displays/mfds/EMD FIRE Display System by Big Bean V1
-@inputs RLCPT:entity Pod:entity CtlTable:table [EGPMain EGPSec]:wirelink Battery
+@inputs RLCPT:entity Pod:entity CtlTable:table [EGPMain EGPSec]:wirelink Battery Isolation UnitNumberOvr:string
 @inputs RX_EOTPSI RX_EOTID  FuelLevel Priming Horn Bell ParkingBrake LoadShed UnitOverride
-@outputs RX_EOTMPH RX_EOTBrakePipe EOTDSetID Running DrivenDistMI AlertEmergency BCI IsolatedBrakes
+@outputs RX_EOTBrakePipe RX_EOTMPH EOTDSetID Running DrivenDistMI AlertEmergency BCI IsolatedBrakes EQResSetPSI
 #----
-#General variables
-@persist Run  Units SkipBoot ShowCredits UseAlerter AlerterMaxVolume AlerterResetKey:string SetToAmps MaxTE MaxContTE MaxTMCurrent MaxContTMCurrent MaxDynCurrent MaxContDynCurrent FuelTankCap GenMaxLoad NumOfTracMotors 
-@persist BrakePanelYeet TimeFormat Timezone HasDST TimezoneName:string LocoDataInfo:table
-@persist RLCPTW:wirelink [Driver Owner User]:entity [UnitsData SmoothTable]:table MainPage SecPage CanRun OSLoaded OSLoadProgress
+#Generic variables
+@persist Run  Units SkipBoot ShowCredits UseAlerter AlerterMaxVolume AlerterResetKey:string MaxSpeedoVelocity SetToAmps MaxTE MaxContTE MaxTMCurrent MaxContTMCurrent MaxDynCurrent MaxContDynCurrent FuelTankCap 
+@persist BrakePanelYeet TimeFormat Timezone HasDST TimezoneName:string LocoDataInfo:table SetupScreenLogo [SetupLogoScale SetupLogoCol]:vector SetupLogoMat:string
+@persist RLCPTW:wirelink [Driver User]:entity [UNIT_DATA SmoothTable]:table MainPage SecPage CanRun OSLoaded OSLoadProgress OSLoadBarPos OSLoading
 @persist [LightBlue DarkBlue LightGreen LightRed OffWhite OnWhite OffRed OnRed OffYellow OnYellow OffBlue]:vector
 @persist BCI AlerterOn AlerterReset  DrivenDistMI Accel MPH1 MPH2 ACheck Speed1 Speed2 AETripped FirmwareVersion:string TMCurrent  Year Month Day Hours Minutes Seconds  HTZ HoursTZ DayTZ MonthTZ YearTZ
 #----
 #Add-on E2 vars
-@persist EOTDLinked EOTDSetID RearPres LowFuel
+@persist LowFuel
 #----
 #RLC vars
 @persist EqualRes BrakePipe AirFlow MainRes BrakeCyl  KPH KPHRaw MPH  Length Reverser Throttle SetBrakeNotch Notch Dynamics DynaBrakePower TractiveEffort Load WheelSlip Sanding
 @persist PCSOpen On EngineNotch EngineSpeed IsLead
 #----
-#Mmonitor vars
+#Page specific vars
 @persist DynBrakeWarn UnitAlarm EOTMove  EID1 EID2 EID3 EID4 EID5 EIDStr:string
-@persist MoreOptionsSec ABLockout BCI_New IsoBrk_New
-#Commands
-@persist MB1 MB2 MB3 MB4 MB5 MB6 MB7 MB8 SB1 SB2 SB3 SB4 SB5 SB6 SB7 SB8
+@persist MoreOptionsMain Brightness
+@persist MainPagePort MoreOptionsSec  AirBrakePage ABLockout BCI_New IsoBrk_New EQSet_New  EOTIDSetup EOTDArmState CommTestResult CommTestRun CommTestFinished EOTDArmed EOTDSetID RearPres
+#Commands & buttons
+@persist [PressedKey KeyCMD]:string IsShifting KeyTimeout  MB1 MB2 MB3 MB4 MB5 MB6 MB7 MB8 SB1 SB2 SB3 SB4 SB5 SB6 SB7 SB8
 #----
 @trigger none
-FirmwareVersion = "101.27"
+FirmwareVersion = "102.01"
 #----
-#[ This is a recreation of the EMD FIRE locomotive displays by, you guessed it, Big ol' Bean.
-A disclaimer or something: This is the V1 version. You will not get the V2, because I trust the public about as much as the Microsoft Support Indian Guy(tm) that's telling me I have a virus in my PC
-Also, the features in this version may not be realistic compared to the real life version, but I am not editing them even if you'll complain, so have fun :)
+#[ Hello there.
+This is a recreation of the EMD FIRE locomotive displays by, you guessed it, Big ol' Bean.
+While not completely realistic, I think it's pretty solid for anybody who doesn't feel like spending over a year on something "pointless", so yeah, have fun using it.
+
+------------
+Version log:
+------------
+V:102.01 - Overhaul of basically every page, fixed some config stuff, cleaned up the old mess, added new loading screen for your pleasures (wow you updated V1 no way)
+--------
+V:101.xx - So old I forgot
+--------
 
 Setup:
 ------
 >>Display setup & wiring:
 1. Slap this E2 somewhere
 2. Wire EGPMain and EGPSec to the primary and secondary displays
-3. Wire RLCPT to the RLC (that was hard to figure out huh?)
+3. Wire RLCPT to the RLC (wow)
 4. Wire Pod to the Pod controller (that was hard too eh?)
 5. Wire CtlTable to the control stand controller
 6. Wire Battery to your switch that should turn this on
 
 >Additional inputs:
-1. FuelLevel is for displaying the amount of fuel in your unit (gallons by default)
-2. Priming should be on when your unit is priming
+1. FuelLevel is for displaying the amount of fuel in your unit (US gallons)
+2. Priming should be on when your unit is priming, so wire it to the either the PT2's output or to your primer button
 3. Horn and Bell go to your horn and bell
-4. ParkingBrake is basically the handbrake
-5. LoadShed is just for the indicator
-6. UnitOverride changes to European units from American (clearly inferior)
+4. ParkingBrake is basically the handbrake, just for detail really
+5. LoadShed is just for the indicator, basically pointless
+6. UnitOverride overrides the currently selected unit type, so that you can control their type from a remote button or whatever
 
 >>EOTD setup & wiring:
 First of you'll want to use the older titus' EOTD E2 (the one that doesn't work with the wireless HOTD thing).
@@ -56,7 +65,7 @@ It's quite straight forward:
 2. Add this block of code to the bottom of the E2:
     local IDS = toString(Skin1) + toString(Skin2) + toString(Skin3) + toString(Skin4) + toString(Skin5)
     EOTDID = IDS:toNumber()
-3. Put a normal wire radio onto the EOTD with at least two values (doesn't have to be more). Channel can be left 1 because it'll get overwritten anyways.
+3. Put a normal wire radio onto the EOTD with at least two values (can be more but they won't be used). Channel can be left at 1 because it'll get overwritten anyway.
 4. Next, put a second wire radio into your locomotive with, again, two values
 
 >>EOTD side radio wiring setup:
@@ -71,19 +80,7 @@ It's quite straight forward:
 3. RX_EOTBrakePipe goes to input 1 on the radio
 4. RX_EOTMPH goes to input 2 on the radio
 
-That's all for the EOTD setup.
-
-
-Operation:
-----------
-For selection of menus, use chat commands.
-The syntax is .<command name>
-For main display buttons, the commands are .MB1 to .MB8
-For secondary display buttons, it's identical but .SB1, etc. instead of .MB1
-
-You may notice that some buttons do not do anything, despite them being Blue. This is because their actions aren't implemented for simplification (or because it's the public version)
-
-Anyways that's about it. Config is down there, you know what to do. Adios
+And that's all. Config's down below, you know what to do. Adios.
 ]#
 if(first()|duped()){
     Run = 0
@@ -94,69 +91,85 @@ if(first()|dupefinished()){
     #-------
     Units = 0 #Changes the DEFAULT units of values displayed (you can change them any time "in-game" later (0 = Imperial US, 1 = Metric))
     SkipBoot = 0 #Skips the bootup sequence (WARNING: This option is kinda broken and should only be used for debugging!)
-    ShowCredits = 1 #If set to 1, shows the people responsible for creating this mess at the bootup of the system
     UseAlerter = 1 #For those who want to sleep during driving
     AlerterMaxVolume = 0.5 #Maximum volume of the alerter sound (set to 1 if you're deaf)
     AlerterResetKey = "T" #The key that you have to press to acknowledge that you're not dead
-    MaxTE = 200 #Maximum Tractive effort of the locomotive
-    MaxContTE = 150 #Max continuous tractive effort
-    SetToAmps = 0 #When this is used, the Tractive Effort indicator will change to traction motor/dynamics current instead
-    MaxTMCurrent = 1650 #Maximum traction motor current
-    MaxContTMCurrent = 1250 #Maximum continuous traction motor current
-    MaxDynCurrent = 1000 #Maximum dynamic brake current
-    MaxContDynCurrent = 800 #Maximum continuous dynamic brake current
-    FuelTankCap = 4500 #Capacity of the locomotive's fuel tank (gal)
-    GenMaxLoad = 6000 #Maximum traction generator load
-    NumOfTracMotors = 6 #Number of traction motors on your locomotive (Max is 6, because if you're using more than that, I'll call Doomguy and tell him to bring the chainsaw too)
+    MaxSpeedoVelocity = 80 #Sets the maximum velocity in MPH shown on the analog speedometer
+    SetToAmps = 0 #When this is used, the Tractive Effort indicator will change to traction motor/dynamic brake current instead
+    MaxTE = 200 #Maximum Tractive effort of the locomotive (ft-lbf)
+    MaxContTE = 199 #Max continuous tractive effort (If it's the same as MaxTE, set it one below so that MaxTE on the TE bar isn't completely white, same applies for the currents)
+    MaxTMCurrent = 2265 #Maximum traction motor current (Important note: Dynamic brake max TE relies on the max TM and DB currents, so make sure those are set up right)
+    MaxContTMCurrent = 2264 #Maximum continuous traction motor current
+    MaxDynCurrent = 755 #Maximum dynamic brake current
+    MaxContDynCurrent = 754 #Maximum continuous dynamic brake current
+    FuelTankCap = 5000 #Capacity of the locomotive's fuel tank (gal)
     BrakePanelYeet = 0 #YEETs the shit out of the brake panel on the main display (so that you can use it in an SD75I)
-    TimeFormat = 0 #When 1, the time format will be set to the superior 24 hour format, otherwise it'll use the AM/PM type
+    TimeFormat = 1 #When 1, the time format will be set to the superior 24 hour format, otherwise it'll use the AM/PM type
     Timezone = 0 #Sets your current timezone (UTC + this many hours, note that this has to be the non-daylight saving time timezone, because DST is automatic, if it is turned on)
-    HasDST = 0 #Tells the E2 whether or not the timezone has daylight saving, if it does, turn this to 1
-    TimezoneName = "UTC" #The name of the timezone you are in
-    #Loco data config
+    HasDST = 1 #Tells the E2 whether or not the timezone has daylight saving, if it does, set this to 1
+    TimezoneName = "CET" #The name of the timezone you are in
     LocoDataInfo = table(
     "SD70MAC", #Unit name
-    "CSX", #Unit owner (RR, abbreviated)
-    "4758" #Unit number
+    "CSX", #Unit owner (Railroad, abbreviated)
+    "4758" #Unit number (unless UnitNumberOvr is wired)
     )
+    SetupScreenLogo = 0 #Creates a hologram for a logo that is sometimes present in the middle of the setup monitor main page
+    SetupLogoScale = vec(0.3, 0.5, 1) #Scales the logo hologram, if your logo doesn't match the size it should be
+    SetupLogoCol = vec(255, 255, 255)
+    SetupLogoMat = "" #The actual logo
+    
     #-------------#
     #End of config#
     #-------------#
     
     #Init:
     #-----
-    UnitsData = table(
-    "KPH", #1 - 6
-    "km",
-    "kW",
-    "kN",
-    "m",
-    "L",
-    1.609344, #7 - 11, KPH/km
-    0.746, #kW
-    4.4482216, #N
-    0.3048, #m
-    3.785412, #L
-    "MPH", #12 - 17
-    "mi",
-    "hp",
-    "kLb",
-    "ft",
-    "Gal",
-    1, #18
-    "C",
-    1.8, #Make sure to add (F-32) before this
-    "F",
-    "bar", #22
-    0.0689,
-    "PSI"
-    )
+    #Unit data for value unit changing
+    #String values
+    UNIT_DATA["KPH", string] = "KPH"
+    UNIT_DATA["km", string] = "km"
+    UNIT_DATA["kW", string] = "kW"
+    UNIT_DATA["kN", string] = "kN"
+    UNIT_DATA["m", string] = "m"
+    UNIT_DATA["L", string] = "L"
+    UNIT_DATA["C", string] = "°C"
+    UNIT_DATA["bar", string] = "bar"
+    UNIT_DATA["Nm", string] = "Nm"
+    #--
+    UNIT_DATA["MPH", string] = "MPH"
+    UNIT_DATA["mi", string] = "mi"
+    UNIT_DATA["hp", string] = "hp"
+    UNIT_DATA["kLb", string] = "kLb"
+    UNIT_DATA["ft", string] = "ft"
+    UNIT_DATA["Gal", string] = "Gal"
+    UNIT_DATA["F", string] = "°F"
+    UNIT_DATA["PSI", string] = "PSI"
+    UNIT_DATA["ft-lbf", string] = "ft-lbf"
+    
+    #Multipliers
+    UNIT_DATA["M_km", number] = 1.609344
+    UNIT_DATA["M_kW", number] = 0.746
+    UNIT_DATA["M_N", number] = 4.4482216
+    UNIT_DATA["M_m", number] = 0.3048
+    UNIT_DATA["M_L", number] = 3.785412
+    UNIT_DATA["M_C", number] = 1.8
+    UNIT_DATA["M_bar", number] = 0.0689
+    UNIT_DATA["M_Nm", number] = 1.3558179483
     
     #Var init
     MainPage = 0 #Main monitor pages (range: 0 - 2)
-    SecPage = 3 #Secondary (setup) monitor pages (range: 3 - idk)
+    SecPage = 0 #Secondary (setup) monitor pages (range: yes)
+    AirBrakePage = 0
     
     Running = 0
+    Brightness = 1
+    EQResSetPSI = EQSet_New = 90
+    BCI = BCI_New = 0
+    IsolatedBrakes = IsoBrk_New = 0
+    ABLockout = 0
+    EOTDSetID = 0
+    EOTDArmState = EOTDArmed = 0
+    
     LightBlue = vec(130,230,245)
     OffBlue = vec(10,40,45)
     DarkBlue = vec(15, 30, 100)
@@ -175,10 +188,7 @@ if(first()|dupefinished()){
     EGPMain:egpClear()
     EGPSec:egpClear()
     
-    Owner = owner()
-    runOnChat(1)
-    
-    setName("EMD FIRE Display System by Big Bean V1\n Firmware Version: " + FirmwareVersion + "\n No EM2000 because I don't trust the public")
+    setName("Immersive FIRE by Big Bean\nFirmware Version: " + FirmwareVersion + "\nNot as immersive, still just as hot")
     #End of init#
     #-----------#
     
@@ -233,10 +243,12 @@ if(first()|dupefinished()){
         
         E:egpBox(Index, Pos, Size)
         E:egpColor(Index, Color)
+        
         E:egpTextLayout(Index + 1, Label, vec2(Pos:x() - Size:x() / 2, Pos:y() - Size:y() / 2), vec2(Size:x(), Size:y()))
         E:egpColor(Index + 1, vec(0))
         E:egpFont(Index + 1, "Marlett", 12)
         E:egpAlign(Index + 1, 1, 1)
+        
         E:egpBoxOutline(Index + 2, Pos, Size)
     }
     
@@ -267,101 +279,78 @@ if(first()|dupefinished()){
     #------------------------------------------
     function void wirelink:bootupScreenLoad(ShowOSScreen, SetupScreen){
         local E = This
-        local White = vec(240)
-        local Blue = vec(0, 110, 230)
+        local Gray = vec(136)
+        local Blue = vec(53, 75, 115)
+        local Orange = vec(247, 140, 30)
+        local DarkGray = vec(60)
         
         if(ShowOSScreen){
-            #OS logo
-            local O = 1
-            E:egpTextLayout(O, "Bean", vec2(180, 370), vec2(844, 240))
-            E:egpFont(O, "Consolas Bold", 120)
-            E:egpAlign(O, 0, 1)
-            E:egpColor(O, White)
-            
-            O = 2
-            E:egpTextLayout(O, "OS", vec2(180, 370), vec2(664, 240))
-            E:egpFont(O, "Consolas", 120)
-            E:egpAlign(O, 2, 1)
-            E:egpColor(O, Blue)
-            
-            #Underline
-            O = 3
-            E:egpPoly(O, array(vec2(180, 570), vec2(844, 570), vec2(800, 590), vec2(224, 590)))
-            E:egpColor(O, White)
-            
-            #Loading bar (inside of the underline)
-            O = 4
-            local UpperPos = clamp(OSLoadProgress * 624, 0, 624)
-            local LowerPosFull = clamp(UpperPos, 0, 596)
-            local LowerVertical = (574 + clamp(12 * min(LowerPosFull, 28) / 28, 0, 12))
-            
-            local PosArray = array(
-            vec2(200, 574),
-            vec2(200 + UpperPos, 574),
-            vec2(200 + LowerPosFull, LowerVertical), #Delta 596, 568, Max 796
-            vec2(200 + min(LowerPosFull, 28), LowerVertical)
-            )
-            E:egpPoly(O, PosArray)
-            E:egpColor(O, Blue)
-            
-            #Loading text
-            O = 5
-            E:egpTextLayout(O, "Loading - Please wait...", vec2(0, 600), vec2(1024, 40))
-            E:egpFont(O, "Consolas", 20)
-            E:egpAlign(O, 1, 0)
-            
-            #Some other texts
-            O = 6
-            E:egpText(O, "System: v1.0.15 Pro", vec2(10, 1014))
-            E:egpFont(O, "Arial", 18)
-            E:egpAlign(O, 0, 2)
-            E:egpColor(O, White)
-            
-            #Do not steal my shit... bitch
-            O = 7
-            E:egpText(O, format("Copyright BeanTek %04d All Rights Reserved", time("year")), vec2(1014, 1014))
-            E:egpFont(O, "Arial Narrow", 18)
-            E:egpAlign(O, 2, 2)
-            E:egpColor(O, White)
-            
-            #Credits
-            if(ShowCredits){
-                O = 8
-                E:egpText(O, "Programmer:", vec2(10, 10))
-                E:egpFont(O, "Arial", 16)
-                E:egpAlign(O, 0, 0)
-                E:egpColor(O, White)
-                
-                O = 9
-                E:egpText(O, "Bug testing & help:", vec2(10, 50))
-                E:egpFont(O, "Arial", 16)
-                E:egpAlign(O, 0, 0)
-                E:egpColor(O, White)
-                
-                O = 10
-                E:egpText(O, "Information provider:", vec2(10, 90))
-                E:egpFont(O, "Arial", 16)
-                E:egpAlign(O, 0, 0)
-                E:egpColor(O, White)
-                
-                #Names
-                O = 11
-                E:egpText(O, "The Big Bean 125", vec2(190, 10))
-                E:egpFont(O, "Arial", 16)
-                E:egpAlign(O, 0, 0)
+            if(!SetupScreen){ #Stuff to show if this is the main screen
+                #OS logo
+                local O = 1
+                E:egpTextLayout(O, "Bean", vec2(142, 370), vec2(740, 240))
+                E:egpFont(O, "Consolas Bold", 120)
+                E:egpAlign(O, 0, 1)
                 E:egpColor(O, Blue)
                 
+                O = 2
+                E:egpTextLayout(O, "OS", vec2(142, 370), vec2(740, 240))
+                E:egpFont(O, "Consolas Bold", 120)
+                E:egpAlign(O, 2, 1)
+                E:egpColor(O, Gray)
+                
+                O = 3
+                E:egpText(O, ":", vec2(620, 490))
+                E:egpFont(O, "Consolas Bold", 120)
+                E:egpAlign(O, 1, 1)
+                E:egpColor(O, Orange)
+                #---
+                
+                
+                #Loading bar rim of the dark variety
+                O = 4
+                E:egpRoundedBox(O, vec2(512, 610), vec2(714, 32))
+                E:egpRadius(O, 5)
+                E:egpColor(O, DarkGray * vec(0.6))
+                
+                
+                #Loading bar of the bright variety
+                O = 5 #Bar center piece
+                E:egpRoundedBox(O, vec2(0, 0), vec2(68, 24))
+                E:egpRadius(O, 4)
+                E:egpColor(O, Orange)
+                
+                O = 6 #Darker inner piece
+                E:egpRoundedBox(O, vec2(0, 610), vec2(64, 20)) #range 100 - 924
+                E:egpRadius(O, 4)
+                E:egpColor(O, Orange * vec(0.95))
+                E:egpParent(5, 6)
+                
+                
+                #A rim of the loading bar rim of slightly brighter variety
                 O = 12
-                E:egpText(O, "Chessie Computer", vec2(260, 50))
-                E:egpFont(O, "Arial", 16)
-                E:egpAlign(O, 0, 0)
-                E:egpColor(O, Blue)
+                E:egpRoundedBoxOutline(O, vec2(512, 610), vec2(716, 36))
+                E:egpRadius(O, 5)
+                E:egpSize(O, 2)
+                E:egpColor(O, DarkGray)
                 
-                O = 13
-                E:egpText(O, "Cubic Revolution", vec2(290, 90))
-                E:egpFont(O, "Arial", 16)
-                E:egpAlign(O, 0, 0)
-                E:egpColor(O, Blue)
+                O = 13 #Cover box right
+                E:egpBox(O, vec2(950, 610), vec2(156, 32))
+                E:egpColor(O, vec(0))
+                
+                O = 14 #Cover box left
+                E:egpBox(O, vec2(74, 610), vec2(156, 32))
+                E:egpColor(O, vec(0))
+                #---
+                
+                
+                #Won't be copying this any time soon my man
+                O = 15
+                E:egpTextLayout(O, format("Copyright BeanTek %04d\n All rights reserved", time("year")), vec2(620, 970), vec2(400, 50))
+                E:egpFont(O, "Consolas", 12)
+                E:egpAlign(O, 2, 1)
+                E:egpColor(O, Gray)
+                #----
             }
         }else{
             #"Starting Applications" box
@@ -387,7 +376,7 @@ if(first()|dupefinished()){
     
     #The main function that loads all of the stuff on the EGP screens
     #----------------------------------------------------------------
-    function void wirelink:egpLoad(Page, UpperPanelLoad){
+    function void wirelink:egpLoad(Page, UpperPanelLoad, PortMainPages){
         local E = This
         
         if(UpperPanelLoad){
@@ -413,7 +402,7 @@ if(first()|dupefinished()){
             E:egpAlign(O, 0, 0)
             
             O = 4
-            E:egpTextLayout(O, "12:00 AM UTC", vec2(839, 10), vec2(180,30))
+            E:egpTextLayout(O, (TimeFormat ? "12:00:00 UTC" : "12:00 AM UTC"), vec2(839, 10), vec2(180,30))
             E:egpColor(O, LightBlue)
             E:egpFont(O, "Marlett", 15)
             E:egpAlign(O, 2, 0)
@@ -523,42 +512,42 @@ if(first()|dupefinished()){
             E:egpAlign(O, 0, 0)
             
             O = 57
-            E:egpText(O, toString(round(10 * (Units ? UnitsData[7,number] : 1), 0)), vec2(405, 190))
+            E:egpText(O, format("%.0f", MaxSpeedoVelocity * (Units ? UNIT_DATA["M_km", number] : 1) * 0.125), vec2(405, 190))
             E:egpFont(O, "Marlett", 14)
             E:egpAlign(O, 0, 0)
             
             O = 58
-            E:egpText(O, toString(round(20 * (Units ? UnitsData[7,number] : 1), 0)), vec2(405, 130))
+            E:egpText(O, format("%.0f", MaxSpeedoVelocity * (Units ? UNIT_DATA["M_km", number] : 1) * 0.25), vec2(405, 130))
             E:egpFont(O, "Marlett", 14)
             E:egpAlign(O, 0, 0)
             
             O = 59
-            E:egpText(O, toString(round(30 * (Units ? UnitsData[7,number] : 1), 0)), vec2(440, 86))
+            E:egpText(O, format("%.0f", MaxSpeedoVelocity * (Units ? UNIT_DATA["M_km", number] : 1) * 0.375), vec2(440, 86))
             E:egpFont(O, "Marlett", 14)
             E:egpAlign(O, 0, 0)
             
             O = 60
-            E:egpText(O, toString(round(40 * (Units ? UnitsData[7,number] : 1), 0)), vec2(512, 65))
+            E:egpText(O, format("%.0f", MaxSpeedoVelocity * (Units ? UNIT_DATA["M_km", number] : 1) * 0.5), vec2(512, 65))
             E:egpFont(O, "Marlett", 14)
             E:egpAlign(O, 1, 0)
             
             O = 61
-            E:egpText(O, toString(round(50 * (Units ? UnitsData[7,number] : 1), 0)), vec2(580, 86))
+            E:egpText(O, format("%.0f", MaxSpeedoVelocity * (Units ? UNIT_DATA["M_km", number] : 1) * 0.625), vec2(580, 86))
             E:egpFont(O, "Marlett", 14)
             E:egpAlign(O, 2, 0)
             
             O = 62
-            E:egpText(O, toString(round(60 * (Units ? UnitsData[7,number] : 1), 0)), vec2(625, 130))
+            E:egpText(O, format("%.0f", MaxSpeedoVelocity * (Units ? UNIT_DATA["M_km", number] : 1) * 0.75), vec2(625, 130))
             E:egpFont(O, "Marlett", 14)
             E:egpAlign(O, 2, 0)
             
             O = 63
-            E:egpText(O, toString(round(70 * (Units ? UnitsData[7,number] : 1), 0)), vec2(625, 190))
+            E:egpText(O, format("%.0f", MaxSpeedoVelocity * (Units ? UNIT_DATA["M_km", number] : 1) * 0.875), vec2(625, 190))
             E:egpFont(O, "Marlett", 14)
             E:egpAlign(O, 2, 0)
             
             O = 64
-            E:egpText(O, toString(Units ? 130 : 80), vec2(595, 245))
+            E:egpText(O, format("%.0f", MaxSpeedoVelocity * (Units ? UNIT_DATA["M_km", number] : 1)), vec2(595, 245))
             E:egpFont(O, "Marlett", 14)
             E:egpAlign(O, 2, 0)
             
@@ -576,125 +565,90 @@ if(first()|dupefinished()){
             E:egpBoxLabeled(67, vec2(670, 60), vec2(110, 70), "Accel")
             E:egpBoxLabeled(70, vec2(788, 60), vec2(110, 70), "Length")
             E:egpBoxLabeled(73, vec2(906, 60), vec2(110, 70), "Reverser")
-            E:egpBoxLabeled(76, vec2(669, 145), vec2(228, 100), "Tractive Effort")
-            E:egpBoxLabeled(79, vec2(906, 145), vec2(110, 100), "Throttle")
+            E:egpBoxLabeled(76, vec2(669, 140), vec2(228, 120), "Consist Effort")
+            E:egpBoxLabeled(79, vec2(669, 200), vec2(228, 60), (SetToAmps ? "Amps" : "Tractive Effort"))
+            E:egpBoxLabeled(82, vec2(906, 140), vec2(110, 120), "TH Handle")
             
             
             #Tractive effort bar
-            local TEDiff = (MaxContTE / MaxTE)
-            local ADiff = (MaxContTMCurrent / MaxTMCurrent)
-            local UsedDiff = (SetToAmps ? ADiff : TEDiff)
-            O = 82 #White part
-            E:egpBox(O, vec2(round(690 + (UsedDiff * 300) / 2,0), 278), vec2(round(UsedDiff * 300 + 1,0), 6))
-            O = 83 #Yellow part
-            E:egpBox(O, vec2(round((690 + (UsedDiff * 300)) + (300 - UsedDiff * 300) / 2,0), 278), vec2(round(300 - UsedDiff * 300,0) + 1, 6))
+            local MaxTE_Actual = (Dynamics ? MaxTE * (MaxDynCurrent / MaxTMCurrent) : MaxTE) #This calculates the "approximate" max tractive effort for dynamics
+            local MaxContTE_Actual = (Dynamics ? MaxContTE * (MaxContDynCurrent / MaxTMCurrent) : MaxContTE)
+            local MaxCurrent_Act = (Dynamics ? MaxDynCurrent : MaxTMCurrent)
+            local MaxContCurrent_Act = (Dynamics ? MaxContDynCurrent : MaxContTMCurrent)
+            local ActualDiff = (SetToAmps ? (MaxContCurrent_Act / MaxCurrent_Act) : (MaxContTE_Actual / MaxTE_Actual))
+            
+            O = 85 #White part
+            E:egpBox(O, vec2(round(690 + (ActualDiff * 300) / 2,0), 292), vec2(round(ActualDiff * 300 + 1,0), 6))
+            O = 86 #Yellow part
+            E:egpBox(O, vec2(round((690 + (ActualDiff * 300)) + (300 - ActualDiff * 300) / 2,0), 292), vec2(round(300 - ActualDiff * 300,0) + 1, 6))
             E:egpColor(O, OnYellow)
             
-            #Pointer/number colors
-            local Col1 = (UsedDiff >= 0.25 ? vec(255) : OnYellow)
-            local Col2 = (UsedDiff >= 0.50 ? vec(255) : OnYellow)
-            local Col3 = (UsedDiff >= 0.75 ? vec(255) : OnYellow)
-            local Col4 = (UsedDiff >= 1 ? vec(255) : OnYellow)
+            #Pointers and numbers
+            for(I = 1, 5){
+                local Izero = (I - 1)
+                local Index = (Izero * 2 + 87)
+                
+                #Pointer generation
+                E:egpBox(Index, vec2(690 + Izero * 75, 299), vec2(4, 18))
+                E:egpColor(Index, (ActualDiff <= (Izero / 4) ? OnYellow : vec(255)))
+                
+                #Numbers
+                E:egpText(Index + 1, format("%.0f", (SetToAmps ? MaxCurrent_Act : MaxTE_Actual * (Units ? UNIT_DATA["M_N", number] : 1)) * (Izero / 4)), vec2(690 + Izero * 75, 276))
+                E:egpFont(Index + 1, "Marlett", 14)
+                E:egpAlign(Index + 1, 1, 1)
+                E:egpColor(Index + 1, (ActualDiff <= (Izero / 4) ? OnYellow : vec(255)))
+            }
             
-            #Bar pointers
-            O = 84
-            E:egpBox(O, vec2(690, 285), vec2(4, 18))
             
-            O = 85
-            E:egpBox(O, vec2(765, 285), vec2(4, 18))
-            E:egpColor(O, Col1)
-            
-            O = 86
-            E:egpBox(O, vec2(840, 285), vec2(4, 18))
-            E:egpColor(O, Col2)
-            
-            O = 87
-            E:egpBox(O, vec2(915, 285), vec2(4, 18))
-            E:egpColor(O, Col3)
-            
-            O = 88
-            E:egpBox(O, vec2(988, 285), vec2(4, 18))
-            E:egpColor(O, Col4)
-            
-            #Bar numbers
-            O = 89
-            E:egpText(O, "0", vec2(690, 260))
-            E:egpFont(O, "Marlett", 14)
-            E:egpAlign(O, 1, 1)
-            
-            O = 90
-            E:egpText(O, toString(0.25 * MaxTE), vec2(765, 260))
-            E:egpFont(O, "Marlett", 14)
-            E:egpAlign(O, 1, 1)
-            E:egpColor(O, Col1)
-            
-            O = 91
-            E:egpText(O, toString(0.5 * MaxTE), vec2(840, 260))
-            E:egpFont(O, "Marlett", 14)
-            E:egpAlign(O, 1, 1)
-            E:egpColor(O, Col2)
-            
-            O = 92
-            E:egpText(O, toString(0.75 * MaxTE), vec2(915, 260))
-            E:egpFont(O, "Marlett", 14)
-            E:egpAlign(O, 1, 1)
-            E:egpColor(O, Col3)
-            
-            O = 93
-            E:egpText(O, toString(MaxTE), vec2(990, 260))
-            E:egpFont(O, "Marlett", 14)
-            E:egpAlign(O, 1, 1)
-            E:egpColor(O, Col4)
-            
-            #Bar needle (or whatever it's called)
-            O = 94
-            E:egpTriangle(O, vec2(680, 304), vec2(700, 304), vec2(690, 292))
+            #Bar needle... thing
+            O = 97
+            E:egpTriangle(O, vec2(680, 308), vec2(700, 308), vec2(690, 296))
             E:egpColor(O, LightGreen)
             
-            O = 95
-            E:egpBox(O, vec2(690, 310), vec2(20, 10))
+            O = 98
+            E:egpBox(O, vec2(690, 313), vec2(22, 8))
             E:egpColor(O, LightGreen)
             
             
             if(!BrakePanelYeet){
                 #Value init (from left to right)
-                O = 96 #ER
+                O = 99 #ER
                 E:egpTextLayout(O, "0", vec2(9, 80), vec2(170, 150))
                 E:egpFont(O, "Marlett", 55)
                 E:egpAlign(O, 1, 1)
                 E:egpColor(O, LightGreen)
                 
-                O = 97 #BP
+                O = 100 #BP
                 E:egpTextLayout(O, "0", vec2(187, 80), vec2(170, 150))
                 E:egpFont(O, "Marlett", 55)
                 E:egpAlign(O, 1, 1)
                 E:egpColor(O, LightGreen)
                 
-                O = 98 #Rear
+                O = 101 #Rear
                 E:egpTextLayout(O, "?", vec2(9, 265), vec2(80, 50))
                 E:egpFont(O, "Marlett", 25)
                 E:egpAlign(O, 1, 1)
                 E:egpColor(O, LightGreen)
                 
-                O = 99 #Flow
+                O = 102 #Flow
                 E:egpTextLayout(O, "0", vec2(99, 265), vec2(80, 50))
                 E:egpFont(O, "Marlett", 25)
                 E:egpAlign(O, 1, 1)
                 E:egpColor(O, LightGreen)
                 
-                O = 100 #Main
+                O = 103 #Main
                 E:egpTextLayout(O, "0", vec2(187, 265), vec2(80, 50))
                 E:egpFont(O, "Marlett", 25)
                 E:egpAlign(O, 1, 1)
                 E:egpColor(O, LightRed)
                 
-                O = 101 #Cyl
+                O = 104 #Cyl
                 E:egpTextLayout(O, "0", vec2(277, 265), vec2(80, 50))
                 E:egpFont(O, "Marlett", 25)
                 E:egpAlign(O, 1, 1)
                 E:egpColor(O, LightGreen)
             }else{
-                O = 98 #Rear
+                O = 101 #Rear
                 E:egpTextLayout(O, "?", vec2(9, 265), vec2(80, 50))
                 E:egpFont(O, "Marlett", 25)
                 E:egpAlign(O, 1, 1)
@@ -703,114 +657,137 @@ if(first()|dupefinished()){
             
             
             #Speed readout
-            O = 102
+            O = 105
             E:egpTextLayout(O, "0.0", vec2(405, 185), vec2(200, 150))
             E:egpFont(O, "Marlett", 44)
             E:egpAlign(O, 1, 2)
             E:egpColor(O, LightGreen)
             
-            O = 103
-            E:egpText(O, (Units ? UnitsData[1,string] : UnitsData[12,string]), vec2(565, 320))
+            O = 106
+            E:egpText(O, (Units ? UNIT_DATA["KPH", string] : UNIT_DATA["MPH", string]), vec2(565, 320))
             E:egpFont(O, "Marlett", 16)
             E:egpAlign(O, 0, 2)
             E:egpColor(O, LightGreen)
             
             
-            O = 104 #Accel
+            O = 107 #Accel
             E:egpTextLayout(O, "0", vec2(660, 80), vec2(80, 32))
             E:egpFont(O, "Marlett", 16)
             E:egpAlign(O, 1, 2)
             E:egpColor(O, LightGreen)
             
-            O = 105
-            E:egpTextLayout(O, (Units ? UnitsData[1,string] : UnitsData[12,string]), vec2(710, 65), vec2(80, 32))
+            O = 108
+            E:egpTextLayout(O, (Units ? UNIT_DATA["KPH", string] : UNIT_DATA["MPH", string]), vec2(710, 65), vec2(80, 32))
             E:egpFont(O, "Marlett", 12)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, LightGreen)
             
-            O = 106
+            O = 109
             E:egpBox(O, vec2(750, 96), vec2(40, 2))
             E:egpColor(O, LightGreen)
             
-            O = 107
+            O = 110
             E:egpTextLayout(O, "min", vec2(710, 96), vec2(80, 24))
             E:egpFont(O, "Marlett", 12)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, LightGreen)
             
-            O = 108 #Length
+            O = 111 #Length
             E:egpTextLayout(O, "0", vec2(788, 80), vec2(80, 32))
             E:egpFont(O, "Marlett", 16)
             E:egpAlign(O, 2, 1)
             E:egpColor(O, LightBlue)
             
-            O = 109
-            E:egpTextLayout(O, (Units ? UnitsData[5,string] : UnitsData[16,string]), vec2(865, 80), vec2(32, 32))
+            O = 112
+            E:egpTextLayout(O, (Units ? UNIT_DATA["m", string] : UNIT_DATA["ft", string]), vec2(865, 80), vec2(32, 32))
             E:egpFont(O, "Marlett", 16)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, LightBlue)
             
-            O = 110 #Reverser position
+            O = 113 #Reverser position
             E:egpTextLayout(O, "Center", vec2(904, 80), vec2(110, 32))
             E:egpFont(O, "Marlett", 16)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, LightBlue)
             
-            #Tractive effort/TM current
-            O = 111
-            E:egpTextLayout(O, "0", vec2(660, 160), vec2(220, 80))
-            E:egpFont(O, "Marlett", 40)
+            
+            #Consist effort ratio (capable:total units)
+            O = 114
+            E:egpText(O, "0:1", vec2(700, 174))
+            E:egpFont(O, "Marlett", 18)
+            E:egpAlign(O, 1, 1)
+            
+            #Consist power state (P/D)
+            O = 115
+            E:egpText(O, "P", vec2(740, 174))
+            E:egpFont(O, "Marlett", 18)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, LightGreen)
-                
-            if(!SetToAmps){
-                O = 112
-                E:egpTextLayout(O, (Units ? UnitsData[4,string] : UnitsData[15,string]), vec2(820, 190), vec2(80, 40))
-                E:egpFont(O, "Marlett", 20)
-                E:egpAlign(O, 1, 1)
-                E:egpColor(O, LightGreen)
-            }else{
-                O = 112
-                E:egpTextLayout(O, "A", vec2(820, 190), vec2(80, 40))
-                E:egpFont(O, "Marlett", 20)
-                E:egpAlign(O, 1, 1)
-                E:egpColor(O, LightGreen)
-            }
+            
+            #Consist tractive effort readout
+            O = 116
+            E:egpText(O, "0", vec2(830, 174))
+            E:egpFont(O, "Marlett", 18)
+            E:egpAlign(O, 2, 1)
+            E:egpColor(O, LightGreen)
+            
+            #TE unit
+            O = 117
+            E:egpText(O, (Units ? UNIT_DATA["kN", string] : UNIT_DATA["kLb", string]), vec2(840, 174))
+            E:egpFont(O, "Marlett", 18)
+            E:egpAlign(O, 0, 1)
+            E:egpColor(O, LightGreen)
+            
+            
+            #Tractive effort readout
+            O = 118
+            E:egpText(O, "0", vec2(784, 234))
+            E:egpFont(O, "Marlett", 18)
+            E:egpAlign(O, 1, 1)
+            E:egpColor(O, LightGreen)
+            
+            O = 119
+            E:egpText(O, (SetToAmps ? "A" : (Units ? UNIT_DATA["kN", string] : UNIT_DATA["kLb", string])), vec2(840, 234))
+            E:egpFont(O, "Marlett", 18)
+            E:egpAlign(O, 0, 1)
+            E:egpColor(O, LightGreen)
+            
             
             #Throttle
-            O = 113
+            O = 120
             E:egpTextLayout(O, "Idle", vec2(905, 150), vec2(110, 110))
-            E:egpFont(O, "Marlett", 30)
+            E:egpFont(O, "Marlett", 28)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, LightGreen)
             #----Upper panel end
             
             
+            
             #----Warning indicators
-            O = 114 #Separator lines
+            O = 121 #Separator lines
             E:egpBox(O, vec2(512, 325), vec2(1024, 4))
             E:egpColor(O, LightBlue)
             
-            O = 115
+            O = 122
             E:egpBox(O, vec2(512, 405), vec2(1024, 4))
             E:egpColor(O, LightBlue)
             
             #Warnings
-            O = 116 #Wheel slip
+            O = 123 #Wheel slip
             E:egpBox(O, vec2(42, 365), vec2(82, 76))
             E:egpColor(O, OffWhite)
             
-            O = 117
+            O = 124
             E:egpTextLayout(O, "WHEEL SLIP", vec2(2, 327), vec2(82, 76))
             E:egpFont(O, "Marlett", 14)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, vec(0))
             
-            O = 118 #PCS Open
+            O = 125 #PCS Open
             E:egpBox(O, vec2(128, 365), vec2(82, 76))
             E:egpColor(O, OffRed)
             
-            O = 119
+            O = 126
             E:egpTextLayout(O, "PCS OPEN", vec2(88, 327), vec2(82, 76))
             E:egpFont(O, "Marlett", 14)
             E:egpAlign(O, 1, 1)
@@ -818,41 +795,41 @@ if(first()|dupefinished()){
             
             #Blank
             
-            O = 120 #Dyn brake
+            O = 127 #Dyn brake
             E:egpBox(O, vec2(300, 365), vec2(82, 76))
             E:egpColor(O, OffYellow)
             
-            O = 121
+            O = 128
             E:egpTextLayout(O, "DYN BRAKE", vec2(260, 327), vec2(82, 76))
             E:egpFont(O, "Marlett", 14)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, vec(0))
             
-            O = 122 #Load shed
+            O = 129 #Load shed
             E:egpBox(O, vec2(386, 365), vec2(82, 76))
             E:egpColor(O, OffYellow)
             
-            O = 123
+            O = 130
             E:egpTextLayout(O, "LOAD SHED", vec2(346, 327), vec2(82, 76))
             E:egpFont(O, "Marlett", 14)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, vec(0))
             
-            O = 124 #Alerter
+            O = 131 #Alerter
             E:egpBox(O, vec2(512, 365), vec2(164, 76))
             E:egpColor(O, OffRed)
             
-            O = 125
+            O = 132
             E:egpTextLayout(O, "ALERT", vec2(432, 327), vec2(164, 76))
             E:egpFont(O, "Marlett", 14)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, vec(0))
             
-            O = 126 #Unit alarm
+            O = 133 #Unit alarm
             E:egpBox(O, vec2(640, 365), vec2(82, 76))
             E:egpColor(O, OffYellow)
             
-            O = 127
+            O = 134
             E:egpTextLayout(O, "UNIT ALARM", vec2(600, 327), vec2(82, 76))
             E:egpFont(O, "Marlett", 14)
             E:egpAlign(O, 1, 1)
@@ -860,11 +837,11 @@ if(first()|dupefinished()){
             
             #Blank
             
-            O = 128 #Idk what the hell this one is, so if somebody does, tell me
+            O = 135 #AB Fault
             E:egpBox(O, vec2(812, 365), vec2(82, 76))
             E:egpColor(O, OffRed)
             
-            O = 129
+            O = 136
             E:egpTextLayout(O, "AB FAIL", vec2(772, 327), vec2(82, 76))
             E:egpFont(O, "Marlett", 14)
             E:egpAlign(O, 1, 1)
@@ -872,11 +849,11 @@ if(first()|dupefinished()){
             
             #Blank
             
-            O = 132 #EOT move
+            O = 137 #EOT move
             E:egpBox(O, vec2(984, 365), vec2(82, 76))
             E:egpColor(O, OffWhite)
             
-            O = 133
+            O = 138
             E:egpTextLayout(O, "EOT MOVE", vec2(944, 327), vec2(82, 76))
             E:egpFont(O, "Marlett", 14)
             E:egpAlign(O, 1, 1)
@@ -887,148 +864,121 @@ if(first()|dupefinished()){
             
             
             #----Lower section stuff
-            #Other indicators
-            #Horn
-            O = 134
-            E:egpTriangle(O, vec2(800, 440), vec2(800, 420), vec2(840, 430))
-            E:egpColor(O, OffBlue)
+            if(Page == 0){ #This makes it so the lower portion loads only on specific pages
+                #Other indicators
+                #Horn
+                O = 139
+                E:egpTriangle(O, vec2(800, 440), vec2(800, 420), vec2(840, 430))
+                E:egpColor(O, OffBlue)
+                
+                O = 140
+                E:egpBox(O, vec2(832, 432), vec2(4, 16))
+                E:egpColor(O, OffBlue)
+                
+                #Bell
+                O = 141
+                E:egpTriangle(O, vec2(860, 450), vec2(888, 450), vec2(874, 418))
+                E:egpColor(O, OffBlue)
+                
+                O = 142
+                E:egpCircle(O, vec2(874, 450), vec2(4, 4))
+                E:egpColor(O, OffBlue)
+                
+                #Sanding
+                O = 143
+                E:egpTriangle(O, vec2(910, 450), vec2(940, 450), vec2(920, 430))
+                E:egpColor(O, OffYellow)
+                
+                O = 144
+                E:egpBox(O, vec2(920, 426), vec2(4, 12))
+                E:egpColor(O, OffYellow)
+                
+                #Low fuel
+                O = 145
+                E:egpBox(O, vec2(980, 440), vec2(14, 20))
+                E:egpColor(O, OffYellow)
+                
+                O = 146
+                E:egpBoxOutline(O, vec2(980, 424), vec2(14, 14))
+                E:egpColor(O, OffYellow)
+                
+                O = 147
+                E:egpBox(O, vec2(988, 446), vec2(4, 4))
+                E:egpColor(O, OffYellow)
+                
+                O = 148
+                E:egpBox(O, vec2(992, 436), vec2(4, 20))
+                E:egpColor(O, OffYellow)
+                
+                
+                #Lower display portion
+                #Fuel quantity
+                O = 149
+                E:egpTextLayout(O, "FUEL QUANTITY", vec2(45, 480), vec2(250, 28))
+                E:egpFont(O, "Marlett", 14)
+                E:egpAlign(O, 1, 1)
+                E:egpColor(O, LightBlue)
+                
+                O = 150
+                E:egpTextLayout(O, "? " + (Units ? UNIT_DATA["L", string] : UNIT_DATA["Gal", string]), vec2(45, 505), vec2(250, 40))
+                E:egpFont(O, "Marlett", 16)
+                E:egpAlign(O, 1, 1)
+                
+                #Air brake setup
+                O = 151
+                E:egpTextLayout(O, "AIR BRAKE SETUP", vec2(45, 540), vec2(250, 28))
+                E:egpFont(O, "Marlett", 14)
+                E:egpAlign(O, 1, 1)
+                E:egpColor(O, LightBlue)
+                
+                O = 152
+                E:egpTextLayout(O, "TRAILING", vec2(45, 565), vec2(250, 40))
+                E:egpFont(O, "Marlett", 16)
+                E:egpAlign(O, 1, 1)
+                
+                
+                #Last car
+                O = 153
+                E:egpTextLayout(O, "LAST CAR", vec2(388, 480), vec2(250, 28))
+                E:egpFont(O, "Marlett", 14)
+                E:egpAlign(O, 1, 1)
+                E:egpColor(O, LightBlue)
+                
+                O = 154
+                E:egpTextLayout(O, "IDENT 0", vec2(388, 510), vec2(250, 40))
+                E:egpFont(O, "Marlett", 16)
+                E:egpAlign(O, 1, 1)
+            }
             
-            O = 135
-            E:egpBox(O, vec2(832, 432), vec2(4, 16))
-            E:egpColor(O, OffBlue)
+            if(Page == 0){
+                #Message box
+                O = 247
+                E:egpBoxOutline(O, vec2(512, 898), vec2(1024, 80))
+                E:egpSize(O, 2)
+                E:egpColor(O, OnYellow)
+                
+                #Message box text layouts
+                O = 248
+                E:egpTextLayout(O, "", vec2(0, 866), vec2(1024, 32))
+                E:egpFont(O, "Marlett", 16)
+                E:egpAlign(O, 1, 0)
             
-            #Bell
-            O = 136
-            E:egpTriangle(O, vec2(860, 450), vec2(888, 450), vec2(874, 418))
-            E:egpColor(O, OffBlue)
-            
-            O = 137
-            E:egpCircle(O, vec2(874, 450), vec2(4, 4))
-            E:egpColor(O, OffBlue)
-            
-            #Sanding
-            O = 138
-            E:egpTriangle(O, vec2(910, 450), vec2(940, 450), vec2(920, 430))
-            E:egpColor(O, OffYellow)
-            
-            O = 139
-            E:egpBox(O, vec2(920, 426), vec2(4, 12))
-            E:egpColor(O, OffYellow)
-            
-            #Low fuel
-            O = 140
-            E:egpBox(O, vec2(980, 440), vec2(14, 20))
-            E:egpColor(O, OffYellow)
-            
-            O = 141
-            E:egpBoxOutline(O, vec2(980, 424), vec2(14, 14))
-            E:egpColor(O, OffYellow)
-            
-            O = 142
-            E:egpBox(O, vec2(988, 446), vec2(4, 4))
-            E:egpColor(O, OffYellow)
-            
-            O = 143
-            E:egpBox(O, vec2(992, 436), vec2(4, 20))
-            E:egpColor(O, OffYellow)
-            
-            
-            #Lower display portion
-            O = 144 #Fuel quantity
-            E:egpTextLayout(O, "FUEL QUANTITY", vec2(45, 480), vec2(250, 28))
-            E:egpFont(O, "Marlett", 14)
-            E:egpAlign(O, 1, 1)
-            E:egpColor(O, LightBlue)
-            
-            O = 145
-            E:egpTextLayout(O, "? " + (Units ? UnitsData[6,string] : UnitsData[17,string]), vec2(45, 505), vec2(250, 40))
-            E:egpFont(O, "Marlett", 16)
-            E:egpAlign(O, 1, 1)
-            
-            O = 146 #Air brake setup
-            E:egpTextLayout(O, "AIR BRAKE SETUP", vec2(45, 540), vec2(250, 28))
-            E:egpFont(O, "Marlett", 14)
-            E:egpAlign(O, 1, 1)
-            E:egpColor(O, LightBlue)
-            
-            O = 147
-            E:egpTextLayout(O, "LEAD - CUT OUT", vec2(45, 565), vec2(250, 40))
-            E:egpFont(O, "Marlett", 16)
-            E:egpAlign(O, 1, 1)
-            
-            
-            O = 148 #Last car
-            E:egpTextLayout(O, "LAST CAR", vec2(388, 480), vec2(250, 28))
-            E:egpFont(O, "Marlett", 14)
-            E:egpAlign(O, 1, 1)
-            E:egpColor(O, LightBlue)
-            
-            O = 149
-            E:egpTextLayout(O, "IDENT 0", vec2(388, 510), vec2(250, 40))
-            E:egpFont(O, "Marlett", 16)
-            E:egpAlign(O, 1, 1)
-            
-            
-            O = 150 #Cab signals
-            E:egpTextLayout(O, "Cab Signals", vec2(740, 480), vec2(250, 28))
-            E:egpFont(O, "Marlett", 14)
-            E:egpAlign(O, 1, 1)
-            E:egpColor(O, LightBlue)
-            
-            
-            #Some free space here for when cab signals come along
-            
-            
-            O = 158 #CS Mode
-            E:egpTextLayout(O, "Mode", vec2(710, 650), vec2(300, 28))
-            E:egpFont(O, "Marlett", 14)
-            E:egpAlign(O, 0, 1)
-            E:egpColor(O, LightBlue)
-            
-            O = 159
-            E:egpTextLayout(O, "?", vec2(800, 650), vec2(300, 28))
-            E:egpFont(O, "Marlett", 14)
-            E:egpAlign(O, 0, 1)
-            E:egpColor(O, LightGreen)
-            
-            O = 160 #Mode info box
-            E:egpBox(O, vec2(860, 700), vec2(300, 32))
-            E:egpColor(O, OnYellow)
-            
-            O = 161 #CS INOPERATIVE
-            E:egpTextLayout(O, "CS INOPERATIVE", vec2(710, 686), vec2(300, 28))
-            E:egpFont(O, "Marlett", 14)
-            E:egpAlign(O, 1, 1)
-            E:egpColor(O, vec(0))
-            
-            
-            
-            #Message box
-            O = 164
-            E:egpBoxOutline(O, vec2(512, 898), vec2(1024, 80))
-            E:egpSize(O, 2)
-            E:egpColor(O, OnYellow)
-            
-            #Message box text layouts
-            O = 165
-            E:egpTextLayout(O, "", vec2(0, 866), vec2(1024, 32))
-            E:egpFont(O, "Marlett", 16)
-            E:egpAlign(O, 1, 0)
-        
-            O = 166
-            E:egpTextLayout(O, "", vec2(0, 898), vec2(1024, 32))
-            E:egpFont(O, "Marlett", 16)
-            E:egpAlign(O, 1, 0)
+                O = 249
+                E:egpTextLayout(O, "", vec2(0, 898), vec2(1024, 32))
+                E:egpFont(O, "Marlett", 16)
+                E:egpAlign(O, 1, 0)
+            }
         }
-        #----
         
         
         
         
-        if(!UpperPanelLoad){
+        #Secondary monitor stuffs:
+        #-------------------------
+        if(!UpperPanelLoad & !PortMainPages){
             local O = 0
             
-            if(Page == 0 | Page == 5 | Page == 7){ #Upper portion stuffs
+            if(Page == 0){ #Upper portion stuffs
                 #Month, day, year
                 O = 1
                 E:egpText(O, format("%s %01d, %04d", "JAN", 1, 2020), vec2(6, 6))
@@ -1037,7 +987,7 @@ if(first()|dupefinished()){
                 
                 #Time
                 O = 2
-                E:egpText(O, format("%02d:%02d %s UTC", 12, 0, "AM"), vec2(6, 38))
+                E:egpText(O, (TimeFormat ? "12:00:00 UTC" : "12:00 AM UTC"), vec2(6, 38))
                 E:egpFont(O, "Marlett", 16)
                 E:egpAlign(O, 0, 0)
                 
@@ -1047,122 +997,188 @@ if(first()|dupefinished()){
                 E:egpFont(O, "Marlett", 16)
                 E:egpAlign(O, 2, 0)
             }
-            
+        }
+        
+        if(!UpperPanelLoad & !PortMainPages){
             switch(Page){
-                case 5, #Air brake setup page
+                case 5, #Air brake setup
                     #Label
-                    E:egpPageLabelBox(4, vec2(512, 800), "Air Brake Setup")
+                    E:egpPageLabelBox(4, vec2(512, 800), (AirBrakePage ? "EQ Reservoir Setup" : "Air Brake Setup"))
                     
-                    O = 7 #Air brake setup change warn
-                    E:egpText(O, "", vec2(20, 840)) #Reverser must be centered to be setup as trail.
-                    E:egpFont(O, "Marlett", 16)
-                    E:egpAlign(O, 0, 1)
-                    E:egpColor(O, LightBlue)
+                    switch(AirBrakePage){
+                        case 0, #Main page
+                            O = 7 #Air brake setup change warn
+                            E:egpText(O, "", vec2(20, 840)) #Reverser must be centered to be setup as trail.
+                            E:egpFont(O, "Marlett", 16)
+                            E:egpAlign(O, 0, 1)
+                            E:egpColor(O, LightBlue)
+                            
+                            #New values
+                            O = 8
+                            E:egpText(O, "NEW", vec2(64, 890))
+                            E:egpFont(O, "Marlett", 16)
+                            E:egpAlign(O, 1, 1)
+                            
+                            O = 9
+                            E:egpText(O, "0 " + (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string]), vec2(192, 890))
+                            E:egpFont(O, "Marlett", 16)
+                            E:egpAlign(O, 1, 1)
+                            
+                            O = 10
+                            E:egpText(O, "TRAIL", vec2(320, 890))
+                            E:egpFont(O, "Marlett", 16)
+                            E:egpAlign(O, 1, 1)
+                            
+                            O = 11
+                            E:egpText(O, "CUT IN", vec2(448, 890))
+                            E:egpFont(O, "Marlett", 16)
+                            E:egpAlign(O, 1, 1)
+                            
+                            #Current values
+                            O = 12
+                            E:egpText(O, "CURRENT", vec2(64, 920))
+                            E:egpFont(O, "Marlett", 16)
+                            E:egpAlign(O, 1, 1)
+                            E:egpColor(O, LightBlue)
+                            
+                            O = 13
+                            E:egpText(O, "0 " + (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string]), vec2(192, 920))
+                            E:egpFont(O, "Marlett", 16)
+                            E:egpAlign(O, 1, 1)
+                            E:egpColor(O, LightBlue)
+                            
+                            O = 14
+                            E:egpText(O, "TRAIL", vec2(320, 920))
+                            E:egpFont(O, "Marlett", 16)
+                            E:egpAlign(O, 1, 1)
+                            E:egpColor(O, LightBlue)
+                            
+                            O = 15
+                            E:egpText(O, "CUT IN", vec2(448, 920))
+                            E:egpFont(O, "Marlett", 16)
+                            E:egpAlign(O, 1, 1)
+                            E:egpColor(O, LightBlue)
+                            
+                            break
+                        case 1, #EQ res setup
+                            O = 7 #Displayed pressure
+                            E:egpText(O, "0 " + (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string]), vec2(256, 870))
+                            E:egpFont(O, "Marlett", 16)
+                            E:egpAlign(O, 1, 1)
+                            
+                            O = 8 #Value underline
+                            E:egpBox(O, vec2(256, 890), vec2(40, 6))
+                            E:egpColor(O, LightBlue)
+                            
+                            O = 9 #Pointer line (Decrease)
+                            E:egpLine(O, vec2(192, 930), vec2(256, 890))
+                            E:egpColor(O, LightBlue)
+                            E:egpSize(O, 2)
+                            
+                            O = 10 #Pointer line (Increase)
+                            E:egpLine(O, vec2(320, 930), vec2(256, 890))
+                            E:egpColor(O, LightBlue)
+                            E:egpSize(O, 2)
+                            
+                            break
+                    }
+                    break
+                    #----
+                case 7, #EOT ID
                     
-                    #New values
-                    O = 8
-                    E:egpText(O, "NEW", vec2(64, 890))
-                    E:egpFont(O, "Marlett", 16)
-                    E:egpAlign(O, 1, 1)
+                    if(!EOTIDSetup){ #Main EOTD page
+                        #Yes, the label again, you won't get rid of it... ever
+                        E:egpPageLabelBox(4, vec2(512, 800), "End of Train Identification")
+                        
+                        #EOT ID box
+                        E:egpBoxLabeled(7, vec2(2, 858), vec2(126, 72), "EOT ID")
+                        
+                        #Current ID
+                        O = 10
+                        E:egpText(O, "0", vec2(64, 892))
+                        E:egpFont(O, "Marlett", 18)
+                        E:egpAlign(O, 1, 1)
+                        E:egpColor(O, LightBlue)
+                        
+                        #EOT Arm state
+                        E:egpBoxLabeled(11, vec2(130, 858), vec2(382, 72), "Arm State")
+                        
+                        #Arm state readout
+                        O = 14
+                        E:egpText(O, "?", vec2(320, 892))
+                        E:egpFont(O, "Marlett", 18)
+                        E:egpAlign(O, 1, 1)
+                        E:egpColor(O, LightGreen)
+                        
+                        #EOT ID box
+                        E:egpBoxLabeled(15, vec2(642, 858), vec2(126, 72), "Comm Test")
+                        
+                        #Current ID
+                        O = 18
+                        E:egpText(O, "-", vec2(704, 892))
+                        E:egpFont(O, "Marlett", 18)
+                        E:egpAlign(O, 1, 1)
+                        E:egpColor(O, LightBlue)
+
+                        
+                    }else{ #Change EOT ID
+                        E:egpPageLabelBox(4, vec2(512, 800), "Change EOT ID")
                     
-                    O = 9
-                    E:egpText(O, "0 " + (Units ? UnitsData[22, string] : UnitsData[24, string]), vec2(192, 890))
-                    E:egpFont(O, "Marlett", 16)
-                    E:egpAlign(O, 1, 1)
-                    
-                    O = 10
-                    E:egpText(O, "TRAIL", vec2(320, 890))
-                    E:egpFont(O, "Marlett", 16)
-                    E:egpAlign(O, 1, 1)
-                    
-                    O = 11
-                    E:egpText(O, "CUT IN", vec2(448, 890))
-                    E:egpFont(O, "Marlett", 16)
-                    E:egpAlign(O, 1, 1)
-                    
-                    #Current values
-                    O = 12
-                    E:egpText(O, "CURRENT", vec2(64, 920))
-                    E:egpFont(O, "Marlett", 16)
-                    E:egpAlign(O, 1, 1)
-                    E:egpColor(O, LightBlue)
-                    
-                    O = 13
-                    E:egpText(O, "0 " + (Units ? UnitsData[22, string] : UnitsData[24, string]), vec2(192, 920))
-                    E:egpFont(O, "Marlett", 16)
-                    E:egpAlign(O, 1, 1)
-                    E:egpColor(O, LightBlue)
-                    
-                    O = 14
-                    E:egpText(O, "TRAIL", vec2(320, 920))
-                    E:egpFont(O, "Marlett", 16)
-                    E:egpAlign(O, 1, 1)
-                    E:egpColor(O, LightBlue)
-                    
-                    O = 15
-                    E:egpText(O, "CUT IN", vec2(448, 920))
-                    E:egpFont(O, "Marlett", 16)
-                    E:egpAlign(O, 1, 1)
-                    E:egpColor(O, LightBlue)
+                        O = 7 #EOT ID readout text
+                        E:egpText(O, format("%01d  %01d  %01d  %01d  %01d", EID1, EID2, EID3, EID4, EID5), vec2(448, 860))
+                        E:egpFont(O, "Marlett", 18)
+                        E:egpAlign(O, 1, 1)
+                        
+                        #Number underlines
+                        O = 8
+                        E:egpBox(O, vec2(384, 876), vec2(22, 4))
+                        E:egpColor(O, LightBlue)
+                        
+                        O = 9
+                        E:egpBox(O, vec2(416, 876), vec2(22, 4))
+                        E:egpColor(O, LightBlue)
+                        
+                        O = 10
+                        E:egpBox(O, vec2(448, 876), vec2(22, 4))
+                        E:egpColor(O, LightBlue)
+                        
+                        O = 11
+                        E:egpBox(O, vec2(480, 876), vec2(22, 4))
+                        E:egpColor(O, LightBlue)
+                        
+                        O = 12
+                        E:egpBox(O, vec2(512, 876), vec2(22, 4))
+                        E:egpColor(O, LightBlue)
+                        
+                        #Connection lines
+                        O = 13
+                        E:egpLine(O, vec2(192, 930), vec2(384, 878))
+                        E:egpSize(O, 2)
+                        E:egpColor(O, LightBlue)
+                        
+                        O = 14
+                        E:egpLine(O, vec2(320, 930), vec2(416, 878))
+                        E:egpSize(O, 2)
+                        E:egpColor(O, LightBlue)
+                        
+                        O = 15
+                        E:egpLine(O, vec2(448, 930), vec2(448, 878))
+                        E:egpSize(O, 2)
+                        E:egpColor(O, LightBlue)
+                        
+                        O = 16
+                        E:egpLine(O, vec2(576, 930), vec2(480, 878))
+                        E:egpSize(O, 2)
+                        E:egpColor(O, LightBlue)
+                        
+                        O = 17
+                        E:egpLine(O, vec2(704, 930), vec2(512, 878))
+                        E:egpSize(O, 2)
+                        E:egpColor(O, LightBlue)
+                    }
                     
                     break
-                case 7, #EOT ID page
-                    #Yes, the label again
-                    E:egpPageLabelBox(4, vec2(512, 800), "EOT ID Setup")
-                    
-                    O = 7 #EOT ID readout text
-                    E:egpText(O, format("%01d  %01d  %01d  %01d  %01d", EID1, EID2, EID3, EID4, EID5), vec2(448, 860))
-                    E:egpFont(O, "Marlett", 18)
-                    E:egpAlign(O, 1, 1)
-                    
-                    #Number underlines
-                    O = 8
-                    E:egpBox(O, vec2(384, 876), vec2(22, 4))
-                    E:egpColor(O, LightBlue)
-                    
-                    O = 9
-                    E:egpBox(O, vec2(416, 876), vec2(22, 4))
-                    E:egpColor(O, LightBlue)
-                    
-                    O = 10
-                    E:egpBox(O, vec2(448, 876), vec2(22, 4))
-                    E:egpColor(O, LightBlue)
-                    
-                    O = 11
-                    E:egpBox(O, vec2(480, 876), vec2(22, 4))
-                    E:egpColor(O, LightBlue)
-                    
-                    O = 12
-                    E:egpBox(O, vec2(512, 876), vec2(22, 4))
-                    E:egpColor(O, LightBlue)
-                    
-                    #Connection lines
-                    O = 13
-                    E:egpLine(O, vec2(192, 930), vec2(384, 878))
-                    E:egpSize(O, 2)
-                    E:egpColor(O, LightBlue)
-                    
-                    O = 14
-                    E:egpLine(O, vec2(320, 930), vec2(416, 878))
-                    E:egpSize(O, 2)
-                    E:egpColor(O, LightBlue)
-                    
-                    O = 15
-                    E:egpLine(O, vec2(448, 930), vec2(448, 878))
-                    E:egpSize(O, 2)
-                    E:egpColor(O, LightBlue)
-                    
-                    O = 16
-                    E:egpLine(O, vec2(576, 930), vec2(480, 878))
-                    E:egpSize(O, 2)
-                    E:egpColor(O, LightBlue)
-                    
-                    O = 17
-                    E:egpLine(O, vec2(704, 930), vec2(512, 878))
-                    E:egpSize(O, 2)
-                    E:egpColor(O, LightBlue)
-                    
-                    break
+                    #----
             }
             
         }
@@ -1173,68 +1189,150 @@ if(first()|dupefinished()){
     
     #All the button presets on each page
     #-----------------------------------
-    function void wirelink:egpLoadButtons(Page, UpperPanelLoad){ #All the buttons presets on each page
+    function void wirelink:egpLoadButtons(Page, UpperPanelLoad, PortMainPages){ #All the buttons presets on each page
         E = This
         
-        if(UpperPanelLoad){ #Main display buttons
-            E:egpButton(180, vec2(448, 980), vec2(126, 80), "Consist   Monitor", LightBlue)
-            E:egpButton(183, vec2(576, 980), vec2(126, 80), "Crew  Message", LightBlue)
-            E:egpButton(186, vec2(832, 980), vec2(126, 80), "Change    Units", LightBlue)
-            E:egpButton(189, vec2(960, 980), vec2(126, 80), "More Choices", LightGreen)
+        if(UpperPanelLoad | PortMainPages){
+            switch(Page){
+                case 0, #Main page
+                    switch(MoreOptionsMain){
+                        case 0,
+                            E:egpButton(250, vec2(448, 980), vec2(126, 80), "Consist   Monitor", LightBlue)
+                            E:egpButton(253, vec2(576, 980), vec2(126, 80), "Crew  Message", LightBlue)
+                            E:egpButton(256, vec2(960, 980), vec2(126, 80), "More Choices", LightGreen)
+                            
+                            break
+                        case 1,
+                            E:egpButton(250, vec2(64, 980), vec2(126, 80), "Brighter", OffBlue)
+                            E:egpButton(253, vec2(192, 980), vec2(126, 80), "Dimmer", LightBlue)
+                            E:egpButton(256, vec2(448, 980), vec2(126, 80), "Operator   Controls", LightBlue)
+                            E:egpButton(259, vec2(704, 980), vec2(126, 80), "Length   Counter", LightBlue)
+                            E:egpButton(262, vec2(960, 980), vec2(126, 80), "More Choices", LightGreen)
+                            
+                            break
+                        case 2,
+                            E:egpButton(250, vec2(192, 980), vec2(126, 80), "Distributed  Power", LightBlue)
+                            E:egpButton(253, vec2(704, 980), vec2(126, 80), "Locomotive  Monitor", LightBlue)
+                            E:egpButton(256, vec2(832, 980), vec2(126, 80), "Maint    Mode", LightBlue)
+                            E:egpButton(259, vec2(960, 980), vec2(126, 80), "More Choices", LightGreen)
+                            
+                            break
+                    }
+                    
+                    break
+                    #----
+            }
         }
         #----
         
         
         
         
-        if(!UpperPanelLoad){ #Secondary display buttons
+        #Secondary display button presets
+        #--------------------------------
+        if(!UpperPanelLoad & !PortMainPages){
             switch(Page){
                 case 0, #Main page
                     switch(MoreOptionsSec){
-                        case 0,
-                            E:egpButton(180, vec2(320, 980), vec2(126, 80), "Locomotive Data", LightBlue)
-                            E:egpButton(183, vec2(448, 980), vec2(126, 80), "Operator Controls", LightBlue)
-                            E:egpButton(186, vec2(576, 980), vec2(126, 80), "Speed Control", LightBlue)
-                            E:egpButton(189, vec2(704, 980), vec2(126, 80), "Length Counter", LightBlue)
-                            E:egpButton(192, vec2(832, 980), vec2(126, 80), "Air       Brake", LightBlue)
-                            E:egpButton(195, vec2(960, 980), vec2(126, 80), "More Choices", LightGreen)
+                        case 0, #More ops. 1
+                            E:egpButton(250, vec2(64, 980), vec2(126, 80), "Brighter", OffBlue)
+                            E:egpButton(253, vec2(192, 980), vec2(126, 80), "Dimmer", LightBlue)
+                            E:egpButton(256, vec2(320, 980), vec2(126, 80), "Locomotive Data", LightBlue)
+                            E:egpButton(259, vec2(448, 980), vec2(126, 80), "Operator Controls", LightBlue)
+                            E:egpButton(262, vec2(576, 980), vec2(126, 80), "Speed Control", LightBlue)
+                            E:egpButton(265, vec2(704, 980), vec2(126, 80), "Length Counter", LightBlue)
+                            E:egpButton(268, vec2(832, 980), vec2(126, 80), "Air       Brake", LightBlue)
+                            E:egpButton(271, vec2(960, 980), vec2(126, 80), "More Choices", LightGreen)
+                            
+                            #Brightness % box
+                            E:egpBoxLabeled(4, vec2(0, 858), vec2(256, 72), "Screen Brightness")
+                            
+                            #Brightness % text
+                            O = 7
+                            E:egpTextLayout(O, "100%", vec2(0, 856), vec2(256, 80))
+                            E:egpFont(O, "Marlett", 18)
+                            E:egpAlign(O, 1, 1)
+                            E:egpColor(O, LightBlue)
                             
                             break
-                        case 1,
-                            E:egpButton(180, vec2(320, 980), vec2(126, 80), "Event       Info", LightBlue)
-                            E:egpButton(183, vec2(448, 980), vec2(126, 80), "EOT ID", LightBlue)
-                            E:egpButton(186, vec2(704, 980), vec2(126, 80), "Locomotive Monitor", LightBlue)
-                            E:egpButton(189, vec2(832, 980), vec2(126, 80), "Maint     Mode", LightBlue)
-                            E:egpButton(192, vec2(960, 980), vec2(126, 80), "More Choices", LightGreen)
+                        case 1, #More ops. 2
+                            for(I = 1, 6){ #This is just so that the last two buttons get removed
+                                E:egpRemove(274 - I)
+                            }
+                            E:egpButton(250, vec2(320, 980), vec2(126, 80), "Event       Info", LightBlue)
+                            E:egpButton(253, vec2(448, 980), vec2(126, 80), "EOT ID", LightBlue)
+                            E:egpButton(256, vec2(576, 980), vec2(126, 80), "Cab      Signals", LightBlue)
+                            E:egpButton(259, vec2(704, 980), vec2(126, 80), "Locomotive Monitor", LightBlue)
+                            E:egpButton(262, vec2(832, 980), vec2(126, 80), "Maint     Mode", LightBlue)
+                            E:egpButton(265, vec2(960, 980), vec2(126, 80), "More Choices", LightGreen)
+                            
+                            for(I = 4, 7){ #This removes the current brightness indicator box thing
+                                E:egpRemove(I)
+                            }
+                            break
+                        case 2, #More ops. 3
+                            E:egpButton(250, vec2(320, 980), vec2(126, 80), "Work    Orders", LightBlue)
+                            E:egpButton(253, vec2(448, 980), vec2(126, 80), "Consist   Monitor", LightBlue)
+                            E:egpButton(256, vec2(576, 980), vec2(126, 80), "Crew    Message", LightBlue)
+                            E:egpButton(259, vec2(832, 980), vec2(126, 80), "Smart   Consist", LightBlue)
+                            E:egpButton(262, vec2(960, 980), vec2(126, 80), "More Choices", LightGreen)
                             
                             break
                     }
                     
                     break
-                case 5, #Air brake setup page
-                    local Color = LightBlue
-                    if(ABLockout){
-                        Color = OffBlue
+                    #----
+                case 5, #Air brake setup
+                    if(AirBrakePage == 0){
+                        local Color = LightBlue
+                        if(ABLockout){
+                            Color = OffBlue
+                        }
+                        
+                        E:egpButton(250, vec2(64, 980), vec2(126, 80), "Cancel", LightBlue)
+                        E:egpButton(253, vec2(192, 980), vec2(126, 80), "EQ Res    Set Up", Color)
+                        E:egpButton(256, vec2(320, 980), vec2(126, 80), "Lead       Trail", Color)
+                        E:egpButton(259, vec2(448, 980), vec2(126, 80), "Cut In        Cut Out", Color)
+                        E:egpButton(262, vec2(704, 980), vec2(126, 80), "Accept      New", Color)
+                        E:egpButton(265, vec2(832, 980), vec2(126, 80), "", Color)
+                        
+                    }elseif(AirBrakePage == 1){
+                        local PSIMult = (Units ? UNIT_DATA["M_bar", number] : 1)
+                        local PresUnits = (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string])
+                        E:egpButton(250, vec2(64, 980), vec2(126, 80), "Cancel", LightBlue)
+                        E:egpButton(253, vec2(192, 980), vec2(126, 80), "DECREASE", LightBlue)
+                        E:egpButton(256, vec2(320, 980), vec2(126, 80), "INCREASE", LightBlue)
+                        E:egpButton(259, vec2(448, 980), vec2(126, 80), format((Units ? "%.1f" : "%.0f") + " %s", 80 * PSIMult, PresUnits), LightBlue)
+                        E:egpButton(262, vec2(576, 980), vec2(126, 80), format((Units ? "%.1f" : "%.0f") + " %s", 90 * PSIMult, PresUnits), LightBlue)
+                        E:egpButton(265, vec2(704, 980), vec2(126, 80), format((Units ? "%.1f" : "%.0f") + " %s", 100 * PSIMult, PresUnits), LightBlue)
+                        E:egpButton(268, vec2(832, 980), vec2(126, 80), format((Units ? "%.1f" : "%.0f") + " %s", 110 * PSIMult, PresUnits), LightBlue)
+                        E:egpButton(271, vec2(960, 980), vec2(126, 80), "Enter", LightBlue)
+                        
                     }
                     
-                    E:egpButton(200, vec2(64, 980), vec2(126, 80), "Cancel", LightBlue)
-                    E:egpButton(203, vec2(192, 980), vec2(126, 80), "EQ Res    Set Up", Color)
-                    E:egpButton(206, vec2(320, 980), vec2(126, 80), "Lead       Trail", Color)
-                    E:egpButton(209, vec2(448, 980), vec2(126, 80), "Cut In        Cut Out", Color)
-                    E:egpButton(212, vec2(704, 980), vec2(126, 80), "Accept      New", Color)
-                    E:egpButton(215, vec2(832, 980), vec2(126, 80), "", Color)
+                    break
+                    #----
+                case 7, #EOT ID
+                    if(!EOTIDSetup){
+                        E:egpButton(250, vec2(64, 980), vec2(126, 80), "Change     EOT ID", LightBlue)
+                        E:egpButton(253, vec2(192, 980), vec2(126, 80), "Arm        EOT", OffBlue)
+                        E:egpButton(256, vec2(320, 980), vec2(126, 80), "Disarm     EOT", OffBlue)
+                        E:egpButton(259, vec2(448, 980), vec2(126, 80), "EOT ID    00000", LightBlue)
+                        E:egpButton(265, vec2(704, 980), vec2(126, 80), "Comm       Test", LightBlue)
+                        E:egpButton(268, vec2(960, 980), vec2(126, 80), "Exit", LightBlue)
+                        
+                    }else{
+                        E:egpButton(250, vec2(64, 980), vec2(126, 80), "Cancel", LightBlue)
+                        E:egpButton(253, vec2(192, 980), vec2(126, 80), "", LightBlue)
+                        E:egpButton(256, vec2(320, 980), vec2(126, 80), "", LightBlue)
+                        E:egpButton(259, vec2(448, 980), vec2(126, 80), "", LightBlue)
+                        E:egpButton(262, vec2(576, 980), vec2(126, 80), "", LightBlue)
+                        E:egpButton(265, vec2(704, 980), vec2(126, 80), "", LightBlue)
+                        E:egpButton(268, vec2(832, 980), vec2(126, 80), "Enter", LightBlue)
+                    }
                     
                     break
-                case 7, #EOT ID page
-                    E:egpButton(200, vec2(64, 980), vec2(126, 80), "Cancel", LightBlue)
-                    E:egpButton(203, vec2(192, 980), vec2(126, 80), "", LightBlue)
-                    E:egpButton(206, vec2(320, 980), vec2(126, 80), "", LightBlue)
-                    E:egpButton(209, vec2(448, 980), vec2(126, 80), "", LightBlue)
-                    E:egpButton(212, vec2(576, 980), vec2(126, 80), "", LightBlue)
-                    E:egpButton(215, vec2(704, 980), vec2(126, 80), "", LightBlue)
-                    E:egpButton(218, vec2(832, 980), vec2(126, 80), "Enter", LightBlue)
-                    
-                    break
+                    #----
             }
         }
     }
@@ -1244,7 +1342,7 @@ if(first()|dupefinished()){
     
     #Updates whatever is displayed
     #-----------------------------
-    function void wirelink:egpUpdate(Page, UpperPanelLoad){
+    function void wirelink:egpUpdate(Page, UpperPanelLoad, PortMainPages){
         local E = This
         
         #Time - Inception (11/10 film, would recommend)
@@ -1314,12 +1412,14 @@ if(first()|dupefinished()){
             HoursActual = floor((HoursTZ > 12 & HoursTZ < 24) ? HoursTZ - 12 : (HoursTZ == 0 ? HoursTZ + 12 : HoursTZ))
         }
         local MonthStr = monthNum2String(MonthTZ)
-        #---
+        #----
         
-        if(UpperPanelLoad){
+        
+        #----Main page updating
+        if(UpperPanelLoad & Page != 5){
             #Unit changing
             #Driven distance
-            E:egpSetText(1, format("%.0f " + (Units ? UnitsData[2,string] : UnitsData[13,string]), DrivenDistMI * (Units ? UnitsData[7,number] : 1)))
+            E:egpSetText(1, format("%.0f " + (Units ? UNIT_DATA["km", string] : UNIT_DATA["mi", string]), DrivenDistMI * (Units ? UNIT_DATA["M_km", number] : 1)))
             
             E:egpSetText(3, format("%s %01d, %04d", MonthStr, Day, Year))
             if(TimeFormat){
@@ -1329,204 +1429,223 @@ if(first()|dupefinished()){
             }
             
             #All of the unit changing
-            local SpeedMult = (Units ? UnitsData[7,number] : 1)
+            local SpeedMult = (Units ? UNIT_DATA["M_km", number] : 1)
             if(changed(Units)){
                 #Analog speedo
-                E:egpSetText(57, toString(round(10 * SpeedMult,0)))
-                E:egpSetText(58, toString(round(20 * SpeedMult,0)))
-                E:egpSetText(59, toString(round(30 * SpeedMult,0)))
-                E:egpSetText(60, toString(round(40 * SpeedMult,0)))
-                E:egpSetText(61, toString(round(50 * SpeedMult,0)))
-                E:egpSetText(62, toString(round(60 * SpeedMult,0)))
-                E:egpSetText(63, toString(round(70 * SpeedMult,0)))
-                E:egpSetText(64, toString(Units ? 130 : 80))
+                E:egpSetText(57, format("%.0f", MaxSpeedoVelocity * SpeedMult * 0.125))
+                E:egpSetText(58, format("%.0f", MaxSpeedoVelocity * SpeedMult * 0.25))
+                E:egpSetText(59, format("%.0f", MaxSpeedoVelocity * SpeedMult * 0.375))
+                E:egpSetText(60, format("%.0f", MaxSpeedoVelocity * SpeedMult * 0.5))
+                E:egpSetText(61, format("%.0f", MaxSpeedoVelocity * SpeedMult * 0.625))
+                E:egpSetText(62, format("%.0f", MaxSpeedoVelocity * SpeedMult * 0.75))
+                E:egpSetText(63, format("%.0f", MaxSpeedoVelocity * SpeedMult * 0.875))
+                E:egpSetText(64, format("%.0f", MaxSpeedoVelocity * SpeedMult))
+                
                 
                 #Digital speedo
-                local SpeedUnit = (Units ? UnitsData[1,string] : UnitsData[12,string])
-                E:egpSetText(103, SpeedUnit)
+                local SpeedUnit = (Units ? UNIT_DATA["KPH", string] : UNIT_DATA["MPH", string])
+                E:egpSetText(106, SpeedUnit)
                 
                 #Accelerometer
-                E:egpSetText(104, SpeedUnit)
+                E:egpSetText(108, SpeedUnit)
                 
                 #Length
-                E:egpSetText(109, (Units ? UnitsData[5,string] : UnitsData[16,string]))
+                E:egpSetText(112, (Units ? UNIT_DATA["m", string] : UNIT_DATA["ft", string]))
                 
                 #Tractive effort
+                E:egpSetText(117, (Units ? UNIT_DATA["kN", string] : UNIT_DATA["kLb", string]))
                 if(!SetToAmps){
-                    E:egpSetText(112, (Units ? UnitsData[4,string] : UnitsData[15,string]))
+                    E:egpSetText(119, (Units ? UNIT_DATA["kN", string] : UNIT_DATA["kLb", string]))
                 }
             }
             
             
-            
-            #Number updating
-            #All of the brake data
+            #All of the brake values
             local PresFormat = (Units ? "%.1f" : "%.0f")
-            local PresMult = (Units ? UnitsData[23, number] : 1)
+            local PresMult = (Units ? UNIT_DATA["M_bar", number] : 1)
             if(!BrakePanelYeet){
-                E:egpSetText(96, format(PresFormat, EqualRes * PresMult))
-                E:egpSetText(97, format(PresFormat, BrakePipe * PresMult))
-                E:egpSetText(99, format(PresFormat, AirFlow * PresMult))
-                E:egpSetText(100, format(PresFormat, MainRes * PresMult))
+                E:egpSetText(99, format(PresFormat, EqualRes * PresMult))
+                E:egpSetText(100, format(PresFormat, BrakePipe * PresMult))
+                E:egpSetText(102, format(PresFormat, AirFlow * PresMult))
+                E:egpSetText(103, format(PresFormat, MainRes * PresMult))
                 if(MainRes >= 100){
-                    E:egpColor(100, LightGreen)
+                    E:egpColor(103, LightGreen)
                 }else{
-                    E:egpColor(100, LightRed)
+                    E:egpColor(103, LightRed)
                 }
-                E:egpSetText(101, format(PresFormat, BrakeCyl * PresMult))
+                E:egpSetText(104, format(PresFormat, BrakeCyl * PresMult))
             }
             
-            if(EOTDLinked){
-                E:egpSetText(98, format(PresFormat, RearPres * PresMult))
+            if(EOTDArmed){
+                E:egpSetText(101, format(PresFormat, RearPres * PresMult))
             }else{
-                E:egpSetText(98, "?")
+                E:egpSetText(101, "?")
             }
             
             
             #Speedometer updating
-            E:egpAngle(65, vec2(512, 180), vec2(-72, 0), (Units ? 46 - (KPH / 130) * 271 : 46 - (MPH / 80) * 271))
-            local MPHC = abs(MPH < 0 ? 0 : MPH * SpeedMult)
-            E:egpSetText(102, format((MPHC >= 10 ? "%.0f" : "%.1f"), max(MPHC, 0)))
+            E:egpAngle(65, vec2(512, 180), vec2(-72, 0), clamp(46 - (MPH / MaxSpeedoVelocity) * 271, -225, 46))
+            local MPH_A = abs(MPH * SpeedMult)
+            E:egpSetText(105, format((MPH_A >= 10 ? "%.0f" : "%.1f"), max(MPH_A, 0)))
             
             
             #Acceleration
-            E:egpSetText(104, format("%.0f", (Units ? UnitsData[7,number] * Accel : Accel)))
+            E:egpSetText(107, format("%.0f", (Units ? UNIT_DATA["M_km", number] * Accel : Accel)))
             
             #Length
-            E:egpSetText(108, format("%.0f", (Units ? UnitsData[10,number] * Length : Length)))
+            E:egpSetText(111, format("%.0f", (Units ? UNIT_DATA["M_m", number] * Length : Length)))
             
             #Reverser position
-            E:egpSetText(110, select(Reverser + 2, "Reverse", "Center", "Forward"))
+            E:egpSetText(113, select(Reverser + 2, "Reverse", "Center", "Forward"))
             
-            #Tractive effort/Amps
-            local TETCol = (Dynamics ? OnYellow : LightGreen)
+            
+            #Consist effort unit ratio, power status and consist effort
+            local CTECol = (Dynamics ? OnYellow : LightGreen)
+            E:egpSetText(114, format("%01d:%01d", On * Isolation, 1)) #Ratio
+            
+            E:egpSetText(115, (Dynamics ? "D" : "P")) #Power status
+            E:egpColor(115, CTECol)
+            
+            E:egpSetText(116, format("%.0f", TractiveEffort * (Units ? UNIT_DATA["M_N", number] : 1) / 1000))
+            E:egpColor(116, CTECol)
+            
+            E:egpColor(117, CTECol) #Changes the color of the units
+            
+            #Changing between TE/Amps readout
+            local TECol = (Dynamics ? OnYellow : LightGreen)
             if(!SetToAmps){
-                E:egpSetText(111, toString(round(TractiveEffort * (Units ? UnitsData[9,number] : 1) / 1000, 0)))
+                E:egpSetText(118, format("%.0f", TractiveEffort * (Units ? UNIT_DATA["M_N", number] : 1) / 1000))
             }else{
-                E:egpSetText(111, toString(abs(round(Load,0))))
+                E:egpSetText(118, format("%.0f", abs(Load)))
+                E:egpSetText(119, "A")
             }
-            E:egpColor(111, TETCol)
-            E:egpColor(112, TETCol)
+            E:egpColor(118, TECol)
+            E:egpColor(119, TECol)
             
-            #Tractive effort box
-            E:egpBoxLabeled(76, vec2(669, 145), vec2(228, 100), (SetToAmps ? "Amps" : (Dynamics ? "Dynamic Brake Effort" : "Tractive Effort")))
+            #TE readout box scale and text updating
+            E:egpBoxLabeled(79, vec2(669, 200), vec2(228, 60), (SetToAmps ? "Amps" : (Dynamics ? "Dynamic Brake Effort" : "Tractive Effort")))
             
-            #TE Bar
+            #TE number axis updating based on mode
+            local MaxTE_Actual = (Dynamics ? MaxTE * (MaxDynCurrent / MaxTMCurrent) : MaxTE) #This calculates the "approximate" max tractive effort for dynamics
+            local MaxContTE_Actual = (Dynamics ? MaxContTE * (MaxContDynCurrent / MaxTMCurrent) : MaxContTE)
+            local MaxCurrent_Act = (Dynamics ? MaxDynCurrent : MaxTMCurrent)
+            local MaxContCurrent_Act = (Dynamics ? MaxContDynCurrent : MaxContTMCurrent)
+            local ActualDiff = (SetToAmps ? (MaxContCurrent_Act / MaxCurrent_Act) : (MaxContTE_Actual / MaxTE_Actual))
+            
+            #Updating axis scale
+            if(changed(Dynamics)){
+                #Updating the axis white part
+                E:egpBox(85, vec2(round(690 + (ActualDiff * 300) / 2,0), 292), vec2(round(ActualDiff * 300 + 1,0), 6))
+                #Updating the axis yellow part
+                E:egpBox(86, vec2(round((690 + (ActualDiff * 300)) + (300 - ActualDiff * 300) / 2,0), 292), vec2(round(300 - ActualDiff * 300,0) + 1, 6))
+                
+                #Also changes the label of the throttle position indicator box
+                E:egpBoxLabeled(82, vec2(906, 140), vec2(110, 120), (Dynamics ? "DB Handle" : "TH Handle"))
+            }
+            
+            #Updating axis numbers and colors
+            for(I = 1, 5){
+                local Izero = (I - 1)
+                local Index = (Izero * 2 + 87)
+                E:egpSetText(Index + 1, format("%.0f", (SetToAmps ? MaxCurrent_Act : MaxTE_Actual * (Units ? UNIT_DATA["M_N", number] : 1)) * (Izero / 4)))
+                
+                E:egpColor(Index, (ActualDiff <= (Izero / 4) ? OnYellow : vec(255)))
+                E:egpColor(Index + 1, (ActualDiff <= (Izero / 4) ? OnYellow : vec(255)))
+            }
+            
+            #TE needle movement
+            local TE_NeedlePos = 0
             if(SetToAmps){
-                if(Dynamics){
-                    E:egpSetText(90, toString(round(0.25 * MaxDynCurrent, 0)))
-                    E:egpSetText(91, toString(round(0.5 * MaxDynCurrent, 0)))
-                    E:egpSetText(92, toString(round(0.75 * MaxDynCurrent, 0)))
-                    E:egpSetText(93, toString(MaxDynCurrent))
-                }else{
-                    E:egpSetText(90, toString(round(0.25 * MaxTMCurrent, 0)))
-                    E:egpSetText(91, toString(round(0.5 * MaxTMCurrent, 0)))
-                    E:egpSetText(92, toString(round(0.75 * MaxTMCurrent, 0)))
-                    E:egpSetText(93, toString(MaxTMCurrent))
-                }
+                TE_NeedlePos = clamp((TMCurrent / MaxContCurrent_Act) * 300, 0, 300)
             }else{
-                local TEMult = (Units ? UnitsData[9,number] : 1)
-                E:egpSetText(90, toString(round(0.25 * MaxTE * TEMult, 0)))
-                E:egpSetText(91, toString(round(0.5 * MaxTE * TEMult, 0)))
-                E:egpSetText(92, toString(round(0.75 * MaxTE * TEMult, 0)))
-                E:egpSetText(93, toString(round(MaxTE * TEMult, 0)))
+                TE_NeedlePos = clamp((TractiveEffort / 1000) / MaxTE_Actual * 300, 0, 300)
             }
+            E:egpTriangle(97, vec2(680 + TE_NeedlePos, 308), vec2(700 + TE_NeedlePos, 308), vec2(690 + TE_NeedlePos, 296))
+            E:egpColor(97, TECol)
             
-            #TE needle
-            local NeedlePos = 0
-            if(SetToAmps){
-                NeedlePos = clamp(TMCurrent / (Dynamics ? MaxDynCurrent : MaxTMCurrent) * 300, 0, 300)
-            }else{
-                NeedlePos = clamp((TractiveEffort / 1000) / MaxTE * 300, 0, 300)
-            }
-            E:egpTriangle(94, vec2(680 + NeedlePos, 304), vec2(700 + NeedlePos, 304), vec2(690 + NeedlePos, 292))
-            E:egpColor(94, TETCol)
+            E:egpBox(98, vec2(690 + TE_NeedlePos / 2, 313), vec2(22 + TE_NeedlePos, 8)) #690 + NeedlePos / 2, 22 + NeedlePos
+            E:egpColor(98, TECol)
             
-            E:egpBox(95, vec2(690 + NeedlePos / 2, 310), vec2(22 + NeedlePos, 10)) #690 + NeedlePos / 2, 20 + NeedlePos
-            E:egpColor(95, TETCol)
             
             #Throttle indicator
             if(Dynamics){
-                E:egpColor(113, OnYellow)
-                E:egpSetText(113, (DynaBrakePower <= 10 ? "Set" : format("D %.0f", throt2notch(DynaBrakePower, 10, 100, 8))))
+                E:egpColor(120, OnYellow)
+                E:egpSetText(120, (DynaBrakePower <= 10 ? "Set" : format("D %.0f", throt2notch(DynaBrakePower, 10, 100, 8))))
             }else{
-                E:egpColor(113, LightGreen)
-                E:egpSetText(113, (Throttle <= 0 ? "Idle" : format("N %.0f", throt2notch(Throttle, 0, 100, 8))))
+                E:egpColor(120, LightGreen)
+                E:egpSetText(120, (Throttle <= 0 ? "Idle" : format("N %.0f", throt2notch(Throttle, 0, 100, 8))))
             }
             
             
             #Warning indicators
-            E:egpColor(116, (WheelSlip ? OnWhite : OffWhite))
-            E:egpColor(118, (PCSOpen ? OnRed : OffRed))
-            E:egpColor(120, (DynBrakeWarn ? OnYellow : OffYellow))
-            E:egpColor(122, (LoadShed ? OnYellow : OffYellow))
-            E:egpColor(124, (AlerterOn ? OnRed : OffRed))
-            E:egpColor(126, (UnitAlarm ? OnYellow : OffYellow))
-            E:egpColor(132, (EOTMove ? OnWhite : OffWhite))
+            E:egpColor(123, (WheelSlip ? OnWhite : OffWhite))
+            E:egpColor(125, (PCSOpen ? OnRed : OffRed))
+            E:egpColor(127, (DynBrakeWarn ? OnYellow : OffYellow))
+            E:egpColor(129, (LoadShed ? OnYellow : OffYellow))
+            E:egpColor(131, (AlerterOn ? OnRed : OffRed))
+            E:egpColor(133, (UnitAlarm ? OnYellow : OffYellow))
+            E:egpColor(137, (EOTMove ? OnWhite : OffWhite))
             #----End of that
             
             #Other indicators
             if(changed(Horn)){
-                E:egpColor(134, indColor(Horn, OffBlue, LightBlue))
-                E:egpColor(135, indColor(Horn, OffBlue, LightBlue))
+                E:egpColor(139, indColor(Horn, OffBlue, LightBlue))
+                E:egpColor(140, indColor(Horn, OffBlue, LightBlue))
             }
             
             if(changed(Bell)){
-                E:egpColor(136, indColor(Bell, OffBlue, LightBlue))
-                E:egpColor(137, indColor(Bell, OffBlue, LightBlue))
+                E:egpColor(141, indColor(Bell, OffBlue, LightBlue))
+                E:egpColor(142, indColor(Bell, OffBlue, LightBlue))
             }
             
-            E:egpColor(138, indColor(Sanding, OffYellow, OnYellow))
-            E:egpColor(139, indColor(Sanding, OffYellow, OnYellow))
+            E:egpColor(143, indColor(Sanding, OffYellow, OnYellow))
+            E:egpColor(144, indColor(Sanding, OffYellow, OnYellow))
             
-            E:egpColor(140, indColor(LowFuel, OffYellow, OnYellow))
-            E:egpColor(141, indColor(LowFuel, OffYellow, OnYellow))
-            E:egpColor(142, indColor(LowFuel, OffYellow, OnYellow))
-            E:egpColor(143, indColor(LowFuel, OffYellow, OnYellow))
+            E:egpColor(145, indColor(LowFuel, OffYellow, OnYellow))
+            E:egpColor(146, indColor(LowFuel, OffYellow, OnYellow))
+            E:egpColor(147, indColor(LowFuel, OffYellow, OnYellow))
+            E:egpColor(148, indColor(LowFuel, OffYellow, OnYellow))
             
             
             #Fuel quantity
             if(->FuelLevel){
-                E:egpSetText(145, format("%.0f " + (Units ? UnitsData[6,string] : UnitsData[17,string]), FuelLevel * (Units ? UnitsData[11,number] : UnitsData[18,number])))
+                E:egpSetText(150, format("%.0f " + (Units ? UNIT_DATA["L", string] : UNIT_DATA["Gal", string]), FuelLevel * (Units ? UNIT_DATA["M_L", number] : UNIT_DATA["M_L", number])))
             }else{
-                E:egpSetText(145, "? " + (Units ? UnitsData[6,string] : UnitsData[17,string]))
+                E:egpSetText(150, "? " + (Units ? UNIT_DATA["L", string] : UNIT_DATA["Gal", string]))
             }
             
             
             #Brake setup indication
             if(BCI){
-                E:egpSetText(147, "LEAD - " + (IsolatedBrakes ? "CUT OUT" : "CUT IN"))
+                E:egpSetText(152, "LEAD - " + (IsolatedBrakes ? "CUT OUT" : "CUT IN"))
             }else{
-                E:egpSetText(147, "TRAILING")
+                E:egpSetText(152, "TRAILING")
             }
             
             
             #IDENT readout
             if(EOTDSetID != 0){
-                E:egpSetText(149, format("IDENT %05d", EOTDSetID))
+                E:egpSetText(154, format("IDENT %05d", EOTDSetID))
             }else{
-                E:egpSetText(149, "IDENT 0")
+                E:egpSetText(154, "IDENT 0")
             }
-            
-            #Cab signals and mode come here one day (hopefully)
-            
             
             #Message box stuff
             if(AETripped){
-                E:egpColor(164, OnRed)
-                E:egpSetText(165, "ALERTER PENALTY - SET TRAIN BRAKE TO SUPPRESSION TO RESET")
-                E:egpSetText(166, "")
+                E:egpColor(247, OnRed)
+                E:egpSetText(248, "ALERTER PENALTY - SET TRAIN BRAKE TO SUPPRESSION TO RESET")
+                E:egpSetText(249, "")
             }else{
-                E:egpColor(164, OnYellow)
+                E:egpColor(247, OnYellow)
                 if(Priming & !On){
-                    E:egpSetText(165, "Fuel Prime Cycle In Progress -")
-                    E:egpSetText(166, "Press Engine Stop To Abort Startup")
+                    E:egpSetText(248, "Fuel Prime Cycle In Progress -")
+                    E:egpSetText(249, "Press Engine Stop To Abort Startup")
                 }elseif(ParkingBrake){
-                    E:egpSetText(165, "Parking Brake Applied")
-                    E:egpSetText(166, "")
+                    E:egpSetText(248, "Parking Brake Applied")
+                    E:egpSetText(249, "")
                 }else{
-                    E:egpSetText(165, "")
-                    E:egpSetText(166, "")
+                    E:egpSetText(248, "")
+                    E:egpSetText(249, "")
                 }
             }
         }
@@ -1534,8 +1653,9 @@ if(first()|dupefinished()){
         
         
         
+        #----Secondary page hell
         if(!UpperPanelLoad){
-            if(Page == 0 | Page == 5 | Page == 7){
+            if(Page == 0 | Page == 5 | Page == 7 | Page == 8 | MainPagePort){
                 #Date setting
                 E:egpSetText(1, format("%s %01d, %04d", MonthStr, Day, Year))
                 if(TimeFormat){
@@ -1544,47 +1664,98 @@ if(first()|dupefinished()){
                     E:egpSetText(2, format("%02d:%02d %s %s", HoursActual, Minutes, AMPM, TimezoneName))
                 }
             }
-            
+        }
+        
+        #The real shit
+        if(!UpperPanelLoad & !PortMainPages){
             #Page speciffic updating
             switch(Page){
-                case 5,
-                    local PSIMult = (Units ? UnitsData[23, number] : 1) #PSI multiplier (from PSI to bar)
-                    #Trail / Lead indication
-                    E:egpSetText(10, (BCI_New ? "LEAD" : "TRAIL"))
-                    E:egpSetText(14, (BCI ? "LEAD" : "TRAIL"))
+                case 0, #Main page
+                    if(MoreOptionsSec == 0){
+                        #Screen brightness
+                        E:egpSetText(7, format("%.0f%s", Brightness * 100, "%"))
+                    }
                     
-                    if(!ABLockout){ #Show and update indications if not locked out
-                        E:egpAlpha(9, 255)
-                        E:egpAlpha(13, 255)
-                        E:egpAlpha(11, 255)
-                        E:egpAlpha(15, 255)
+                    break
+                    #----
+                case 5, #Air brake setup
+                    local PSIMult = (Units ? UNIT_DATA["M_bar", number] : 1) #PSI multiplier (from PSI to bar)
+                    
+                    if(AirBrakePage == 0){ #Main page
+                        #Trail / Lead indication
+                        E:egpSetText(10, (BCI_New ? "LEAD" : "TRAIL"))
+                        E:egpSetText(14, (BCI ? "LEAD" : "TRAIL"))
                         
-                        #EQ Res pressures
-                        E:egpSetText(9, format((Units ? "%.1f" : "%.0f") + " %s", 90 * PSIMult, (Units ? UnitsData[22, string] : UnitsData[24, string])))
-                        E:egpSetText(13, format((Units ? "%.1f" : "%.0f") + " %s", 90 * PSIMult, (Units ? UnitsData[22, string] : UnitsData[24, string])))
+                        if(!ABLockout){ #Show and update indications if not locked out
+                            E:egpAlpha(9, 255)
+                            E:egpAlpha(13, 255)
+                            E:egpAlpha(11, 255)
+                            E:egpAlpha(15, 255)
+                            
+                            #EQ Res pressures
+                            E:egpSetText(9, format((Units ? "%.1f" : "%.0f") + " %s", EQSet_New * PSIMult, (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string])))
+                            E:egpSetText(13, format((Units ? "%.1f" : "%.0f") + " %s", EQResSetPSI * PSIMult, (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string])))
+                            
+                            #Cut In / Cut Out indication
+                            E:egpSetText(11, (IsoBrk_New ? "CUT OUT" : "CUT IN"))
+                            E:egpSetText(15, (IsolatedBrakes ? "CUT OUT" : "CUT IN"))
+                            
+                            E:egpSetText(7, "")
+                            
+                        }else{ #Hide the indicators when locked out
+                            E:egpAlpha(9, 0)
+                            E:egpAlpha(13, 0)
+                            E:egpAlpha(11, 0)
+                            E:egpAlpha(15, 0)
+                            
+                            E:egpSetText(7, "Reverser must be centered to be setup as trail.")
+                        }
+                    }else{ #EQ Res PSI setup
+                        if(changed(Units)){
+                            E:egpSetText(260, format((Units ? "%.1f" : "%.0f") + " %s", 80 * PSIMult, (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string])))
+                            E:egpSetText(263, format((Units ? "%.1f" : "%.0f") + " %s", 90 * PSIMult, (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string])))
+                            E:egpSetText(266, format((Units ? "%.1f" : "%.0f") + " %s", 100 * PSIMult, (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string])))
+                            E:egpSetText(269, format((Units ? "%.1f" : "%.0f") + " %s", 110 * PSIMult, (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string])))
+                        }
                         
-                        #Cut In / Cut Out indication
-                        E:egpSetText(11, (IsoBrk_New ? "CUT OUT" : "CUT IN"))
-                        E:egpSetText(15, (IsolatedBrakes ? "CUT OUT" : "CUT IN"))
+                        #EQ Res pressure readout
+                        E:egpSetText(7, format((Units ? "%.1f" : "%.0f") + " %s", EQSet_New * PSIMult, (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string])))
                         
-                        E:egpSetText(7, "")
-                        
-                    }else{ #Hide the indicators when locked out
-                        E:egpAlpha(9, 0)
-                        E:egpAlpha(13, 0)
-                        E:egpAlpha(11, 0)
-                        E:egpAlpha(15, 0)
-                        
-                        E:egpSetText(7, "Reverser must be centered to be setup as trail.")
                     }
                     
                     break
                     #----
                 case 7, #EOT ID
-                    #EOT ID readout
-                    E:egpSetText(7, format("%01d  %01d  %01d  %01d  %01d", EID1, EID2, EID3, EID4, EID5))
+                    if(!EOTIDSetup){
+                        #EOT ID readout
+                        E:egpSetText(10, format("%0.f", EOTDSetID))
+                        
+                        #Arm state
+                        if(RX_EOTID != 0 & (CommTestFinished & CommTestResult)){
+                            E:egpSetText(14, (EOTDArmed ? "Armed" : "Disarmed"))
+                        }else{
+                            E:egpSetText(14, "?")
+                        }
+                        
+                        #Comm test status
+                        if(CommTestRun){
+                            E:egpSetText(18, "Testing")
+                            E:egpColor(18, LightBlue)
+                        }elseif(CommTestFinished){
+                            E:egpSetText(18, (CommTestResult ? "Passed" : "Failed"))
+                            E:egpColor(18, (CommTestResult ? LightBlue : LightRed))
+                        }else{
+                            E:egpSetText(18, "-")
+                            E:egpColor(18, LightBlue)
+                        }
+                        
+                    }else{
+                        #EOT ID readout
+                        E:egpSetText(7, format("%01d  %01d  %01d  %01d  %01d", EID1, EID2, EID3, EID4, EID5))
+                    }
                     
                     break
+                    #----
             }
         }
     }
@@ -1598,6 +1769,13 @@ if(first()|dupefinished()){
 #-------------
 if(clk("run")){
     Run = 1
+    
+    #Unit number override and RR name output
+    if(->UnitNumberOvr){
+        LocoDataInfo[3,string] = UnitNumberOvr
+    }
+    UnitRRName = LocoDataInfo[2, string]
+    UnitNumber = LocoDataInfo[3, string]
 }
 if(Run){
     timer("clk",200)
@@ -1610,24 +1788,47 @@ if(Battery & !Running & !SkipBoot){
     
     #Operating system load
     if(!OSLoaded){
-        if(OSLoadProgress >= 1){
+        if(!OSLoading){ #This just makes sure the screen doesn't keep on reloading
+            EGPMain:bootupScreenLoad(1, 0)
+            EGPSec:bootupScreenLoad(1, 1)
+            OSLoading = 1
+        }
+        
+        if(OSLoadProgress >= 1){ #OS Loaded, run the funny
             OSLoadProgress = 1
-            OSLoaded = 1
+            OSLoading = 0
             stoptimer("osLoadNext")
             
             EGPMain:egpClear()
             EGPSec:egpClear()
             
-            timer("startApps", randint(800, 1500))
-            #---
+            timer("startApps", randint(1000, 1500))
+            OSLoaded = 1
+            #----
         }else{ #Updating the load progress bar
-            timer("osLoadNext", randint(500, 1200))
-            if(clk("osLoadNext")){
-                OSLoadProgress += randint(5, 20) / 100
-            }
+            timer("osClk", 100)
             
-            EGPMain:bootupScreenLoad(1, 0)
-            EGPSec:egpClear()
+            if(clk("osClk")){ #This runs all the loading animations and the loading process itself
+                OSLoadBarPos += 40
+                if(OSLoadBarPos >= 1024){
+                    OSLoadBarPos -= 1024
+                }
+                
+                #Moving the bar
+                EGPMain:egpPos(6, vec2(OSLoadBarPos, 610))
+                
+                #Blinking colors cause it looks cool
+                local ColFactor = abs(sin(OSLoadBarPos / 2.84))
+                local Color = (vec(247, 140, 30) * (1 - ColFactor) + vec(207, 100, 0) * ColFactor)
+                EGPMain:egpColor(3, Color)
+                EGPMain:egpColor(5, Color)
+                EGPMain:egpColor(6, Color * vec(0.95))
+                #---
+                
+                #Loading
+                OSLoadProgress += (randint(0, 100) > 80 ? randint(5, 15) / 100 : 0)
+                #----
+            }
         }
     }
     
@@ -1643,10 +1844,19 @@ if(Battery & !Running & !SkipBoot){
     
 }elseif(!Battery){ #Display shutdown
     stoptimer("start")
+    stoptimer("osLoad")
     EGPMain:egpClear()
     EGPSec:egpClear()
     CanRun = 0
     Running = 0
+    OSLoaded = OSLoadProgress = 0
+    OSLoading = OSLoadBarPos = 0
+    
+    MainPage = 0
+    SecPage = 0
+    MoreOptionsMain = 0
+    MoreOptionsSec = 0
+    AirBrakePage = 0
 }
 
 #Display running
@@ -1655,17 +1865,18 @@ if(clk("start") | (SkipBoot & changed(Battery) & Battery)){
     CanRun = 1
     MainPage = 0
     SecPage = 0
+    AirBrakePage = 0
     
     stoptimer("start")
     
     EGPMain:egpClear()
-    EGPMain:egpLoad(MainPage, 1)
-    EGPMain:egpLoadButtons(MainPage, 1)
+    EGPMain:egpLoad(MainPage, 1, 0)
+    EGPMain:egpLoadButtons(MainPage, 1, 0)
     
     if(->EGPSec){
         EGPSec:egpClear()
-        EGPSec:egpLoad(SecPage, 0)
-        EGPSec:egpLoadButtons(SecPage, 0)
+        EGPSec:egpLoad(SecPage, 0, MainPagePort)
+        EGPSec:egpLoadButtons(SecPage, 0, MainPagePort)
     }
 }
 if(Running){
@@ -1685,10 +1896,9 @@ if(Driver:keyPressed(AlerterResetKey)){
     AlertResetKeyClicked = 0
 }
 
-
 if(Running){
     #Acceleration calculation
-    local SpeedC = (Units ? UnitsData[7,number] * MPH : MPH)
+    local SpeedC = (Units ? UNIT_DATA["M_km", number] * MPH : MPH)
     if(!ACheck & SpeedC > 0){
         Speed1 = SpeedC
         timer("speedClk", 500)
@@ -1748,14 +1958,62 @@ if(Running){
         }
     }
     #----
+    
+    
+    #EOTD stuff
+    #Comm test
+    if(CommTestRun){
+        timer("commTestDelay", randint(1000, 2000))
+        CommTestFinished = 0
+    }
+    if(clk("commTestDelay")){
+        if(RX_EOTID == EOTDSetID & ->RX_EOTID & RX_EOTID != 0){
+            CommTestResult = 1
+        }else{
+            CommTestResult = 0
+        }
+        CommTestRun = 0
+        CommTestFinished = 1
+    }
+    if(EOTDArmed & CommTestResult & !RX_EOTID){
+        CommTestFinished = 0
+        CommTestResult = 0
+        CommTestRun = 0
+        EOTDArmed = 0
+        EIDStr = "0"
+        EID1 = EID2 = EID3 = EID4 = EID5 = 0
+    }
+    
+    #EOTD Arming
+    if(EOTDArmState){
+        RX_EOTBrakePipe = BrakePipe
+        RX_EOTMPH = MPH
+        EOTDArmed = 1
+    }else{
+        RX_EOTBrakePipe = RX_EOTMPH = 0
+        EOTDArmed = 0
+    }
+    
+    #Rear pressure readout
+    if(EOTDArmed){
+        RearPres = RX_EOTPSI
+    }else{
+        RearPres = 0
+    }
+    
+    #EOTD moving
+    if(EOTDArmed & MPH > 0.2){
+        EOTMove = 1
+    }else{
+        EOTMove = 0
+    }
+    #----
 }
         
 
 if(clk("clk") & CanRun){ #Display running
     
     if(Running){
-        #The EXTRA THICC value gathering
-        
         #RLCPT
         RLCPTW = RLCPT:wirelink()
         #----
@@ -1800,24 +2058,6 @@ if(clk("clk") & CanRun){ #Display running
             LowFuel = 0
         }
         
-        #EOTD data gathering & sending
-        RX_EOTBrakePipe = BrakePipe
-        RX_EOTMPH = MPH
-        if(RX_EOTID == EOTDSetID & ->RX_EOTID & EOTDSetID != 0){
-            EOTDLinked = 1
-            RearPres = RX_EOTPSI
-        }else{
-            RearPres = 0
-            EOTDLinked = 0
-        }
-        
-        #EOTD moving
-        if(EOTDLinked & MPH > 0.2){
-            EOTMove = 1
-        }else{
-            EOTMove = 0
-        }
-        
         #Unit override
         if(->UnitOverride){
             Units = UnitOverride
@@ -1831,235 +2071,455 @@ if(clk("clk") & CanRun){ #Display running
                 ABLockout = 0
             }
         }
+        #----
         
-        if(MB7){ #Units change button
-            Units = !Units
+        
+        
+        
+        #Main display operation
+        #----------------------
+        switch(MainPage){
+            case 0, #----Main page
+                #More choices
+                if(changed(MB8) & MB8 & MoreOptionsMain < 2){
+                    MoreOptionsMain++
+                }elseif(changed(MB8) & MB8 & MoreOptionsMain >= 2){
+                    MoreOptionsMain = 0
+                }
+                
+                switch(MoreOptionsMain){
+                    case 1, #More opts. 2
+                        #Brightness buttons
+                        if(Brightness < 1){ #Brighter
+                            if(MB1){
+                                Brightness += 0.05
+                            }
+                            EGPMain:egpColor(250, LightBlue)
+                        }else{
+                            EGPMain:egpColor(250, OffBlue)
+                        }
+                        
+                        if(Brightness > 0.15){ #Dimmer
+                            if(MB2){
+                                Brightness -= 0.05
+                            }
+                            EGPMain:egpColor(253, LightBlue)
+                        }else{
+                            EGPMain:egpColor(253, OffBlue)
+                        }
+                        
+                        #Page selection
+                        if(MB4){ #Operator controls page (not yet)
+                        #    MainPage = 3
+                        }
+                        if(MB6){ #Length counter page (not yet)
+                        #    MainPage = 4
+                        }
+                        
+                        break
+                }
+                break
+                #----
         }
         #----
         
         
         
         
-        #Page speciffic stuff (secondary display)
-        switch(SecPage){
-            case 0, #----Main page
-                #More choices
-                if(changed(SB8) & SB8 & MoreOptionsSec < 1){
-                    MoreOptionsSec++
-                }elseif(changed(SB8) & SB8 & MoreOptionsSec >= 1){
-                    MoreOptionsSec = 0
-                }
-                
-                if(MoreOptionsSec == 0){
-                    if(SB7){ #Air brake setup
-                        SecPage = 5
-                    }
-                }elseif(MoreOptionsSec == 1){
-                    if(SB4){ #EOT ID
-                        SecPage = 7
-                    }
-                }
-                
-                break
-            case 5, #----Air Brake (setup)
-                #Buttons
-                #Cancel
-                if(SB1){
-                    SecPage = 0
-                }
-                
-                if(!ABLockout){
-                    #Lead / Trail change
-                    if(SB3){
-                        BCI_New = !BCI_New
+        
+        #Setup display operation
+        #-----------------------
+        if(->EGPSec){
+            if(!MainPagePort){
+            switch(SecPage){
+                case 0, #----Main page
+                    #More choices
+                    if(changed(SB8) & SB8 & MoreOptionsSec < 2){
+                        MoreOptionsSec++
+                    }elseif(changed(SB8) & SB8 & MoreOptionsSec >= 2){
+                        MoreOptionsSec = 0
                     }
                     
-                    #Cut In / Cut Out change
-                    if(SB4){
-                        IsoBrk_New = !IsoBrk_New
+                    switch(MoreOptionsSec){
+                        case 0, #More opts. 1
+                            #Brightness buttons
+                            if(Brightness < 1){ #Brighter
+                                if(SB1){
+                                    Brightness += 0.05
+                                }
+                                EGPSec:egpColor(250, LightBlue)
+                            }else{
+                                EGPSec:egpColor(250, OffBlue)
+                            }
+                            
+                            if(Brightness > 0.15){ #Dimmer
+                                if(SB2){
+                                    Brightness -= 0.05
+                                }
+                                EGPSec:egpColor(253, LightBlue)
+                            }else{
+                                EGPSec:egpColor(253, OffBlue)
+                            }
+                            
+                            #Page switching
+                            #Air brake setup
+                            if(SB7){
+                                SecPage = 5
+                            }
+                            
+                            break
+                        case 1, #More opts. 2
+                            #EOT ID
+                            if(SB4){
+                                SecPage = 7
+                            }
+                            
+                            break
                     }
                     
-                    #Accept new
-                    if(SB6){
-                        BCI = BCI_New
-                        IsolatedBrakes = IsoBrk_New
-                        SecPage = 0
+                    break
+                    #----
+                case 5, #----Air Brake (setup)
+                    if(AirBrakePage == 0){
+                        #Buttons
+                        #Cancel
+                        if(SB1){
+                            SecPage = 0
+                        }
+                        
+                        if(!ABLockout){
+                            #EQ res setup page
+                            if(SB2){
+                                AirBrakePage = 1
+                            }
+                            
+                            #Lead / Trail change
+                            if(SB3){
+                                BCI_New = !BCI_New
+                            }
+                            
+                            #Cut In / Cut Out change
+                            if(SB4){
+                                IsoBrk_New = !IsoBrk_New
+                            }
+                            
+                            #Accept new
+                            if(SB6){
+                                BCI = BCI_New
+                                IsolatedBrakes = IsoBrk_New
+                                EQResSetPSI = EQSet_New
+                                SecPage = 0
+                            }
+                        }
+                    }elseif(AirBrakePage == 1){
+                        #More buttons
+                        #Cancel
+                        if(SB1){
+                            EQSet_New = EQResSetPSI
+                            AirBrakePage = 0
+                        }
+                        
+                        #Decrease & Increase buttons
+                        if(SB2 & EQSet_New > 80){
+                            EQSet_New--
+                        }
+                        
+                        if(SB3 & EQSet_New < 130){
+                            EQSet_New++
+                        }
+                        
+                        #80 PSI
+                        if(SB4){
+                            EQSet_New = 80
+                        }
+                        
+                        #90 PSI
+                        if(SB5){
+                            EQSet_New = 90
+                        }
+                        
+                        #100 PSI
+                        if(SB6){
+                            EQSet_New = 100
+                        }
+                        
+                        #110 PSI
+                        if(SB7){
+                            EQSet_New = 110
+                        }
+                        
+                        #Enter
+                        if(SB8){
+                            AirBrakePage = 0
+                        }
+                        
                     }
-                }
-                
-                break
-                #----
-            case 7, #----EOT ID page
-                #Yeah you get idea
-                if(SB1){ #Cancel
-                    SecPage = 0
-                }
-                
-                #Individual digit cycle buttons
-                if(SB2){ #1
-                    if(EID1 < 9){
-                        EID1++
-                    }elseif(EID1 >= 9){
-                        EID1 = 0
+                    break
+                    #----
+                case 7, #----EOT ID page
+                    if(!EOTIDSetup){
+                        if(SB1){ #Change EOT ID
+                            EOTIDSetup = 1
+                        }
+                        
+                        local CommTestPassed = (CommTestResult & CommTestFinished)
+                        if(SB2 & CommTestPassed){ #Arm EOT
+                            EOTDArmState = 1
+                        }
+                        if(CommTestPassed){
+                            EGPSec:egpColor(253, LightBlue)
+                            EGPSec:egpColor(256, LightBlue)
+                        }else{
+                            EGPSec:egpColor(253, OffBlue)
+                            EGPSec:egpColor(256, OffBlue)
+                        }
+                        
+                        if((SB3 & CommTestPassed) | !CommTestPassed){ #Disarm EOT
+                            EOTDArmState = 0
+                        }
+                        
+                        
+                        if(SB4){ #Reset EOT ID
+                            EIDStr = "0"
+                            CommTestResult = CommTestFinished = 0
+                        }
+                        
+                        if(SB6){ #Comm test
+                            CommTestRun = 1
+                        }
+                        
+                        if(SB8){ #Exit(tm)
+                            SecPage = 0
+                        }
+                        
+                    }else{
+                        #Yeah you get idea
+                        if(SB1){ #Cancel
+                            EOTIDSetup = 0
+                        }
+                        
+                        #Individual digit cycle buttons
+                        if(SB2){ #1
+                            if(EID1 < 9){
+                                EID1++
+                            }elseif(EID1 >= 9){
+                                EID1 = 0
+                            }
+                        }
+                        
+                        if(SB3){ #2
+                            if(EID2 < 9){
+                                EID2++
+                            }elseif(EID2 >= 9){
+                                EID2 = 0
+                            }
+                        }
+                        
+                        if(SB4){ #3
+                            if(EID3 < 9){
+                                EID3++
+                            }elseif(EID3 >= 9){
+                                EID3 = 0
+                            }
+                        }
+                        
+                        if(SB5){ #4
+                            if(EID4 < 9){
+                                EID4++
+                            }elseif(EID4 >= 9){
+                                EID4 = 0
+                            }
+                        }
+                        
+                        if(SB6){ #5
+                            if(EID5 < 9){
+                                EID5++
+                            }elseif(EID5 >= 9){
+                                EID5 = 0
+                            }
+                        }
+                        
+                        if(SB7){
+                            EIDStr = EID1:toString() + EID2:toString() + EID3:toString() + EID4:toString() + EID5:toString()
+                            if(EIDStr:toNumber() != EOTDSetID){
+                                CommTestResult = CommTestFinished = 0
+                            }
+                            EOTIDSetup = 0
+                        }
                     }
-                }
-                
-                if(SB3){ #2
-                    if(EID2 < 9){
-                        EID2++
-                    }elseif(EID2 >= 9){
-                        EID2 = 0
-                    }
-                }
-                
-                if(SB4){ #3
-                    if(EID3 < 9){
-                        EID3++
-                    }elseif(EID3 >= 9){
-                        EID3 = 0
-                    }
-                }
-                
-                if(SB5){ #4
-                    if(EID4 < 9){
-                        EID4++
-                    }elseif(EID4 >= 9){
-                        EID4 = 0
-                    }
-                }
-                
-                if(SB6){ #5
-                    if(EID5 < 9){
-                        EID5++
-                    }elseif(EID5 >= 9){
-                        EID5 = 0
-                    }
-                }
-                
-                if(SB7){
-                    EIDStr = EID1:toString() + EID2:toString() + EID3:toString() + EID4:toString() + EID5:toString()
-                    SecPage = 0
-                }
-                
-                
-                break
+                    
+                    break
+                    #----
+            }
+            
+            #--End of secondary monitor pages
+            }elseif(MainPagePort){
+            #--Main page port stuff
+            
+            #Not yet...
+            
+            }
         }
+        
+        #Miscellaneous operation:
+        #------------------------
+        #Brightness clamp
+        if(Brightness > 1){
+            Brightness = 1
+        }elseif(Brightness < 0.15){
+            Brightness = 0.15
+        }
+        #---
+        
         
         #EOTD ID
         EOTDSetID = EIDStr:toNumber()
         
         
-        #EGP loading
+        #Display loading
+        #Main display
+        #------------
         if(changed(MainPage)){
             EGPMain:egpClear()
-            EGPMain:egpLoad(MainPage, 1)
-            EGPMain:egpLoadButtons(MainPage, 1)
+            EGPMain:egpLoad(MainPage, 1, 0)
+            EGPMain:egpLoadButtons(MainPage, 1, 0)
         }
+        #Button loading
+        if(changed(MoreOptionsMain)){
+            EGPMain:egpLoadButtons(MainPage, 1, 0)
+        }
+        
+        #Secondary display
+        #-----------------
         if(->EGPSec){
-            if(changed(SecPage)){
+            #Force-loading when porting pages
+            if(changed(MainPagePort)){
                 EGPSec:egpClear()
-                EGPSec:egpLoad(SecPage, 0)
-                EGPSec:egpLoadButtons(SecPage, 0)
+                EGPSec:egpLoad(SecPage, 0, MainPagePort)
+                EGPSec:egpLoadButtons(SecPage, 0, MainPagePort)
             }
             
-            #Button loading
-            if(changed(MoreOptionsSec)){
-                EGPSec:egpLoadButtons(SecPage, 0)
+            if(!MainPagePort){
+                if(SecPage == 0 & SetupScreenLogo){ #Setup page logo
+                    holoCreate(1, EGPSec:entity():toWorld(vec(5.3, 0, 0)), SetupLogoScale, EGPSec:entity():toWorld(ang(90, 0, 0)), SetupLogoCol, "plane")
+                }
+                
+                if(changed(SecPage) | changed(AirBrakePage) | changed(EOTIDSetup)){
+                    EGPSec:egpClear()
+                    EGPSec:egpLoad(SecPage, 0, 0)
+                    EGPSec:egpLoadButtons(SecPage, 0, 0)
+                }
+                
+                #Button loading
+                if(changed(MoreOptionsSec) | changed(ABLockout)){
+                    EGPSec:egpLoadButtons(SecPage, 0, 0)
+                }
+            }elseif(MainPagePort){
+                #Nah
             }
         }
     }
+    
+    MB1 = MB2 = MB3 = MB4 = MB5 = MB6 = MB7 = MB8 = 0
+    SB1 = SB2 = SB3 = SB4 = SB5 = SB6 = SB7 = SB8 = 0
 }
 
 
 if(clk("clkDisp")){ #Display updating
-    EGPMain:egpUpdate(MainPage, 1)
+    EGPMain:egpUpdate(MainPage, 1, 0)
     if(->EGPSec){
-        EGPSec:egpUpdate(SecPage, 0)
+        EGPSec:egpUpdate(SecPage, 0, MainPagePort)
     }
 }
 #----
 
+#Key stuff
+if(!User:isPlayer()){
+    if(Driver:isPlayer()){
+        User = Driver
+        runOnKeys(User, 1)
+    }
+}
 
-#Command crazyness
-User = (Driver:isValid() ? Driver : Owner)
-if(chatClk(User) & Running){
-    LastSaid = User:lastSaid()
-    CMDA = LastSaid:explode(" ")
-    Prefix = CMDA[1,string]:index(1)
-    CMD = CMDA[1,string]
+#Checks if the user has pressed a key
+if(Running & keyClk() & !KeyTimeout){
+    KeyTimeout = 1
+    PressedKey = keyClkPressed()
+    IsShifting = User:keyPressed("LShift")
+    KeyCMD = format("%d%s", IsShifting, PressedKey)
     
-    switch(CMD){
-        case ".mb1", #Main buttons
+    switch(KeyCMD){
+        case "01", #Main buttons
             MB1 = 1
             break
-        case ".mb2",
+        case "02",
             MB2 = 1
             break
-        case ".mb3",
+        case "03",
             MB3 = 1
             break
-        case ".mb4",
+        case "04",
             MB4 = 1
             break
-        case ".mb5",
+        case "05",
             MB5 = 1
             break
-        case ".mb6",
+        case "06",
             MB6 = 1
             break
-        case ".mb7",
+        case "07",
             MB7 = 1
             break
-        case ".mb8",
+        case "08",
             MB8 = 1
             break
-        case ".sb1", #Secondary buttons
+        case "11", #Secondary buttons
             SB1 = 1
             break
-        case ".sb2",
+        case "12",
             SB2 = 1
             break
-        case ".sb3",
+        case "13",
             SB3 = 1
             break
-        case ".sb4",
+        case "14",
             SB4 = 1
             break
-        case ".sb5",
+        case "15",
             SB5 = 1
             break
-        case ".sb6",
+        case "16",
             SB6 = 1
             break
-        case ".sb7",
+        case "17",
             SB7 = 1
             break
-        case ".sb8",
+        case "18",
             SB8 = 1
             break
     }
-    if(Prefix == "."){
-        local CMDLo = CMD:lower()
-        if("abcdefghijklmnopqrstuvwxyz":find(CMDLo:index(2))){
-            hideChat(1)
-        }
-        
+    if("12345678":find(PressedKey)){
         #Click sounds
-        if("m":find(CMD:index(2))){
+        if(!IsShifting){
             EGPMain:entity():soundPlay(2, 0.25, "titus's locomotive sound expansion pack/resources/ac4400cw/cab/switchesbuttons/smallbutton/s_ac4400cwbuttonclicksmallona03.wav")
             timer("bOutM", 300)
         }
-        if("s":find(CMD:index(2))){
+        if(IsShifting){
             EGPSec:entity():soundPlay(2, 0.25, "titus's locomotive sound expansion pack/resources/ac4400cw/cab/switchesbuttons/smallbutton/s_ac4400cwbuttonclicksmallona03.wav")
             timer("bOutS", 300)
         }
+        
     }
     
-    timer("butReset", 230)
+}elseif(Running & keyClk() & KeyTimeout){ #Resets the timeout if the user stops pressing the key
+    KeyTimeout = 0
 }
-if(clk("butReset")){
-    MB1 = MB2 = MB3 = MB4 = MB5 = MB6 = MB7 = MB8 = 0
-    SB1 = SB2 = SB3 = SB4 = SB5 = SB6 = SB7 = SB8 = 0
+if(!Driver:isPlayer()){ #Stops the E2 from running on keys by the last user (if the user gets out of the seat)
+    runOnKeys(User, 0)
+    User = noentity()
+    KeyCMD = ""
+    PressedKey = ""
+    IsShifting = 0
 }
 
 if(clk("bOutM")){
