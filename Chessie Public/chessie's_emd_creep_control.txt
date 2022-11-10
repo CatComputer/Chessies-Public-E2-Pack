@@ -4,6 +4,12 @@
 @persist CreepLoad
 @trigger none
 if(first()|dupefinished()){
+    #Instructions
+    RLCPT:entity will go to your PT2 chip
+    HumpMultIn is not necessary to wire unless you have a hump control system already on your unit, then wire the HumpMultIn to that.
+    HumpMultiplier will go to your PT2 control stand.
+    Be sure to modify the config below.
+
     #Config
     CreepLoad=2550 #At what load does creep control start kicking on?
     #End of Config (that was fast)
