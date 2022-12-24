@@ -1,13 +1,13 @@
 @name locomotive_displays/mfds/EMD FIRE Display System by Big Bean V1
 @inputs RLCPT:entity Pod:entity CtlTable:table [EGPMain EGPSec]:wirelink Battery Isolation UnitNumberOvr:string
 @inputs RX_EOTPSI RX_EOTID  FuelLevel Priming Horn Bell ParkingBrake LoadShed UnitOverride
-@outputs RX_EOTBrakePipe RX_EOTMPH EOTDSetID Running DrivenDistMI AlertEmergency BCI IsolatedBrakes EQResSetPSI DefoggerOn RailConditioner
+@outputs RX_EOTBrakePipe RX_EOTMPH EOTDSetID Running DrivenDistMI AlertEmergency BCI IsolatedBrakes EQResSetPSI DefoggerOn RailConditioner Length MMDrivenDistance MMSpeedChecks:table MMTimeElapsed
 #----
 #Generic variables
 @persist Run  Units SkipBoot ShowCredits UseAlerter AlerterMaxVolume AlerterResetKey:string MaxSpeedoVelocity SetToAmps MaxTE MaxContTE MaxTMCurrent MaxContTMCurrent MaxDynCurrent MaxContDynCurrent FuelTankCap 
 @persist BrakePanelYeet TimeFormat Timezone HasDST TimezoneName:string LocoDataInfo:table SetupScreenLogo [SetupLogoScale SetupLogoCol]:vector SetupLogoMat:string
 @persist RLCPTW:wirelink [Driver User]:entity [UNIT_DATA SmoothTable]:table MainPage SecPage CanRun OSLoaded OSLoadProgress OSLoadBarPos OSLoading
-@persist [LightBlue DarkBlue LightGreen LightRed OffWhite OnWhite OffRed OnRed OffYellow OnYellow OffBlue]:vector
+@persist [White LightBlue DarkBlue LightPurple LightGreen LightRed OffWhite OnWhite OffRed OnRed OffYellow OnYellow OffBlue LightGray VLightGreen VLightYellow DarkerGreen DarkerYellow]:vector
 @persist BCI AlerterOn AlerterReset  DrivenDistMI Accel MPH1 MPH2 ACheck Speed1 Speed2 AETripped FirmwareVersion:string TMCurrent  Year Month Day Hours Minutes Seconds  HTZ HoursTZ DayTZ MonthTZ YearTZ
 #----
 #Add-on E2 vars
@@ -19,7 +19,8 @@
 #----
 #Page specific vars
 @persist DynBrakeWarn UnitAlarm EOTMove  EID1 EID2 EID3 EID4 EID5 EIDStr:string
-@persist MoreOptionsMain Brightness OPControlsPage
+@persist MoreOptionsMain Brightness OPControlsPage  LengthCounterPage LengthChangePage MeasureLengthFinished MeasuredLength MeasuredLTooShort IL1 IL2 IL3 IL4 IL5 CountdownLength 
+@persist MeasuringLength MeasuredMileRun MMFinished MMTimeElapsed MMCheckFailed MMAverageSpeed CountdownRun MMDrivenDistance MMSpeedChecks:table MMSpeedSum
 @persist MainPagePort MoreOptionsSec  AirBrakePage ABLockout BCI_New IsoBrk_New EQSet_New  EOTIDSetup EOTDArmState CommTestResult CommTestRun CommTestFinished EOTDArmed EOTDSetID RearPres
 #Commands & buttons
 @persist [PressedKey KeyCMD]:string IsShifting KeyTimeout  MB1 MB2 MB3 MB4 MB5 MB6 MB7 MB8 SB1 SB2 SB3 SB4 SB5 SB6 SB7 SB8
@@ -35,6 +36,7 @@ While not completely realistic, I think it's pretty solid for anybody who doesn'
 Version log:
 ------------
 V:102.02 - So you know how the config says that you can change the units in-game? That's a feature now. Additionally changed the metric pressure units to kPa from bar (thanks West)
+Whoops, finger slipped, added length counter as well. Merry Christmas!
 --------
 V:102.01 - Overhaul of basically every page, fixed some config stuff, cleaned up the old mess, added new loading screen for your pleasures (wow you updated V1 no way)
 --------
@@ -173,9 +175,12 @@ if(first()|dupefinished()){
     EOTDSetID = 0
     EOTDArmState = EOTDArmed = 0
     
+    Running = 0
+    White = vec(255)
     LightBlue = vec(130,230,245)
     OffBlue = vec(10,40,45)
     DarkBlue = vec(15, 30, 100)
+    LightPurple = vec(220, 155, 245)
     LightGreen = vec(80,255,50)
     LightRed = vec(250,100,60)
     OffWhite = vec(32,30,28)
@@ -184,6 +189,11 @@ if(first()|dupefinished()){
     OnRed = vec(220,30,30)
     OffYellow = vec(40,40,10)
     OnYellow = vec(255,250,110)
+    LightGray = vec(180)
+    VLightGreen = vec(190, 255, 170)
+    VLightYellow = vec(255, 250, 190)
+    DarkerGreen = vec(70, 210, 40)
+    DarkerYellow = vec(240, 210, 40)
     
     #EGP clearing
     EGPMain:egpResolution(vec2(0,0), vec2(1024,1024))
@@ -867,7 +877,7 @@ if(first()|dupefinished()){
             
             
             #----Lower section stuff
-            if(Page == 0 | Page == 3){ #This makes it so the lower portion loads only on specific pages
+            if(Page == 0 | Page == 3 | Page == 4){ #This makes it so the lower portion loads only on specific pages
                 #Other indicators
                 #Horn
                 O = 139
@@ -1041,6 +1051,182 @@ if(first()|dupefinished()){
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightBlue)
                                                         
+                            break
+                    }
+                    break
+                    #----
+                case 4, #Length counter
+                    switch(LengthCounterPage){
+                        case 0, #Main page
+                            #Page label box
+                            E:egpPageLabelBox(174, vec2(512, 800), "Length Counter")
+                            
+                            break
+                        case 1, #Length change page
+                            switch(LengthChangePage){
+                                case 0, #Main page
+                                    #I mean you get the idea at this point
+                                    E:egpPageLabelBox(174, vec2(512, 800), "Change Length")
+                                    
+                                    #Measured length
+                                    
+                                    break
+                                case 1, #Measure length page
+                                    E:egpPageLabelBox(174, vec2(512, 800), "Train Length Counter Functions")
+                                    local LUnits = (Units ? "Meters" : "Feet")
+                                    local LUnitMult = (Units ? UNIT_DATA["M_m", number] : 1)
+                                    
+                                    if(!MeasureLengthFinished){
+                                        #Current measured length
+                                        O = 177
+                                        E:egpText(O, format("%.0f", MeasuredLength * LUnitMult), vec2(320, 890))
+                                        E:egpFont(O, "Marlett", 18)
+                                        E:egpAlign(O, 1, 1)
+                                        
+                                        #Units
+                                        O = 178
+                                        E:egpText(O, format("%s", LUnits), vec2(420, 890))
+                                        E:egpFont(O, "Marlett", 18)
+                                        E:egpAlign(O, 1, 1)
+                                        E:egpColor(O, LightBlue)
+                                    }else{
+                                        #Info text
+                                        O = 177 #Short length warning
+                                        E:egpText(O, (MeasuredLTooShort ? "The measured length is too short!" : ""), vec2(20, 880))
+                                        E:egpFont(O, "Marlett", 18)
+                                        E:egpAlign(O, 0, 1)
+                                        
+                                        #Previous length
+                                        O = 178
+                                        E:egpText(O, format("The previous length was %.0f %s", Length * LUnitMult, LUnits), vec2(20, 920))
+                                        E:egpFont(O, "Marlett", 18)
+                                        E:egpAlign(O, 0, 1)
+                                        E:egpColor(O, LightBlue)
+                                    }
+                                        
+                                    
+                                    break
+                                case 2, #Enter length page
+                                    E:egpPageLabelBox(174, vec2(512, 800), "Enter Length")
+                                    
+                                    #Current input length readout
+                                    O = 177
+                                    E:egpText(O, format("%01d  %01d  %01d  %01d  %01d", IL1, IL2, IL3, IL4, IL5), vec2(448, 860))
+                                    E:egpFont(O, "Marlett", 18)
+                                    E:egpAlign(O, 1, 1)
+                                    
+                                    O = 178
+                                    E:egpText(O, format("%s", (Units ? "Meters" : "Feet")), vec2(530, 860))
+                                    E:egpFont(O, "Marlett", 18)
+                                    E:egpAlign(O, 0, 1)
+                                    #---
+                                    
+                                    #Digit underlines
+                                    O = 179
+                                    E:egpBox(O, vec2(384, 884), vec2(22, 6))
+                                    E:egpColor(O, LightBlue)
+                                    
+                                    O = 180
+                                    E:egpBox(O, vec2(416, 884), vec2(22, 6))
+                                    E:egpColor(O, LightBlue)
+                                    
+                                    O = 181
+                                    E:egpBox(O, vec2(448, 884), vec2(22, 6))
+                                    E:egpColor(O, LightBlue)
+                                    
+                                    O = 182
+                                    E:egpBox(O, vec2(480, 884), vec2(22, 6))
+                                    E:egpColor(O, LightBlue)
+                                    
+                                    O = 183
+                                    E:egpBox(O, vec2(512, 884), vec2(22, 6))
+                                    E:egpColor(O, LightBlue)
+                                    #---
+                                    
+                                    #Connection lines
+                                    O = 184
+                                    E:egpLine(O, vec2(192, 940), vec2(384, 886))
+                                    E:egpSize(O, 2)
+                                    E:egpColor(O, LightBlue)
+                                    
+                                    O = 185
+                                    E:egpLine(O, vec2(320, 940), vec2(416, 886))
+                                    E:egpSize(O, 2)
+                                    E:egpColor(O, LightBlue)
+                                    
+                                    O = 186
+                                    E:egpLine(O, vec2(448, 940), vec2(448, 886))
+                                    E:egpSize(O, 2)
+                                    E:egpColor(O, LightBlue)
+                                    
+                                    O = 187
+                                    E:egpLine(O, vec2(576, 940), vec2(480, 886))
+                                    E:egpSize(O, 2)
+                                    E:egpColor(O, LightBlue)
+                                    
+                                    O = 188
+                                    E:egpLine(O, vec2(704, 940), vec2(512, 886))
+                                    E:egpSize(O, 2)
+                                    E:egpColor(O, LightBlue)
+                                    #---
+                                    
+                                    #Invalid length text
+                                    O = 189
+                                    E:egpText(O, "Invalid Length", vec2(1018, 890)) #Invalid Length
+                                    E:egpFont(O, "Marlett", 16)
+                                    E:egpAlign(O, 2, 1)
+                                    E:egpColor(O, OnRed)
+                                    
+                                    break
+                            }
+                            break
+                        case 2, #Length countdown page
+                            E:egpPageLabelBox(174, vec2(512, 800), "Countdown Length")
+                            local LUnits = (Units ? "Meters" : "Feet")
+                            local LUnitMult = (Units ? UNIT_DATA["M_m", number] : 1)
+                            
+                            #Length
+                            O = 177
+                            E:egpText(O, format("%.0f", CountdownLength * LUnitMult), vec2(576, 904))
+                            E:egpFont(O, "Marlett", 18)
+                            E:egpAlign(O, 1, 1)
+                            
+                            #Units
+                            O = 178
+                            E:egpText(O, format("%s", LUnits), vec2(676, 904))
+                            E:egpFont(O, "Marlett", 18)
+                            E:egpAlign(O, 1, 1)
+                            E:egpColor(O, LightBlue)
+                                                                                
+                            break
+                        case 3, #Measured mile page
+                            E:egpPageLabelBox(174, vec2(512, 800), "Measured Mile")
+                            
+                            O = 177 #Elapsed time
+                            E:egpText(O, "Time Mile Posts", vec2(192, 850))
+                            E:egpFont(O, "Marlett", 18)
+                            E:egpAlign(O, 1, 1)
+                            E:egpColor(O, LightBlue)
+                            
+                            O = 178 #Time readout
+                            E:egpText(O, format("%02d:%02d", 0, 0), vec2(192, 890))
+                            E:egpFont(O, "Marlett", 18)
+                            E:egpAlign(O, 1, 1)
+                            E:egpColor(O, LightPurple)
+                            
+                            O = 179 #Average speed for Measured Mile text placeholder
+                            E:egpText(O, "", vec2(800, 850))
+                            E:egpFont(O, "Marlett", 16)
+                            E:egpAlign(O, 1, 1)
+                            E:egpColor(O, LightBlue)
+                            
+                            O = 180 #Average speed / Speed Check invalid message
+                            E:egpText(O, "", vec2(800, 890))
+                            E:egpFont(O, "Marlett", 16)
+                            E:egpAlign(O, 1, 1)
+                            E:egpColor(O, LightPurple)
+                            
+                            
                             break
                     }
                     break
@@ -1326,6 +1512,77 @@ if(first()|dupefinished()){
                             E:egpButton(259, vec2(448, 980), vec2(126, 80), "Engineer's   Primary", OffBlue)
                             E:egpButton(262, vec2(960, 980), vec2(126, 80), "Exit", LightBlue)
                             E:egpButton(265, vec2(832, 980), vec2(126, 80), "Change    Units", LightBlue)
+                            
+                            break
+                    }
+                    break
+                    #----
+                case 4, #Length counter
+                    switch(LengthCounterPage){
+                        case 0, #Main page
+                            E:egpButton(250, vec2(192, 980), vec2(126, 80), "Change   Length", LightBlue)
+                            E:egpButton(256, vec2(448, 980), vec2(126, 80), "Countdown  Length", LightBlue)
+                            E:egpButton(259, vec2(704, 980), vec2(126, 80), "Mesaured   Mile", LightBlue)
+                            E:egpButton(262, vec2(960, 980), vec2(126, 80), "Exit", LightBlue)
+                            
+                            break
+                        case 1, #Change length page
+                            switch(LengthChangePage){
+                                case 0, #Main length change page
+                                    E:egpButton(250, vec2(320, 980), vec2(126, 80), "Measure   Length", LightBlue)
+                                    E:egpButton(253, vec2(576, 980), vec2(126, 80), "Enter     Length", LightBlue)
+                                    E:egpButton(256, vec2(960, 980), vec2(126, 80), "Exit", LightBlue)
+                                    
+                                    break
+                                case 1, #Measure length
+                                    if(!MeasureLengthFinished){
+                                        E:egpButton(250, vec2(64, 980), vec2(126, 80), "Cancel", LightBlue)
+                                        E:egpButton(253, vec2(320, 980), vec2(126, 80), (MeasuringLength ? "Stop      Measure" : "Start      Measure"), (MeasuringLength ? OnYellow : LightBlue))
+                                        E:egpButton(256, vec2(960, 980), vec2(126, 80), "Exit, Count Conitnues", LightBlue)
+                                    }else{
+                                        E:egpButton(250, vec2(576, 980), vec2(126, 80), "Accept    Length", (!MeasuredLTooShort ? OnYellow : OffYellow))
+                                        E:egpButton(253, vec2(832, 980), vec2(126, 80), "Reject    Length", OnYellow)
+                                    }
+                                                                                    
+                                    break
+                                case 2, #Enter length
+                                    E:egpButton(250, vec2(64, 980), vec2(126, 80), "Cancel", LightBlue)
+                                    E:egpButton(253, vec2(192, 980), vec2(126, 80), "", LightBlue)
+                                    E:egpButton(256, vec2(320, 980), vec2(126, 80), "", LightBlue)
+                                    E:egpButton(259, vec2(448, 980), vec2(126, 80), "", LightBlue)
+                                    E:egpButton(262, vec2(576, 980), vec2(126, 80), "", LightBlue)
+                                    E:egpButton(265, vec2(704, 980), vec2(126, 80), "", LightBlue)
+                                    E:egpButton(268, vec2(960, 980), vec2(126, 80), "Enter", OffBlue)
+                                    
+                                    break
+                            }
+                            break
+                        case 2, #Length countdown page
+                            E:egpButton(250, vec2(576, 980), vec2(126, 80), "Count     Down", LightPurple)
+                            E:egpButton(253, vec2(832, 980), vec2(126, 80), "Reset    Counter", LightBlue)
+                            E:egpButton(256, vec2(960, 980), vec2(126, 80), "Exit, Count Conitnues", LightBlue)
+                                                                                
+                            break
+                        case 3, #Measure mile page
+                            if(!MeasuredMileRun & !MMFinished){
+                                for(I = 1, 6){ #Yeet the previous buttons
+                                    E:egpRemove(I + 249)
+                                }
+                                E:egpButton(250, vec2(192, 980), vec2(126, 80), "Start     Timer", LightBlue)
+                            }
+                            
+                            if(MeasuredMileRun | MMFinished){
+                                if(!MMFinished){
+                                    E:egpButton(250, vec2(576, 980), vec2(126, 80), "Stop      Timer", OnYellow)
+                                }else{
+                                    for(I = 1, 3){ #YEET the yellow button with extreme force
+                                        E:egpRemove(I + 249)
+                                    }
+                                }
+                                E:egpButton(253, vec2(832, 980), vec2(126, 80), "Reset     Timer", LightBlue)
+                            }
+                            
+                            E:egpButton(256, vec2(960, 980), vec2(126, 80), "Exit", LightBlue)
                             
                             break
                     }
@@ -1698,7 +1955,7 @@ if(first()|dupefinished()){
             #----End of that
             
             
-            if(Page == 0 | Page == 3){
+            if(Page == 0 | Page == 3 | Page == 4){
                 #Other indicators
                 if(changed(Horn)){
                     E:egpColor(139, indColor(Horn, OffBlue, LightBlue))
@@ -1788,6 +2045,81 @@ if(first()|dupefinished()){
                             E:egpSetText(188, (Units ? "Metric" : "Imper."))
                             
                             break
+                    }
+                    break
+                    #----
+                case 4, #Length counter
+                    local LUnits = (Units ? "Meters" : "Feet")
+                    local LUnitMult = (Units ? UNIT_DATA["M_m", number] : 1)
+                    
+                    switch(LengthCounterPage){
+                        case 1, #Length change page
+                            switch(LengthChangePage){
+                                case 1, #Mesaure length
+                                    if(!MeasureLengthFinished){
+                                        #Measured length readout
+                                        E:egpSetText(177, format("%.0f", MeasuredLength * LUnitMult))
+                                        
+                                        #Units
+                                        E:egpSetText(178, LUnits)
+                                        
+                                    }else{
+                                        #Length too short thing
+                                        E:egpSetText(177, (MeasuredLTooShort ? "The measured length is too short!" : format("Mesaured length: %.0f %s", MeasuredLength * LUnitMult, LUnits)))
+                                        
+                                        #Previous length
+                                        E:egpSetText(178, format("The previous length was %.0f %s", Length * LUnitMult, LUnits))
+                                    }
+                                    
+                                    break
+                                case 2, #Enter length
+                                    #Length readout updating
+                                    E:egpSetText(177, format("%01d  %01d  %01d  %01d  %01d", IL1, IL2, IL3, IL4, IL5))
+                                    
+                                    #Unit change
+                                    E:egpSetText(178, format("%s", (Units ? "Meters" : "Feet")))
+                                                                        
+                                    break
+                            }
+                            break
+                        case 2, #Length countdown
+                            #Length readout
+                            E:egpSetText(177, format("%.0f", CountdownLength * LUnitMult))
+                            
+                            #Units
+                            E:egpSetText(178, LUnits)
+                            
+                            break
+                        case 3, #Measured mile
+                            local SPUnit = (Units ? UNIT_DATA["KPH", string] : UNIT_DATA["MPH", string])
+                            local SPMult = (Units ? UNIT_DATA["M_km", number] : 1)
+                            
+                            #Elapsed time readout
+                            local Minutes = floor(MMTimeElapsed / 60, 0)
+                            E:egpSetText(178, format("%02d:%02d", Minutes, round(MMTimeElapsed, 0) - Minutes * 60))
+                            
+                            if(MeasuredMileRun | MMFinished){
+                                E:egpSetText(176, "Measured Mile - In Progress")
+                            }else{
+                                E:egpSetText(176, "Measured Mile")
+                            }
+                            
+                            #Speed check conclusion
+                            if(MMFinished){
+                                E:egpSetText(179, "Average Speed for Measured Mile")
+                                
+                                if(MMCheckFailed){
+                                    E:egpSetText(180, "Speed Check Invalid!")
+                                }else{
+                                    E:egpSetText(180, format("%.0f %s", MMAverageSpeed * SPMult, SPUnit))
+                                }
+                            }else{
+                                E:egpSetText(179, "")
+                                E:egpSetText(180, "")
+                            }
+                                                        
+                            break
+                            
                     }
                     break
                     #----
@@ -2165,8 +2497,6 @@ if(clk("clk") & CanRun){ #Display running
         KPHRaw = RLCPTW["KPH", number]
         MPH = abs(RLCPTW["MPH",number])
         #----
-        local CarCount = RLCPTW["CarCount",number]
-        Length = CarCount * 55
         Reverser = CtlTable["SetReverser", number]
         Throttle = CtlTable["SetThrottle", number]
         SetBrakeNotch = CtlTable["SetBrakeNotch", number]
@@ -2256,8 +2586,8 @@ if(clk("clk") & CanRun){ #Display running
                         if(MB4){ #Operator controls page
                             MainPage = 3
                         }
-                        if(MB6){ #Length counter page (not yet)
-                        #    MainPage = 4
+                        if(MB6){ #Length counter page
+                            MainPage = 4
                         }
                         
                         break
@@ -2320,6 +2650,209 @@ if(clk("clk") & CanRun){ #Display running
                         
                         if(MB8){ #Exit
                             OPControlsPage = 0
+                        }
+                        
+                        break
+                }
+                break
+                #----
+            case 4, #----Length counter page
+                switch(LengthCounterPage){
+                    case 0, #Main length counter page
+                        
+                        if(MB2){ #Change length page switch
+                            LengthCounterPage = 1
+                        }
+                        
+                        if(MB4){ #Countdown length page switch
+                            LengthCounterPage = 2
+                            if(!CountdownRun){
+                                CountdownLength = Length
+                            }
+                            CountdownRun = 1
+                        }
+                        
+                        if(MB6){ #Measured mile page switch
+                            LengthCounterPage = 3
+                        }
+                        
+                        if(MB8){ #Page exit
+                            MainPage = 0
+                            MeasuringLength = 0 #Stop measuring length (if somebody forgot to stop it themselves)
+                            MeasuredLength = 0
+                            MeasureLengthFinished = 0
+                        }
+                        
+                        break
+                    case 1, #Main length change page
+                        switch(LengthChangePage){
+                            case 0, #Length change type selection
+                                
+                                if(MB3){ #Measure length
+                                    LengthChangePage = 1
+                                }
+                                if(MB5){ #Measure length
+                                    LengthChangePage = 2
+                                }
+                                if(MB8){ #Exit
+                                    LengthCounterPage = 0
+                                }
+                                
+                                break
+                            case 1, #Measure length page
+                                
+                                if(!MeasureLengthFinished){
+                                    if(MB1){ #Cancel
+                                        LengthChangePage = 0
+                                        MeasuringLength = 0
+                                        MeasuredLength = 0
+                                        MeasureLengthFinished = 0
+                                    }
+                                    
+                                    if(MB3){
+                                        if(!MeasuringLength){ #Start measure
+                                            MeasuringLength = 1
+                                        }elseif(MeasuringLength){ #Stop measure
+                                            MeasuringLength = 0
+                                            MeasureLengthFinished = 1
+                                        }
+                                    }
+                                    
+                                    if(MB8){ #Page exit (keeps running the measure)
+                                        LengthChangePage = 0
+                                    }
+                                }else{
+                                    if(MeasuredLength < Length | MeasuredLength <= 0){
+                                        MeasuredLTooShort = 1
+                                    }else{
+                                        MeasuredLTooShort = 0
+                                    }
+                                    
+                                    if(MB5 & !MeasuredLTooShort){ #Accept measured length
+                                        Length = MeasuredLength
+                                        MeasuredLength = 0
+                                        MeasureLengthFinished = 0
+                                        MainPage = LengthChangePage = LengthCounterPage = 0
+                                    }
+                                    
+                                    if(MB7){ #Reject measured length
+                                        MeasuredLength = 0
+                                        MeasureLengthFinished = 0
+                                        MainPage = LengthChangePage = LengthCounterPage = 0
+                                    }
+                                }
+                                
+                                break
+                            case 2, #Enter length page
+                                
+                                if(MB1){ #Cancel
+                                    LengthChangePage = 0
+                                }
+                                
+                                if(MB2){ #First digit increment
+                                    if(IL1 < 9){
+                                        IL1++
+                                    }elseif(IL1 >= 9){
+                                        IL1 = 0
+                                    }
+                                }
+                                if(MB3){ #Second digit increment
+                                    if(IL2 < 9){
+                                        IL2++
+                                    }elseif(IL2 >= 9){
+                                        IL2 = 0
+                                    }
+                                }
+                                if(MB4){ #Third digit increment
+                                    if(IL3 < 9){
+                                        IL3++
+                                    }elseif(IL3 >= 9){
+                                        IL3 = 0
+                                    }
+                                }
+                                if(MB5){ #Fourth digit increment
+                                    if(IL4 < 9){
+                                        IL4++
+                                    }elseif(IL4 >= 9){
+                                        IL4 = 0
+                                    }
+                                }
+                                if(MB6){ #Fifth digit increment
+                                    if(IL5 < 9){
+                                        IL5++
+                                    }elseif(IL5 >= 9){
+                                        IL5 = 0
+                                    }
+                                }
+                                #---
+                                ILStr = (IL1:toString() + IL2:toString() + IL3:toString() + IL4:toString() + IL5:toString())
+                                #Is the length valid?
+                                if(ILStr:toNumber() != 0){
+                                    LengthValid = 1
+                                    EGPMain:egpSetText(189, "")
+                                    EGPMain:egpColor(268, LightBlue)
+                                }else{
+                                    LengthValid = 0
+                                    EGPMain:egpSetText(189, "Invalid Length")
+                                    EGPMain:egpColor(268, OffBlue)
+                                }
+                                
+                                if(MB8 & LengthValid){ #Enter input length
+                                    Length = (ILStr:toNumber()) / (Units ? UNIT_DATA["M_m", number] : 1)
+                                    LengthChangePage = 0
+                                }
+                                
+                                break
+                        }
+                        #----
+                        break
+                    case 2, #Lengt countdown page
+                        
+                        if(MB5){ #Count down button (whatever this does)
+                            CountdownLength = Length
+                            LengthCounterPage = 0
+                            MainPage = 0
+                            CountdownRun = 0
+                        }
+                        
+                        if(MB7){ #Reset counter
+                            CountdownLength = Length
+                            CountdownRun = 1
+                        }
+                        
+                        if(MB8){ #Page exit (countdown keeps going)
+                            LengthCounterPage = 0
+                        }
+                        
+                        break
+                    case 3, #Measured mile page
+                        
+                        if(MB2 & !(MeasuredMileRun | MMFinished)){ #Start le toimr
+                            MeasuredMileRun = 1
+                        }
+                        
+                        if(MB5 & MeasuredMileRun){ #Stop the timer
+                            MeasuredMileRun = 0
+                            MMFinished = 1
+                        }
+                        
+                        if(MB7){ #Reset timer
+                            if(MeasuredMileRun & !MMFinished){
+                                MMTimeElapsed = 0
+                            }elseif(MMFinished){
+                                MMTimeElapsed = 0
+                                MMFinished = 0
+                                MMCheckFailed = 0
+                            }
+                            MMSpeedChecks:clear()
+                        }
+                        
+                        if(MB8){ #Exit(tm)
+                            MMFinished = 0
+                            MeasuredMileRun = 0
+                            LengthCounterPage = 0
+                            MMTimeElapsed = 0
+                            MMSpeedChecks:clear()
                         }
                         
                         break
@@ -2577,6 +3110,67 @@ if(clk("clk") & CanRun){ #Display running
         }
         #---
         
+        #Measure length
+        if(MeasuringLength){
+            local FPS = (KPH * 0.91134442)
+            MeasuredLength += (FPS / 5) * (MeasuredLength < 99999 ? 1 : 0)
+        }
+        
+        #Countdown length
+        if(CountdownRun){
+            if(CountdownLength > 0){
+                local FPS = (KPH * 0.91134442)
+                CountdownLength -= (FPS / 5)
+            }elseif(CountdownLength <= 0){
+                CountdownLength = 0
+                CountdownRun = 0
+            }
+        }
+        
+        #Measured mile stuff
+        if(MeasuredMileRun){ #Measured mile running
+            #Elapsed time counter
+            MMTimeElapsed += 0.2 * (MMTimeElapsed < 3600)
+            
+            #Speed check (every 0.1 mile until 1 mile is driven)
+            MMDrivenDistance += (MPH / 18000)
+            if(MMDrivenDistance > 0.1){
+                MMSpeedChecks:pushNumber(MPH)
+                MMDrivenDistance = 0
+            }
+            
+            #If the check count has exceeded 10 (1 mile driven), then automatically stop the measured mile
+            if(MMSpeedChecks:count() >= 10){
+                MMFinished = 1
+                MeasuredMileRun= 0
+            }
+            
+            #If the time elapsed passes an hour, the measurement will fail
+            if(MMTimeElapsed >= 3600){
+                MMFinished = 1
+                MeasuredMileRun = 0
+                MMCheckFailed = 1
+            }
+        }
+        
+        #Average speed calculation
+        if(changed(MMFinished) & MMFinished){
+            MMSpeedSum = 0
+            for(I = 1, MMSpeedChecks:count()){ #This does a fancy thing called-
+                local SpeedAtKey = MMSpeedChecks[I, number]
+                MMSpeedSum = MMSpeedSum + SpeedAtKey
+            }
+            MMAverageSpeed = (MMSpeedSum / MMSpeedChecks:count()) #-literally the arithmetic mean
+        }
+        #Measured mile finished
+        if(!MeasuredMileRun & MMFinished){
+            if(MMAverageSpeed <= 0 | MMSpeedChecks:count() < 2){ #MM speed check invalid
+                MMCheckFailed = 1
+            }else{ #You are valid and are now going to brazil
+                MMCheckFailed = 0
+            }
+        }
+        #----
         
         #EOTD ID
         EOTDSetID = EIDStr:toNumber()
@@ -2585,13 +3179,13 @@ if(clk("clk") & CanRun){ #Display running
         #Display loading
         #Main display
         #------------
-        if(changed(MainPage) | changed(OPControlsPage)){
+        if(changed(MainPage) | changed(OPControlsPage) | changed(LengthCounterPage) | changed(LengthChangePage) | changed(MeasureLengthFinished)){
             EGPMain:egpClear()
             EGPMain:egpLoad(MainPage, 1, 0)
             EGPMain:egpLoadButtons(MainPage, 1, 0)
         }
         #Button loading
-        if(changed(MoreOptionsMain)){
+        if(changed(MoreOptionsMain) | changed(MeasuringLength) | changed(MeasureLengthFinished) | changed(MeasuredMileRun) | changed(MMFinished)){
             EGPMain:egpLoadButtons(MainPage, 1, 0)
         }
         
