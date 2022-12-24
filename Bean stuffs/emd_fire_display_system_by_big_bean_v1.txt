@@ -1,7 +1,7 @@
 @name locomotive_displays/mfds/EMD FIRE Display System by Big Bean V1
 @inputs RLCPT:entity Pod:entity CtlTable:table [EGPMain EGPSec]:wirelink Battery Isolation UnitNumberOvr:string
 @inputs RX_EOTPSI RX_EOTID  FuelLevel Priming Horn Bell ParkingBrake LoadShed UnitOverride
-@outputs RX_EOTBrakePipe RX_EOTMPH EOTDSetID Running DrivenDistMI AlertEmergency BCI IsolatedBrakes EQResSetPSI
+@outputs RX_EOTBrakePipe RX_EOTMPH EOTDSetID Running DrivenDistMI AlertEmergency BCI IsolatedBrakes EQResSetPSI DefoggerOn RailConditioner
 #----
 #Generic variables
 @persist Run  Units SkipBoot ShowCredits UseAlerter AlerterMaxVolume AlerterResetKey:string MaxSpeedoVelocity SetToAmps MaxTE MaxContTE MaxTMCurrent MaxContTMCurrent MaxDynCurrent MaxContDynCurrent FuelTankCap 
@@ -19,13 +19,13 @@
 #----
 #Page specific vars
 @persist DynBrakeWarn UnitAlarm EOTMove  EID1 EID2 EID3 EID4 EID5 EIDStr:string
-@persist MoreOptionsMain Brightness
+@persist MoreOptionsMain Brightness OPControlsPage
 @persist MainPagePort MoreOptionsSec  AirBrakePage ABLockout BCI_New IsoBrk_New EQSet_New  EOTIDSetup EOTDArmState CommTestResult CommTestRun CommTestFinished EOTDArmed EOTDSetID RearPres
 #Commands & buttons
 @persist [PressedKey KeyCMD]:string IsShifting KeyTimeout  MB1 MB2 MB3 MB4 MB5 MB6 MB7 MB8 SB1 SB2 SB3 SB4 SB5 SB6 SB7 SB8
 #----
 @trigger none
-FirmwareVersion = "102.01"
+FirmwareVersion = "102.02"
 #----
 #[ Hello there.
 This is a recreation of the EMD FIRE locomotive displays by, you guessed it, Big ol' Bean.
@@ -34,6 +34,8 @@ While not completely realistic, I think it's pretty solid for anybody who doesn'
 ------------
 Version log:
 ------------
+V:102.02 - So you know how the config says that you can change the units in-game? That's a feature now. Additionally changed the metric pressure units to kPa from bar (thanks West)
+--------
 V:102.01 - Overhaul of basically every page, fixed some config stuff, cleaned up the old mess, added new loading screen for your pleasures (wow you updated V1 no way)
 --------
 V:101.xx - So old I forgot
@@ -125,6 +127,7 @@ if(first()|dupefinished()){
     #Init:
     #-----
     #Unit data for value unit changing
+    UNIT_DATA = table()
     #String values
     UNIT_DATA["KPH", string] = "KPH"
     UNIT_DATA["km", string] = "km"
@@ -132,8 +135,8 @@ if(first()|dupefinished()){
     UNIT_DATA["kN", string] = "kN"
     UNIT_DATA["m", string] = "m"
     UNIT_DATA["L", string] = "L"
-    UNIT_DATA["C", string] = "°C"
-    UNIT_DATA["bar", string] = "bar"
+    UNIT_DATA["C", string] = "C"
+    UNIT_DATA["kPa", string] = "kPa"
     UNIT_DATA["Nm", string] = "Nm"
     #--
     UNIT_DATA["MPH", string] = "MPH"
@@ -142,7 +145,7 @@ if(first()|dupefinished()){
     UNIT_DATA["kLb", string] = "kLb"
     UNIT_DATA["ft", string] = "ft"
     UNIT_DATA["Gal", string] = "Gal"
-    UNIT_DATA["F", string] = "°F"
+    UNIT_DATA["F", string] = "F"
     UNIT_DATA["PSI", string] = "PSI"
     UNIT_DATA["ft-lbf", string] = "ft-lbf"
     
@@ -153,7 +156,7 @@ if(first()|dupefinished()){
     UNIT_DATA["M_m", number] = 0.3048
     UNIT_DATA["M_L", number] = 3.785412
     UNIT_DATA["M_C", number] = 1.8
-    UNIT_DATA["M_bar", number] = 0.0689
+    UNIT_DATA["M_kPa", number] = 6.89475729
     UNIT_DATA["M_Nm", number] = 1.3558179483
     
     #Var init
@@ -864,7 +867,7 @@ if(first()|dupefinished()){
             
             
             #----Lower section stuff
-            if(Page == 0){ #This makes it so the lower portion loads only on specific pages
+            if(Page == 0 | Page == 3){ #This makes it so the lower portion loads only on specific pages
                 #Other indicators
                 #Horn
                 O = 139
@@ -973,6 +976,83 @@ if(first()|dupefinished()){
         
         
         
+        if(UpperPanelLoad | PortMainPages){
+            switch(Page){
+                case 3, #Operator controls
+                    switch(OPControlsPage){
+                        case 0, #Main page
+                            E:egpPageLabelBox(174, vec2(512, 800), "Operator Controls")
+                            
+                            #Blower status box
+                            E:egpBoxLabeled(177, vec2(768, 858), vec2(128, 72), "Blower")
+                            
+                            #Blower status text
+                            O = 180
+                            E:egpText(O, "Off", vec2(832, 898))
+                            E:egpFont(O, "Marlett", 18)
+                            E:egpAlign(O, 1, 1)
+                            E:egpColor(O, LightBlue)
+                            
+                            break
+                        case 1, #Climate control page
+                            E:egpPageLabelBox(174, vec2(512, 800), "Cab Climate Control System")
+                            
+                            #Defogger status box
+                            E:egpBoxLabeled(177, vec2(768, 858), vec2(128, 72), "Defog")
+                            
+                            #Defogger status text
+                            O = 180
+                            E:egpText(O, "Off", vec2(832, 898))
+                            E:egpFont(O, "Marlett", 18)
+                            E:egpAlign(O, 1, 1)
+                            E:egpColor(O, LightBlue)
+                            
+                            break
+                        case 2, #Display setup page
+                            E:egpPageLabelBox(174, vec2(512, 800), "Display Setup")
+                            
+                            #Brightness % box
+                            E:egpBoxLabeled(177, vec2(0, 858), vec2(256, 72), "Screen Brightness")
+                            
+                            #Brightness % text
+                            O = 180
+                            E:egpTextLayout(O, "100%", vec2(0, 856), vec2(256, 80))
+                            E:egpFont(O, "Marlett", 18)
+                            E:egpAlign(O, 1, 1)
+                            E:egpColor(O, LightBlue)
+                            
+                            #Display mode box
+                            E:egpBoxLabeled(181, vec2(256, 858), vec2(256, 72), "Display mode")
+                            
+                            #Brightness % text
+                            O = 184
+                            E:egpTextLayout(O, "Engineer Primary", vec2(256, 856), vec2(256, 80))
+                            E:egpFont(O, "Marlett", 18)
+                            E:egpAlign(O, 1, 1)
+                            E:egpColor(O, LightBlue)
+                            
+                            #Unit change button
+                            E:egpBoxLabeled(185, vec2(768, 858), vec2(128, 72), "Units")
+                            
+                            #Current units
+                            O = 188
+                            E:egpText(O, (Units ? "Metric" : "Imper."), vec2(832, 898))
+                            E:egpFont(O, "Marlett", 18)
+                            E:egpAlign(O, 1, 1)
+                            E:egpColor(O, LightBlue)
+                                                        
+                            break
+                    }
+                    break
+                    #----
+            }
+            #End of main monitor stuff#
+        }
+        #----
+        
+        
+        
+        
         #Secondary monitor stuffs:
         #-------------------------
         if(!UpperPanelLoad & !PortMainPages){
@@ -1020,7 +1100,7 @@ if(first()|dupefinished()){
                             E:egpAlign(O, 1, 1)
                             
                             O = 9
-                            E:egpText(O, "0 " + (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string]), vec2(192, 890))
+                            E:egpText(O, "0 " + (Units ? UNIT_DATA["kPa", string] : UNIT_DATA["PSI", string]), vec2(192, 890))
                             E:egpFont(O, "Marlett", 16)
                             E:egpAlign(O, 1, 1)
                             
@@ -1042,7 +1122,7 @@ if(first()|dupefinished()){
                             E:egpColor(O, LightBlue)
                             
                             O = 13
-                            E:egpText(O, "0 " + (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string]), vec2(192, 920))
+                            E:egpText(O, "0 " + (Units ? UNIT_DATA["kPa", string] : UNIT_DATA["PSI", string]), vec2(192, 920))
                             E:egpFont(O, "Marlett", 16)
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightBlue)
@@ -1062,7 +1142,7 @@ if(first()|dupefinished()){
                             break
                         case 1, #EQ res setup
                             O = 7 #Displayed pressure
-                            E:egpText(O, "0 " + (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string]), vec2(256, 870))
+                            E:egpText(O, "0 " + (Units ? UNIT_DATA["kPa", string] : UNIT_DATA["PSI", string]), vec2(256, 870))
                             E:egpFont(O, "Marlett", 16)
                             E:egpAlign(O, 1, 1)
                             
@@ -1221,6 +1301,36 @@ if(first()|dupefinished()){
                     
                     break
                     #----
+                case 3, #Operator controls
+                    switch(OPControlsPage){
+                        case 0, #Main page
+                            E:egpButton(250, vec2(192, 980), vec2(126, 80), "Alarm Bell Silence", OffBlue)
+                            E:egpButton(253, vec2(320, 980), vec2(126, 80), "Climate   Control", LightBlue)
+                            E:egpButton(256, vec2(448, 980), vec2(126, 80), "Display    Setup", LightBlue)
+                            E:egpButton(259, vec2(832, 980), vec2(126, 80), "Rail    Conditioner", LightBlue)
+                            E:egpButton(262, vec2(960, 980), vec2(126, 80), "Exit", LightBlue)
+                            for(I = 1, 3){
+                                E:egpRemove(I + 264)
+                            }
+                            
+                            break
+                        case 1, #Climate control page
+                            E:egpButton(250, vec2(832, 980), vec2(126, 80), "Defogger", LightBlue)
+                            E:egpButton(253, vec2(960, 980), vec2(126, 80), "Exit", LightBlue)
+                            
+                            break
+                        case 2, #Display setup page
+                            E:egpButton(250, vec2(64, 980), vec2(126, 80), "Brighter", OffBlue)
+                            E:egpButton(253, vec2(192, 980), vec2(126, 80), "Dimmer", LightBlue)
+                            E:egpButton(256, vec2(320, 980), vec2(126, 80), "Engineer's  Combined", OffBlue)
+                            E:egpButton(259, vec2(448, 980), vec2(126, 80), "Engineer's   Primary", OffBlue)
+                            E:egpButton(262, vec2(960, 980), vec2(126, 80), "Exit", LightBlue)
+                            E:egpButton(265, vec2(832, 980), vec2(126, 80), "Change    Units", LightBlue)
+                            
+                            break
+                    }
+                    break
+                    #----
             }
         }
         #----
@@ -1235,15 +1345,6 @@ if(first()|dupefinished()){
                 case 0, #Main page
                     switch(MoreOptionsSec){
                         case 0, #More ops. 1
-                            E:egpButton(250, vec2(64, 980), vec2(126, 80), "Brighter", OffBlue)
-                            E:egpButton(253, vec2(192, 980), vec2(126, 80), "Dimmer", LightBlue)
-                            E:egpButton(256, vec2(320, 980), vec2(126, 80), "Locomotive Data", LightBlue)
-                            E:egpButton(259, vec2(448, 980), vec2(126, 80), "Operator Controls", LightBlue)
-                            E:egpButton(262, vec2(576, 980), vec2(126, 80), "Speed Control", LightBlue)
-                            E:egpButton(265, vec2(704, 980), vec2(126, 80), "Length Counter", LightBlue)
-                            E:egpButton(268, vec2(832, 980), vec2(126, 80), "Air       Brake", LightBlue)
-                            E:egpButton(271, vec2(960, 980), vec2(126, 80), "More Choices", LightGreen)
-                            
                             #Brightness % box
                             E:egpBoxLabeled(4, vec2(0, 858), vec2(256, 72), "Screen Brightness")
                             
@@ -1254,10 +1355,22 @@ if(first()|dupefinished()){
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightBlue)
                             
+                            E:egpButton(250, vec2(64, 980), vec2(126, 80), "Brighter", OffBlue)
+                            E:egpButton(253, vec2(192, 980), vec2(126, 80), "Dimmer", LightBlue)
+                            E:egpButton(256, vec2(320, 980), vec2(126, 80), "Locomotive Data", LightBlue)
+                            E:egpButton(259, vec2(448, 980), vec2(126, 80), "Operator Controls", LightBlue)
+                            E:egpButton(262, vec2(576, 980), vec2(126, 80), "Speed Control", LightBlue)
+                            E:egpButton(265, vec2(704, 980), vec2(126, 80), "Length Counter", LightBlue)
+                            E:egpButton(268, vec2(832, 980), vec2(126, 80), "Air       Brake", LightBlue)
+                            E:egpButton(271, vec2(960, 980), vec2(126, 80), "More Choices", LightGreen)
+                            
                             break
                         case 1, #More ops. 2
-                            for(I = 1, 6){ #This is just so that the last two buttons get removed
-                                E:egpRemove(274 - I)
+                            for(I = 4, 7){ #This removes the current brightness indicator box thing
+                                E:egpRemove(I)
+                            }
+                            for(I = 268, 273){ #This is just so that the last two buttons get removed
+                                E:egpRemove(I)
                             }
                             E:egpButton(250, vec2(320, 980), vec2(126, 80), "Event       Info", LightBlue)
                             E:egpButton(253, vec2(448, 980), vec2(126, 80), "EOT ID", LightBlue)
@@ -1266,9 +1379,6 @@ if(first()|dupefinished()){
                             E:egpButton(262, vec2(832, 980), vec2(126, 80), "Maint     Mode", LightBlue)
                             E:egpButton(265, vec2(960, 980), vec2(126, 80), "More Choices", LightGreen)
                             
-                            for(I = 4, 7){ #This removes the current brightness indicator box thing
-                                E:egpRemove(I)
-                            }
                             break
                         case 2, #More ops. 3
                             E:egpButton(250, vec2(320, 980), vec2(126, 80), "Work    Orders", LightBlue)
@@ -1297,15 +1407,15 @@ if(first()|dupefinished()){
                         E:egpButton(265, vec2(832, 980), vec2(126, 80), "", Color)
                         
                     }elseif(AirBrakePage == 1){
-                        local PSIMult = (Units ? UNIT_DATA["M_bar", number] : 1)
-                        local PresUnits = (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string])
+                        local PSIMult = (Units ? UNIT_DATA["M_kPa", number] : 1)
+                        local PresUnits = (Units ? UNIT_DATA["kPa", string] : UNIT_DATA["PSI", string])
                         E:egpButton(250, vec2(64, 980), vec2(126, 80), "Cancel", LightBlue)
                         E:egpButton(253, vec2(192, 980), vec2(126, 80), "DECREASE", LightBlue)
                         E:egpButton(256, vec2(320, 980), vec2(126, 80), "INCREASE", LightBlue)
-                        E:egpButton(259, vec2(448, 980), vec2(126, 80), format((Units ? "%.1f" : "%.0f") + " %s", 80 * PSIMult, PresUnits), LightBlue)
-                        E:egpButton(262, vec2(576, 980), vec2(126, 80), format((Units ? "%.1f" : "%.0f") + " %s", 90 * PSIMult, PresUnits), LightBlue)
-                        E:egpButton(265, vec2(704, 980), vec2(126, 80), format((Units ? "%.1f" : "%.0f") + " %s", 100 * PSIMult, PresUnits), LightBlue)
-                        E:egpButton(268, vec2(832, 980), vec2(126, 80), format((Units ? "%.1f" : "%.0f") + " %s", 110 * PSIMult, PresUnits), LightBlue)
+                        E:egpButton(259, vec2(448, 980), vec2(126, 80), format("%.0f %s", 80 * PSIMult, PresUnits), LightBlue)
+                        E:egpButton(262, vec2(576, 980), vec2(126, 80), format("%.0f %s", 90 * PSIMult, PresUnits), LightBlue)
+                        E:egpButton(265, vec2(704, 980), vec2(126, 80), format("%.0f %s", 100 * PSIMult, PresUnits), LightBlue)
+                        E:egpButton(268, vec2(832, 980), vec2(126, 80), format("%.0f %s", 110 * PSIMult, PresUnits), LightBlue)
                         E:egpButton(271, vec2(960, 980), vec2(126, 80), "Enter", LightBlue)
                         
                     }
@@ -1461,8 +1571,8 @@ if(first()|dupefinished()){
             
             
             #All of the brake values
-            local PresFormat = (Units ? "%.1f" : "%.0f")
-            local PresMult = (Units ? UNIT_DATA["M_bar", number] : 1)
+            local PresFormat = "%.0f"
+            local PresMult = (Units ? UNIT_DATA["M_kPa", number] : 1)
             if(!BrakePanelYeet){
                 E:egpSetText(99, format(PresFormat, EqualRes * PresMult))
                 E:egpSetText(100, format(PresFormat, BrakePipe * PresMult))
@@ -1587,69 +1697,103 @@ if(first()|dupefinished()){
             E:egpColor(137, (EOTMove ? OnWhite : OffWhite))
             #----End of that
             
-            #Other indicators
-            if(changed(Horn)){
-                E:egpColor(139, indColor(Horn, OffBlue, LightBlue))
-                E:egpColor(140, indColor(Horn, OffBlue, LightBlue))
-            }
             
-            if(changed(Bell)){
-                E:egpColor(141, indColor(Bell, OffBlue, LightBlue))
-                E:egpColor(142, indColor(Bell, OffBlue, LightBlue))
-            }
-            
-            E:egpColor(143, indColor(Sanding, OffYellow, OnYellow))
-            E:egpColor(144, indColor(Sanding, OffYellow, OnYellow))
-            
-            E:egpColor(145, indColor(LowFuel, OffYellow, OnYellow))
-            E:egpColor(146, indColor(LowFuel, OffYellow, OnYellow))
-            E:egpColor(147, indColor(LowFuel, OffYellow, OnYellow))
-            E:egpColor(148, indColor(LowFuel, OffYellow, OnYellow))
-            
-            
-            #Fuel quantity
-            if(->FuelLevel){
-                E:egpSetText(150, format("%.0f " + (Units ? UNIT_DATA["L", string] : UNIT_DATA["Gal", string]), FuelLevel * (Units ? UNIT_DATA["M_L", number] : UNIT_DATA["M_L", number])))
-            }else{
-                E:egpSetText(150, "? " + (Units ? UNIT_DATA["L", string] : UNIT_DATA["Gal", string]))
-            }
-            
-            
-            #Brake setup indication
-            if(BCI){
-                E:egpSetText(152, "LEAD - " + (IsolatedBrakes ? "CUT OUT" : "CUT IN"))
-            }else{
-                E:egpSetText(152, "TRAILING")
-            }
-            
-            
-            #IDENT readout
-            if(EOTDSetID != 0){
-                E:egpSetText(154, format("IDENT %05d", EOTDSetID))
-            }else{
-                E:egpSetText(154, "IDENT 0")
-            }
-            
-            #Message box stuff
-            if(AETripped){
-                E:egpColor(247, OnRed)
-                E:egpSetText(248, "ALERTER PENALTY - SET TRAIN BRAKE TO SUPPRESSION TO RESET")
-                E:egpSetText(249, "")
-            }else{
-                E:egpColor(247, OnYellow)
-                if(Priming & !On){
-                    E:egpSetText(248, "Fuel Prime Cycle In Progress -")
-                    E:egpSetText(249, "Press Engine Stop To Abort Startup")
-                }elseif(ParkingBrake){
-                    E:egpSetText(248, "Parking Brake Applied")
-                    E:egpSetText(249, "")
+            if(Page == 0 | Page == 3){
+                #Other indicators
+                if(changed(Horn)){
+                    E:egpColor(139, indColor(Horn, OffBlue, LightBlue))
+                    E:egpColor(140, indColor(Horn, OffBlue, LightBlue))
+                }
+                
+                if(changed(Bell)){
+                    E:egpColor(141, indColor(Bell, OffBlue, LightBlue))
+                    E:egpColor(142, indColor(Bell, OffBlue, LightBlue))
+                }
+                
+                E:egpColor(143, indColor(Sanding, OffYellow, OnYellow))
+                E:egpColor(144, indColor(Sanding, OffYellow, OnYellow))
+                
+                E:egpColor(145, indColor(LowFuel, OffYellow, OnYellow))
+                E:egpColor(146, indColor(LowFuel, OffYellow, OnYellow))
+                E:egpColor(147, indColor(LowFuel, OffYellow, OnYellow))
+                E:egpColor(148, indColor(LowFuel, OffYellow, OnYellow))
+                
+                
+                #Fuel quantity
+                if(->FuelLevel){
+                    E:egpSetText(150, format("%.0f " + (Units ? UNIT_DATA["L", string] : UNIT_DATA["Gal", string]), FuelLevel * (Units ? UNIT_DATA["M_L", number] : UNIT_DATA["M_L", number])))
                 }else{
-                    E:egpSetText(248, "")
-                    E:egpSetText(249, "")
+                    E:egpSetText(150, "? " + (Units ? UNIT_DATA["L", string] : UNIT_DATA["Gal", string]))
+                }
+                
+                
+                #Brake setup indication
+                if(BCI){
+                    E:egpSetText(152, "LEAD - " + (IsolatedBrakes ? "CUT OUT" : "CUT IN"))
+                }else{
+                    E:egpSetText(152, "TRAILING")
+                }
+                
+                
+                #IDENT readout
+                if(EOTDSetID != 0){
+                    E:egpSetText(154, format("IDENT %05d", EOTDSetID))
+                }else{
+                    E:egpSetText(154, "IDENT 0")
                 }
             }
         }
-        #----
+        
+        if(UpperPanelLoad | PortMainPages){    
+            switch(Page){ #Page specific updating
+                case 0, #General page
+                    #Message box stuff
+                    if(AETripped){
+                        E:egpColor(247, OnRed)
+                        E:egpSetText(248, "ALERTER PENALTY - SET TRAIN BRAKE TO SUPPRESSION TO RESET")
+                        E:egpSetText(249, "")
+                    }else{
+                        E:egpColor(247, OnYellow)
+                        if(Priming & !On){
+                            E:egpSetText(248, "Fuel Prime Cycle In Progress -")
+                            E:egpSetText(249, "Press Engine Stop To Abort Startup")
+                        }elseif(ParkingBrake){
+                            E:egpSetText(248, "Parking Brake Applied")
+                            E:egpSetText(249, "")
+                        }else{
+                            E:egpSetText(248, "")
+                            E:egpSetText(249, "")
+                        }
+                    }
+                
+                    break
+                    #----
+                case 3, #Operator controls
+                    switch(OPControlsPage){
+                        case 0, #Main page
+                            #Rail conditioner status
+                            E:egpSetText(180, (RailConditioner ? "Auto" : "Off"))
+                            
+                            break
+                        case 1, #Climate control page
+                            #Defogger status
+                            E:egpSetText(180, (DefoggerOn ? "On" : "Off"))
+                            
+                            break
+                        case 2, #Display setup page
+                            #Screen brightness
+                            E:egpSetText(180, format("%.0f%s", Brightness * 100, "%"))
+                            
+                            #Current units
+                            E:egpSetText(188, (Units ? "Metric" : "Imper."))
+                            
+                            break
+                    }
+                    break
+                    #----
+            }
+        }
+        #----End of main screen shits
         
         
         
@@ -1679,7 +1823,7 @@ if(first()|dupefinished()){
                     break
                     #----
                 case 5, #Air brake setup
-                    local PSIMult = (Units ? UNIT_DATA["M_bar", number] : 1) #PSI multiplier (from PSI to bar)
+                    local PSIMult = (Units ? UNIT_DATA["M_kPa", number] : 1) #PSI multiplier (from PSI to bar)
                     
                     if(AirBrakePage == 0){ #Main page
                         #Trail / Lead indication
@@ -1693,8 +1837,8 @@ if(first()|dupefinished()){
                             E:egpAlpha(15, 255)
                             
                             #EQ Res pressures
-                            E:egpSetText(9, format((Units ? "%.1f" : "%.0f") + " %s", EQSet_New * PSIMult, (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string])))
-                            E:egpSetText(13, format((Units ? "%.1f" : "%.0f") + " %s", EQResSetPSI * PSIMult, (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string])))
+                            E:egpSetText(9, format("%.0f %s", EQSet_New * PSIMult, (Units ? UNIT_DATA["kPa", string] : UNIT_DATA["PSI", string])))
+                            E:egpSetText(13, format("%.0f %s", EQResSetPSI * PSIMult, (Units ? UNIT_DATA["kPa", string] : UNIT_DATA["PSI", string])))
                             
                             #Cut In / Cut Out indication
                             E:egpSetText(11, (IsoBrk_New ? "CUT OUT" : "CUT IN"))
@@ -1712,14 +1856,14 @@ if(first()|dupefinished()){
                         }
                     }else{ #EQ Res PSI setup
                         if(changed(Units)){
-                            E:egpSetText(260, format((Units ? "%.1f" : "%.0f") + " %s", 80 * PSIMult, (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string])))
-                            E:egpSetText(263, format((Units ? "%.1f" : "%.0f") + " %s", 90 * PSIMult, (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string])))
-                            E:egpSetText(266, format((Units ? "%.1f" : "%.0f") + " %s", 100 * PSIMult, (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string])))
-                            E:egpSetText(269, format((Units ? "%.1f" : "%.0f") + " %s", 110 * PSIMult, (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string])))
+                            E:egpSetText(260, format("%.0f %s", 80 * PSIMult, (Units ? UNIT_DATA["kPa", string] : UNIT_DATA["PSI", string])))
+                            E:egpSetText(263, format("%.0f %s", 90 * PSIMult, (Units ? UNIT_DATA["kPa", string] : UNIT_DATA["PSI", string])))
+                            E:egpSetText(266, format("%.0f %s", 100 * PSIMult, (Units ? UNIT_DATA["kPa", string] : UNIT_DATA["PSI", string])))
+                            E:egpSetText(269, format("%.0f %s", 110 * PSIMult, (Units ? UNIT_DATA["kPa", string] : UNIT_DATA["PSI", string])))
                         }
                         
                         #EQ Res pressure readout
-                        E:egpSetText(7, format((Units ? "%.1f" : "%.0f") + " %s", EQSet_New * PSIMult, (Units ? UNIT_DATA["bar", string] : UNIT_DATA["PSI", string])))
+                        E:egpSetText(7, format("%.0f %s", EQSet_New * PSIMult, (Units ? UNIT_DATA["kPa", string] : UNIT_DATA["PSI", string])))
                         
                     }
                     
@@ -2109,11 +2253,73 @@ if(clk("clk") & CanRun){ #Display running
                         }
                         
                         #Page selection
-                        if(MB4){ #Operator controls page (not yet)
-                        #    MainPage = 3
+                        if(MB4){ #Operator controls page
+                            MainPage = 3
                         }
                         if(MB6){ #Length counter page (not yet)
                         #    MainPage = 4
+                        }
+                        
+                        break
+                }
+                break
+                #----
+            case 3, #----Operator controls
+                
+                switch(OPControlsPage){
+                    case 0, #Main page
+                        
+                        if(MB3){ #Climate control
+                            OPControlsPage = 1
+                        }
+                        if(MB4){ #Display setup
+                            OPControlsPage = 2
+                        }
+                        if(MB7){ #Rail conditioner mode swap
+                            RailConditioner = !RailConditioner
+                        }
+                        if(MB8){ #Exit
+                            MainPage = 0
+                        }
+                        
+                        break
+                    case 1, #Climate control page
+                        if(MB7){ #Defogger cycling
+                            DefoggerOn = !DefoggerOn
+                        }
+                        
+                        if(MB8){ #Exit
+                            OPControlsPage = 0
+                        }
+                        
+                        break
+                    case 2, #Display setup page
+                        
+                        #Brightness buttons
+                        if(Brightness < 1){ #Brighter
+                            if(MB1){
+                                Brightness += 0.05
+                            }
+                            EGPMain:egpColor(250, LightBlue)
+                        }else{
+                            EGPMain:egpColor(250, OffBlue)
+                        }
+                        
+                        if(Brightness > 0.15){ #Dimmer
+                            if(MB2){
+                                Brightness -= 0.05
+                            }
+                            EGPMain:egpColor(253, LightBlue)
+                        }else{
+                            EGPMain:egpColor(253, OffBlue)
+                        }
+                        
+                        if(MB7){ #Units change button
+                            Units = !Units
+                        }
+                        
+                        if(MB8){ #Exit
+                            OPControlsPage = 0
                         }
                         
                         break
@@ -2379,7 +2585,7 @@ if(clk("clk") & CanRun){ #Display running
         #Display loading
         #Main display
         #------------
-        if(changed(MainPage)){
+        if(changed(MainPage) | changed(OPControlsPage)){
             EGPMain:egpClear()
             EGPMain:egpLoad(MainPage, 1, 0)
             EGPMain:egpLoadButtons(MainPage, 1, 0)
@@ -2501,14 +2707,13 @@ if(Running & keyClk() & !KeyTimeout){
     if("12345678":find(PressedKey)){
         #Click sounds
         if(!IsShifting){
-            EGPMain:entity():soundPlay(2, 0.25, "titus's locomotive sound expansion pack/resources/ac4400cw/cab/switchesbuttons/smallbutton/s_ac4400cwbuttonclicksmallona03.wav")
+            EGPMain:entity():soundPlay(2, 0.25, "titus's locomotive sound expansion pack/resources/sd40-2/cab/controls/smallbutton/s_sd40buttonclicksmallona01.wav")
             timer("bOutM", 300)
         }
         if(IsShifting){
-            EGPSec:entity():soundPlay(2, 0.25, "titus's locomotive sound expansion pack/resources/ac4400cw/cab/switchesbuttons/smallbutton/s_ac4400cwbuttonclicksmallona03.wav")
+            EGPSec:entity():soundPlay(2, 0.25, "titus's locomotive sound expansion pack/resources/sd40-2/cab/controls/smallbutton/s_sd40buttonclicksmallona01.wav")
             timer("bOutS", 300)
         }
-        
     }
     
 }elseif(Running & keyClk() & KeyTimeout){ #Resets the timeout if the user stops pressing the key
@@ -2523,8 +2728,9 @@ if(!Driver:isPlayer()){ #Stops the E2 from running on keys by the last user (if 
 }
 
 if(clk("bOutM")){
-    EGPMain:entity():soundPlay(2, 0.25, "titus's locomotive sound expansion pack/resources/ac4400cw/cab/switchesbuttons/smallbutton/s_ac4400cwbuttonclicksmalloffa03.wav")
+    EGPMain:entity():soundPlay(2, 0.25, "titus's locomotive sound expansion pack/resources/sd40-2/cab/controls/smallbutton/s_sd40buttonclicksmallona02.wav")
 }
 if(clk("bOutS")){
-    EGPSec:entity():soundPlay(2, 0.25, "titus's locomotive sound expansion pack/resources/ac4400cw/cab/switchesbuttons/smallbutton/s_ac4400cwbuttonclicksmalloffa03.wav")
+    EGPSec:entity():soundPlay(2, 0.25, "titus's locomotive sound expansion pack/resources/sd40-2/cab/controls/smallbutton/s_sd40buttonclicksmallona02.wav")
 }
+soundVolume(2, 0.4)
