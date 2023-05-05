@@ -7,7 +7,15 @@
 E = entity()
 L = LOCOMOTIVE
 if(first()|duped()){
-    
+    #[Setup tutorial:
+        -Spawn this E2 somewhere on your loco
+        -Spawn two camera controllers on your loco as well. Make sure that your settings have Coordinates local to parent unticked and localized movement and client side movement ticked
+        -Connect the cam controllers to the relevant seats and then connect their Position and Parent inputs to the respective outputs of this E2
+        -Finally, connect their active inputs to the E2
+        
+        Cool epic disclaimer: The cam controller prevents you from going into third person, what a fun thing to cry about, right?
+        I guess it's also laggy or something idk, anyway cya
+    ]#
     #Config:
     #-------
     InvertVelocity = 1 #Set this to 1 if the cam is moving in the wrong direction
