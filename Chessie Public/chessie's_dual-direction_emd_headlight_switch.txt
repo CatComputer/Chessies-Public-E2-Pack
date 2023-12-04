@@ -1,0 +1,75 @@
+@name Chessie's Dual-Direction EMD Headlight Switch
+@inputs NextWeapon PrevWeapon ThirdPerson Driver:entity HeadlightSwitch
+@outputs FrontHeadlight RearHeadlight SwitchPos DriverLooking 
+@persist Scale ActivationMethod ActivationRadius ActivationKey:string SwitchBodygroup SwitchPos Locked
+@trigger NextWeapon PrevWeapon
+
+if(first()|dupefinished()){
+    #wire NextWeapon, PrevWeapon, and Driver:entity to the driver's pod controller, and wire headlight switch to the headlight breaker on the stand or backwall
+    
+    #FrontHeadlight and RearHeadlight work on a 0-3 basis, 0 being off, 1 being dim, 2 being med, and 3 being bright.
+        
+    ActivationMethod = 0 #1 makes it so it gets activated with a key, otherwise it gets activated upon looking
+    
+    ActivationRadius = 6 #radius of driver looking at switch (used if activation method is 0)
+    
+    ActivationKey = "f" #key to hold while scrolling to turn the switch (irrelevant if activation method is 0)
+    
+    Scale = 1
+    
+    
+    
+    entity():setAlpha(0)
+    
+    A=1
+    holoCreate(A)
+    holoPos(A,entity():toWorld(vec()))
+    holoAng(A,entity():toWorld(ang()))
+    holoParent(A,entity())
+    holoModel(A,"models/magtrainslocos/rotaryswitches/headlight_emd.mdl")
+    holoScale(A,vec(Scale))
+    holoEntity(A):setSubMaterial(1,"cubics_pack/breakers/mag_emd_dash1_hdlt")
+}
+interval(200)
+DriverLooking = Driver:aimPos():distance(entity():pos())<ActivationRadius
+if(ActivationMethod){
+    if(Driver:keyPressed(ActivationKey)){
+        if((changed(NextWeapon)|changed(PrevWeapon))){
+            timer("unlock",100)
+            if(!Locked){
+                SwitchPos+=PrevWeapon-NextWeapon
+            }
+            Locked=1
+        }
+    }
+}
+else{
+    if(DriverLooking){
+        if(changed(NextWeapon)|changed(PrevWeapon)&!ThirdPerson){
+            timer("unlock",100)
+            if(!Locked){
+                SwitchPos+=PrevWeapon-NextWeapon
+            }
+            Locked=1
+        }
+    }
+}
+
+if(clk("unlock")){
+    Locked=0
+}
+
+FrontHeadlight=HeadlightSwitch ? 1+clamp(SwitchPos,0,2) : 0
+RearHeadlight=HeadlightSwitch ? 1-clamp(SwitchPos,-2,0) : 0
+
+    
+
+SwitchPos=clamp(SwitchPos,-2,2)
+SwitchBodygroup=SwitchPos>(-1) ? SwitchPos : 8+SwitchPos
+
+holoBodygroup(1,1,SwitchBodygroup)
+
+
+if(changed(SwitchPos)){
+    soundPlay(1,1,"gsgtrainsounds/misc/cab/emd_composite_reverser.wav")
+}
