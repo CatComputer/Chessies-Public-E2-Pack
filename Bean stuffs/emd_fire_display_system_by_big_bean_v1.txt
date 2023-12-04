@@ -8,7 +8,7 @@
 @persist BrakePanelYeet TimeFormat Timezone HasDST TimezoneName:string LocoDataInfo:table SetupScreenLogo [SetupLogoScale SetupLogoCol]:vector SetupLogoMat:string
 @persist RLCPTW:wirelink [Driver User]:entity [UNIT_DATA SmoothTable]:table MainPage SecPage CanRun OSLoaded OSLoadProgress OSLoadBarPos OSLoading
 @persist [White LightBlue DarkBlue LightPurple LightGreen LightRed OffWhite OnWhite OffRed OnRed OffYellow OnYellow OffBlue LightGray VLightGreen VLightYellow DarkerGreen DarkerYellow]:vector
-@persist BCI AlerterOn AlerterReset  DrivenDistMI Accel MPH1 MPH2 ACheck Speed1 Speed2 AETripped FirmwareVersion:string TMCurrent  Year Month Day Hours Minutes Seconds  HTZ HoursTZ DayTZ MonthTZ YearTZ
+@persist BCI AlerterOn AlerterReset  DrivenDistMI Accel MPH1 MPH2 ACheck Speed1 Speed2 AETripped FirmwareVersion:string TMCurrent  Year Month Day Hours Minutes Seconds  HTZ HoursTZ DayTZ MonthTZ YearTZ Font1:string
 #----
 #Add-on E2 vars
 @persist LowFuel
@@ -26,7 +26,7 @@
 @persist [PressedKey KeyCMD]:string IsShifting KeyTimeout  MB1 MB2 MB3 MB4 MB5 MB6 MB7 MB8 SB1 SB2 SB3 SB4 SB5 SB6 SB7 SB8
 #----
 @trigger none
-FirmwareVersion = "102.02"
+FirmwareVersion = "102.03"
 #----
 #[ Hello there.
 This is a recreation of the EMD FIRE locomotive displays by, you guessed it, Big ol' Bean.
@@ -35,6 +35,8 @@ While not completely realistic, I think it's pretty solid for anybody who doesn'
 ------------
 Version log:
 ------------
+V:102.03 - Fixed the fonts being whack because EGP updated their default font.
+--------
 V:102.02 - So you know how the config says that you can change the units in-game? That's a feature now. Additionally changed the metric pressure units to kPa from bar (thanks West)
 Whoops, finger slipped, added length counter as well. Merry Christmas!
 --------
@@ -62,9 +64,9 @@ Setup:
 6. UnitOverride overrides the currently selected unit type, so that you can control their type from a remote button or whatever
 
 >>EOTD setup & wiring:
-First of you'll want to use the older titus' EOTD E2 (the one that doesn't work with the wireless HOTD thing).
+First off, you'll want to use the older titus' EOTD E2 (the one that doesn't work with the wireless HOTD thing).
 
-It's quite straight forward:
+It's quite straight forward afterwards:
 1. Add an output called EOTDID
 2. Add this block of code to the bottom of the E2:
     local IDS = toString(Skin1) + toString(Skin2) + toString(Skin3) + toString(Skin4) + toString(Skin5)
@@ -174,6 +176,7 @@ if(first()|dupefinished()){
     ABLockout = 0
     EOTDSetID = 0
     EOTDArmState = EOTDArmed = 0
+    Font1 = "Arial"
     
     Running = 0
     White = vec(255)
@@ -259,7 +262,7 @@ if(first()|dupefinished()){
         
         E:egpTextLayout(Index + 1, Label, vec2(Pos:x() - Size:x() / 2, Pos:y() - Size:y() / 2), vec2(Size:x(), Size:y()))
         E:egpColor(Index + 1, vec(0))
-        E:egpFont(Index + 1, "Marlett", 12)
+        E:egpFont(Index + 1, Font1, 12)
         E:egpAlign(Index + 1, 1, 1)
         
         E:egpBoxOutline(Index + 2, Pos, Size)
@@ -276,7 +279,7 @@ if(first()|dupefinished()){
         E:egpSize(Index + 1, 2)
         
         E:egpTextLayout(Index + 2, Text, vec2(0, Pos:y() - 16), vec2(1024, 32))
-        E:egpFont(Index + 2, "Marlett", 16)
+        E:egpFont(Index + 2, Font1, 16)
         E:egpAlign(Index + 2, 1, 1)
     }
     
@@ -359,7 +362,7 @@ if(first()|dupefinished()){
                 
                 #Won't be copying this any time soon my man
                 O = 15
-                E:egpTextLayout(O, format("Copyright BeanTek %04d\n All rights reserved", time("year")), vec2(620, 970), vec2(400, 50))
+                E:egpTextLayout(O, format("Copyright BeanTek 2020-%04d\n All rights reserved", time("year")), vec2(620, 970), vec2(400, 50))
                 E:egpFont(O, "Consolas", 12)
                 E:egpAlign(O, 2, 1)
                 E:egpColor(O, Gray)
@@ -399,25 +402,25 @@ if(first()|dupefinished()){
             O = 1
             E:egpTextLayout(O, format("%.0f " + "mi", 0), vec2(10,10), vec2(170,30))
             E:egpColor(O, LightBlue)
-            E:egpFont(O, "Marlett", 15)
+            E:egpFont(O, Font1, 15)
             E:egpAlign(O, 0, 0)
             
             O = 2
             E:egpTextLayout(O, LocoDataInfo[2,string] + " " + LocoDataInfo[3,string], vec2(205, 10), vec2(180,30))
             E:egpColor(O, LightBlue)
-            E:egpFont(O, "Marlett", 15)
+            E:egpFont(O, Font1, 15)
             E:egpAlign(O, 0, 0)
             
             O = 3
             E:egpTextLayout(O, "JAN 1, 2020", vec2(666, 10), vec2(180,30))
             E:egpColor(O, LightBlue)
-            E:egpFont(O, "Marlett", 15)
+            E:egpFont(O, Font1, 15)
             E:egpAlign(O, 0, 0)
             
             O = 4
             E:egpTextLayout(O, (TimeFormat ? "12:00:00 UTC" : "12:00 AM UTC"), vec2(839, 10), vec2(180,30))
             E:egpColor(O, LightBlue)
-            E:egpFont(O, "Marlett", 15)
+            E:egpFont(O, Font1, 15)
             E:egpAlign(O, 2, 0)
             
             
@@ -521,47 +524,47 @@ if(first()|dupefinished()){
             #Numbers
             O = 56
             E:egpText(O, "0", vec2(430, 245))
-            E:egpFont(O, "Marlett", 14)
+            E:egpFont(O, Font1, 14)
             E:egpAlign(O, 0, 0)
             
             O = 57
             E:egpText(O, format("%.0f", MaxSpeedoVelocity * (Units ? UNIT_DATA["M_km", number] : 1) * 0.125), vec2(405, 190))
-            E:egpFont(O, "Marlett", 14)
+            E:egpFont(O, Font1, 14)
             E:egpAlign(O, 0, 0)
             
             O = 58
             E:egpText(O, format("%.0f", MaxSpeedoVelocity * (Units ? UNIT_DATA["M_km", number] : 1) * 0.25), vec2(405, 130))
-            E:egpFont(O, "Marlett", 14)
+            E:egpFont(O, Font1, 14)
             E:egpAlign(O, 0, 0)
             
             O = 59
             E:egpText(O, format("%.0f", MaxSpeedoVelocity * (Units ? UNIT_DATA["M_km", number] : 1) * 0.375), vec2(440, 86))
-            E:egpFont(O, "Marlett", 14)
+            E:egpFont(O, Font1, 14)
             E:egpAlign(O, 0, 0)
             
             O = 60
             E:egpText(O, format("%.0f", MaxSpeedoVelocity * (Units ? UNIT_DATA["M_km", number] : 1) * 0.5), vec2(512, 65))
-            E:egpFont(O, "Marlett", 14)
+            E:egpFont(O, Font1, 14)
             E:egpAlign(O, 1, 0)
             
             O = 61
             E:egpText(O, format("%.0f", MaxSpeedoVelocity * (Units ? UNIT_DATA["M_km", number] : 1) * 0.625), vec2(580, 86))
-            E:egpFont(O, "Marlett", 14)
+            E:egpFont(O, Font1, 14)
             E:egpAlign(O, 2, 0)
             
             O = 62
             E:egpText(O, format("%.0f", MaxSpeedoVelocity * (Units ? UNIT_DATA["M_km", number] : 1) * 0.75), vec2(625, 130))
-            E:egpFont(O, "Marlett", 14)
+            E:egpFont(O, Font1, 14)
             E:egpAlign(O, 2, 0)
             
             O = 63
             E:egpText(O, format("%.0f", MaxSpeedoVelocity * (Units ? UNIT_DATA["M_km", number] : 1) * 0.875), vec2(625, 190))
-            E:egpFont(O, "Marlett", 14)
+            E:egpFont(O, Font1, 14)
             E:egpAlign(O, 2, 0)
             
             O = 64
             E:egpText(O, format("%.0f", MaxSpeedoVelocity * (Units ? UNIT_DATA["M_km", number] : 1)), vec2(595, 245))
-            E:egpFont(O, "Marlett", 14)
+            E:egpFont(O, Font1, 14)
             E:egpAlign(O, 2, 0)
             
             
@@ -607,7 +610,7 @@ if(first()|dupefinished()){
                 
                 #Numbers
                 E:egpText(Index + 1, format("%.0f", (SetToAmps ? MaxCurrent_Act : MaxTE_Actual * (Units ? UNIT_DATA["M_N", number] : 1)) * (Izero / 4)), vec2(690 + Izero * 75, 276))
-                E:egpFont(Index + 1, "Marlett", 14)
+                E:egpFont(Index + 1, Font1, 14)
                 E:egpAlign(Index + 1, 1, 1)
                 E:egpColor(Index + 1, (ActualDiff <= (Izero / 4) ? OnYellow : vec(255)))
             }
@@ -627,43 +630,43 @@ if(first()|dupefinished()){
                 #Value init (from left to right)
                 O = 99 #ER
                 E:egpTextLayout(O, "0", vec2(9, 80), vec2(170, 150))
-                E:egpFont(O, "Marlett", 55)
+                E:egpFont(O, Font1, 55)
                 E:egpAlign(O, 1, 1)
                 E:egpColor(O, LightGreen)
                 
                 O = 100 #BP
                 E:egpTextLayout(O, "0", vec2(187, 80), vec2(170, 150))
-                E:egpFont(O, "Marlett", 55)
+                E:egpFont(O, Font1, 55)
                 E:egpAlign(O, 1, 1)
                 E:egpColor(O, LightGreen)
                 
                 O = 101 #Rear
                 E:egpTextLayout(O, "?", vec2(9, 265), vec2(80, 50))
-                E:egpFont(O, "Marlett", 25)
+                E:egpFont(O, Font1, 25)
                 E:egpAlign(O, 1, 1)
                 E:egpColor(O, LightGreen)
                 
                 O = 102 #Flow
                 E:egpTextLayout(O, "0", vec2(99, 265), vec2(80, 50))
-                E:egpFont(O, "Marlett", 25)
+                E:egpFont(O, Font1, 25)
                 E:egpAlign(O, 1, 1)
                 E:egpColor(O, LightGreen)
                 
                 O = 103 #Main
                 E:egpTextLayout(O, "0", vec2(187, 265), vec2(80, 50))
-                E:egpFont(O, "Marlett", 25)
+                E:egpFont(O, Font1, 25)
                 E:egpAlign(O, 1, 1)
                 E:egpColor(O, LightRed)
                 
                 O = 104 #Cyl
                 E:egpTextLayout(O, "0", vec2(277, 265), vec2(80, 50))
-                E:egpFont(O, "Marlett", 25)
+                E:egpFont(O, Font1, 25)
                 E:egpAlign(O, 1, 1)
                 E:egpColor(O, LightGreen)
             }else{
                 O = 101 #Rear
                 E:egpTextLayout(O, "?", vec2(9, 265), vec2(80, 50))
-                E:egpFont(O, "Marlett", 25)
+                E:egpFont(O, Font1, 25)
                 E:egpAlign(O, 1, 1)
                 E:egpColor(O, LightGreen)
             }
@@ -672,26 +675,26 @@ if(first()|dupefinished()){
             #Speed readout
             O = 105
             E:egpTextLayout(O, "0.0", vec2(405, 185), vec2(200, 150))
-            E:egpFont(O, "Marlett", 44)
+            E:egpFont(O, Font1, 44)
             E:egpAlign(O, 1, 2)
             E:egpColor(O, LightGreen)
             
             O = 106
             E:egpText(O, (Units ? UNIT_DATA["KPH", string] : UNIT_DATA["MPH", string]), vec2(565, 320))
-            E:egpFont(O, "Marlett", 16)
+            E:egpFont(O, Font1, 16)
             E:egpAlign(O, 0, 2)
             E:egpColor(O, LightGreen)
             
             
             O = 107 #Accel
             E:egpTextLayout(O, "0", vec2(660, 80), vec2(80, 32))
-            E:egpFont(O, "Marlett", 16)
+            E:egpFont(O, Font1, 16)
             E:egpAlign(O, 1, 2)
             E:egpColor(O, LightGreen)
             
             O = 108
             E:egpTextLayout(O, (Units ? UNIT_DATA["KPH", string] : UNIT_DATA["MPH", string]), vec2(710, 65), vec2(80, 32))
-            E:egpFont(O, "Marlett", 12)
+            E:egpFont(O, Font1, 12)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, LightGreen)
             
@@ -701,25 +704,25 @@ if(first()|dupefinished()){
             
             O = 110
             E:egpTextLayout(O, "min", vec2(710, 96), vec2(80, 24))
-            E:egpFont(O, "Marlett", 12)
+            E:egpFont(O, Font1, 12)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, LightGreen)
             
             O = 111 #Length
             E:egpTextLayout(O, "0", vec2(788, 80), vec2(80, 32))
-            E:egpFont(O, "Marlett", 16)
+            E:egpFont(O, Font1, 16)
             E:egpAlign(O, 2, 1)
             E:egpColor(O, LightBlue)
             
             O = 112
             E:egpTextLayout(O, (Units ? UNIT_DATA["m", string] : UNIT_DATA["ft", string]), vec2(865, 80), vec2(32, 32))
-            E:egpFont(O, "Marlett", 16)
+            E:egpFont(O, Font1, 16)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, LightBlue)
             
             O = 113 #Reverser position
             E:egpTextLayout(O, "Center", vec2(904, 80), vec2(110, 32))
-            E:egpFont(O, "Marlett", 16)
+            E:egpFont(O, Font1, 16)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, LightBlue)
             
@@ -727,27 +730,27 @@ if(first()|dupefinished()){
             #Consist effort ratio (capable:total units)
             O = 114
             E:egpText(O, "0:1", vec2(700, 174))
-            E:egpFont(O, "Marlett", 18)
+            E:egpFont(O, Font1, 18)
             E:egpAlign(O, 1, 1)
             
             #Consist power state (P/D)
             O = 115
             E:egpText(O, "P", vec2(740, 174))
-            E:egpFont(O, "Marlett", 18)
+            E:egpFont(O, Font1, 18)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, LightGreen)
             
             #Consist tractive effort readout
             O = 116
             E:egpText(O, "0", vec2(830, 174))
-            E:egpFont(O, "Marlett", 18)
+            E:egpFont(O, Font1, 18)
             E:egpAlign(O, 2, 1)
             E:egpColor(O, LightGreen)
             
             #TE unit
             O = 117
             E:egpText(O, (Units ? UNIT_DATA["kN", string] : UNIT_DATA["kLb", string]), vec2(840, 174))
-            E:egpFont(O, "Marlett", 18)
+            E:egpFont(O, Font1, 18)
             E:egpAlign(O, 0, 1)
             E:egpColor(O, LightGreen)
             
@@ -755,13 +758,13 @@ if(first()|dupefinished()){
             #Tractive effort readout
             O = 118
             E:egpText(O, "0", vec2(784, 234))
-            E:egpFont(O, "Marlett", 18)
+            E:egpFont(O, Font1, 18)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, LightGreen)
             
             O = 119
             E:egpText(O, (SetToAmps ? "A" : (Units ? UNIT_DATA["kN", string] : UNIT_DATA["kLb", string])), vec2(840, 234))
-            E:egpFont(O, "Marlett", 18)
+            E:egpFont(O, Font1, 18)
             E:egpAlign(O, 0, 1)
             E:egpColor(O, LightGreen)
             
@@ -769,7 +772,7 @@ if(first()|dupefinished()){
             #Throttle
             O = 120
             E:egpTextLayout(O, "Idle", vec2(905, 150), vec2(110, 110))
-            E:egpFont(O, "Marlett", 28)
+            E:egpFont(O, Font1, 28)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, LightGreen)
             #----Upper panel end
@@ -792,7 +795,7 @@ if(first()|dupefinished()){
             
             O = 124
             E:egpTextLayout(O, "WHEEL SLIP", vec2(2, 327), vec2(82, 76))
-            E:egpFont(O, "Marlett", 14)
+            E:egpFont(O, Font1, 14)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, vec(0))
             
@@ -802,7 +805,7 @@ if(first()|dupefinished()){
             
             O = 126
             E:egpTextLayout(O, "PCS OPEN", vec2(88, 327), vec2(82, 76))
-            E:egpFont(O, "Marlett", 14)
+            E:egpFont(O, Font1, 14)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, vec(0))
             
@@ -814,7 +817,7 @@ if(first()|dupefinished()){
             
             O = 128
             E:egpTextLayout(O, "DYN BRAKE", vec2(260, 327), vec2(82, 76))
-            E:egpFont(O, "Marlett", 14)
+            E:egpFont(O, Font1, 14)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, vec(0))
             
@@ -824,7 +827,7 @@ if(first()|dupefinished()){
             
             O = 130
             E:egpTextLayout(O, "LOAD SHED", vec2(346, 327), vec2(82, 76))
-            E:egpFont(O, "Marlett", 14)
+            E:egpFont(O, Font1, 14)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, vec(0))
             
@@ -834,7 +837,7 @@ if(first()|dupefinished()){
             
             O = 132
             E:egpTextLayout(O, "ALERT", vec2(432, 327), vec2(164, 76))
-            E:egpFont(O, "Marlett", 14)
+            E:egpFont(O, Font1, 14)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, vec(0))
             
@@ -844,7 +847,7 @@ if(first()|dupefinished()){
             
             O = 134
             E:egpTextLayout(O, "UNIT ALARM", vec2(600, 327), vec2(82, 76))
-            E:egpFont(O, "Marlett", 14)
+            E:egpFont(O, Font1, 14)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, vec(0))
             
@@ -856,7 +859,7 @@ if(first()|dupefinished()){
             
             O = 136
             E:egpTextLayout(O, "AB FAIL", vec2(772, 327), vec2(82, 76))
-            E:egpFont(O, "Marlett", 14)
+            E:egpFont(O, Font1, 14)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, vec(0))
             
@@ -868,7 +871,7 @@ if(first()|dupefinished()){
             
             O = 138
             E:egpTextLayout(O, "EOT MOVE", vec2(944, 327), vec2(82, 76))
-            E:egpFont(O, "Marlett", 14)
+            E:egpFont(O, Font1, 14)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, vec(0))
             #----End of warning indicators
@@ -928,38 +931,38 @@ if(first()|dupefinished()){
                 #Fuel quantity
                 O = 149
                 E:egpTextLayout(O, "FUEL QUANTITY", vec2(45, 480), vec2(250, 28))
-                E:egpFont(O, "Marlett", 14)
+                E:egpFont(O, Font1, 14)
                 E:egpAlign(O, 1, 1)
                 E:egpColor(O, LightBlue)
                 
                 O = 150
                 E:egpTextLayout(O, "? " + (Units ? UNIT_DATA["L", string] : UNIT_DATA["Gal", string]), vec2(45, 505), vec2(250, 40))
-                E:egpFont(O, "Marlett", 16)
+                E:egpFont(O, Font1, 16)
                 E:egpAlign(O, 1, 1)
                 
                 #Air brake setup
                 O = 151
                 E:egpTextLayout(O, "AIR BRAKE SETUP", vec2(45, 540), vec2(250, 28))
-                E:egpFont(O, "Marlett", 14)
+                E:egpFont(O, Font1, 14)
                 E:egpAlign(O, 1, 1)
                 E:egpColor(O, LightBlue)
                 
                 O = 152
                 E:egpTextLayout(O, "TRAILING", vec2(45, 565), vec2(250, 40))
-                E:egpFont(O, "Marlett", 16)
+                E:egpFont(O, Font1, 16)
                 E:egpAlign(O, 1, 1)
                 
                 
                 #Last car
                 O = 153
                 E:egpTextLayout(O, "LAST CAR", vec2(388, 480), vec2(250, 28))
-                E:egpFont(O, "Marlett", 14)
+                E:egpFont(O, Font1, 14)
                 E:egpAlign(O, 1, 1)
                 E:egpColor(O, LightBlue)
                 
                 O = 154
                 E:egpTextLayout(O, "IDENT 0", vec2(388, 510), vec2(250, 40))
-                E:egpFont(O, "Marlett", 16)
+                E:egpFont(O, Font1, 16)
                 E:egpAlign(O, 1, 1)
             }
             
@@ -973,12 +976,12 @@ if(first()|dupefinished()){
                 #Message box text layouts
                 O = 248
                 E:egpTextLayout(O, "", vec2(0, 866), vec2(1024, 32))
-                E:egpFont(O, "Marlett", 16)
+                E:egpFont(O, Font1, 16)
                 E:egpAlign(O, 1, 0)
             
                 O = 249
                 E:egpTextLayout(O, "", vec2(0, 898), vec2(1024, 32))
-                E:egpFont(O, "Marlett", 16)
+                E:egpFont(O, Font1, 16)
                 E:egpAlign(O, 1, 0)
             }
         }
@@ -999,7 +1002,7 @@ if(first()|dupefinished()){
                             #Blower status text
                             O = 180
                             E:egpText(O, "Off", vec2(832, 898))
-                            E:egpFont(O, "Marlett", 18)
+                            E:egpFont(O, Font1, 18)
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightBlue)
                             
@@ -1013,7 +1016,7 @@ if(first()|dupefinished()){
                             #Defogger status text
                             O = 180
                             E:egpText(O, "Off", vec2(832, 898))
-                            E:egpFont(O, "Marlett", 18)
+                            E:egpFont(O, Font1, 18)
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightBlue)
                             
@@ -1027,7 +1030,7 @@ if(first()|dupefinished()){
                             #Brightness % text
                             O = 180
                             E:egpTextLayout(O, "100%", vec2(0, 856), vec2(256, 80))
-                            E:egpFont(O, "Marlett", 18)
+                            E:egpFont(O, Font1, 18)
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightBlue)
                             
@@ -1037,7 +1040,7 @@ if(first()|dupefinished()){
                             #Brightness % text
                             O = 184
                             E:egpTextLayout(O, "Engineer Primary", vec2(256, 856), vec2(256, 80))
-                            E:egpFont(O, "Marlett", 18)
+                            E:egpFont(O, Font1, 18)
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightBlue)
                             
@@ -1047,7 +1050,7 @@ if(first()|dupefinished()){
                             #Current units
                             O = 188
                             E:egpText(O, (Units ? "Metric" : "Imper."), vec2(832, 898))
-                            E:egpFont(O, "Marlett", 18)
+                            E:egpFont(O, Font1, 18)
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightBlue)
                                                         
@@ -1080,26 +1083,26 @@ if(first()|dupefinished()){
                                         #Current measured length
                                         O = 177
                                         E:egpText(O, format("%.0f", MeasuredLength * LUnitMult), vec2(320, 890))
-                                        E:egpFont(O, "Marlett", 18)
+                                        E:egpFont(O, Font1, 18)
                                         E:egpAlign(O, 1, 1)
                                         
                                         #Units
                                         O = 178
                                         E:egpText(O, format("%s", LUnits), vec2(420, 890))
-                                        E:egpFont(O, "Marlett", 18)
+                                        E:egpFont(O, Font1, 18)
                                         E:egpAlign(O, 1, 1)
                                         E:egpColor(O, LightBlue)
                                     }else{
                                         #Info text
                                         O = 177 #Short length warning
                                         E:egpText(O, (MeasuredLTooShort ? "The measured length is too short!" : ""), vec2(20, 880))
-                                        E:egpFont(O, "Marlett", 18)
+                                        E:egpFont(O, Font1, 18)
                                         E:egpAlign(O, 0, 1)
                                         
                                         #Previous length
                                         O = 178
                                         E:egpText(O, format("The previous length was %.0f %s", Length * LUnitMult, LUnits), vec2(20, 920))
-                                        E:egpFont(O, "Marlett", 18)
+                                        E:egpFont(O, Font1, 18)
                                         E:egpAlign(O, 0, 1)
                                         E:egpColor(O, LightBlue)
                                     }
@@ -1112,12 +1115,12 @@ if(first()|dupefinished()){
                                     #Current input length readout
                                     O = 177
                                     E:egpText(O, format("%01d  %01d  %01d  %01d  %01d", IL1, IL2, IL3, IL4, IL5), vec2(448, 860))
-                                    E:egpFont(O, "Marlett", 18)
+                                    E:egpFont(O, Font1, 18)
                                     E:egpAlign(O, 1, 1)
                                     
                                     O = 178
                                     E:egpText(O, format("%s", (Units ? "Meters" : "Feet")), vec2(530, 860))
-                                    E:egpFont(O, "Marlett", 18)
+                                    E:egpFont(O, Font1, 18)
                                     E:egpAlign(O, 0, 1)
                                     #---
                                     
@@ -1173,7 +1176,7 @@ if(first()|dupefinished()){
                                     #Invalid length text
                                     O = 189
                                     E:egpText(O, "Invalid Length", vec2(1018, 890)) #Invalid Length
-                                    E:egpFont(O, "Marlett", 16)
+                                    E:egpFont(O, Font1, 16)
                                     E:egpAlign(O, 2, 1)
                                     E:egpColor(O, OnRed)
                                     
@@ -1188,13 +1191,13 @@ if(first()|dupefinished()){
                             #Length
                             O = 177
                             E:egpText(O, format("%.0f", CountdownLength * LUnitMult), vec2(576, 904))
-                            E:egpFont(O, "Marlett", 18)
+                            E:egpFont(O, Font1, 18)
                             E:egpAlign(O, 1, 1)
                             
                             #Units
                             O = 178
                             E:egpText(O, format("%s", LUnits), vec2(676, 904))
-                            E:egpFont(O, "Marlett", 18)
+                            E:egpFont(O, Font1, 18)
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightBlue)
                                                                                 
@@ -1204,25 +1207,25 @@ if(first()|dupefinished()){
                             
                             O = 177 #Elapsed time
                             E:egpText(O, "Time Mile Posts", vec2(192, 850))
-                            E:egpFont(O, "Marlett", 18)
+                            E:egpFont(O, Font1, 18)
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightBlue)
                             
                             O = 178 #Time readout
                             E:egpText(O, format("%02d:%02d", 0, 0), vec2(192, 890))
-                            E:egpFont(O, "Marlett", 18)
+                            E:egpFont(O, Font1, 18)
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightPurple)
                             
                             O = 179 #Average speed for Measured Mile text placeholder
                             E:egpText(O, "", vec2(800, 850))
-                            E:egpFont(O, "Marlett", 16)
+                            E:egpFont(O, Font1, 16)
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightBlue)
                             
                             O = 180 #Average speed / Speed Check invalid message
                             E:egpText(O, "", vec2(800, 890))
-                            E:egpFont(O, "Marlett", 16)
+                            E:egpFont(O, Font1, 16)
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightPurple)
                             
@@ -1248,19 +1251,19 @@ if(first()|dupefinished()){
                 #Month, day, year
                 O = 1
                 E:egpText(O, format("%s %01d, %04d", "JAN", 1, 2020), vec2(6, 6))
-                E:egpFont(O, "Marlett", 16)
+                E:egpFont(O, Font1, 16)
                 E:egpAlign(O, 0, 0)
                 
                 #Time
                 O = 2
                 E:egpText(O, (TimeFormat ? "12:00:00 UTC" : "12:00 AM UTC"), vec2(6, 38))
-                E:egpFont(O, "Marlett", 16)
+                E:egpFont(O, Font1, 16)
                 E:egpAlign(O, 0, 0)
                 
                 #Unit RR and number
                 O = 3
                 E:egpText(O, format("%s %s", LocoDataInfo[2, string], LocoDataInfo[3, string]), vec2(1018, 6))
-                E:egpFont(O, "Marlett", 16)
+                E:egpFont(O, Font1, 16)
                 E:egpAlign(O, 2, 0)
             }
         }
@@ -1275,53 +1278,53 @@ if(first()|dupefinished()){
                         case 0, #Main page
                             O = 7 #Air brake setup change warn
                             E:egpText(O, "", vec2(20, 840)) #Reverser must be centered to be setup as trail.
-                            E:egpFont(O, "Marlett", 16)
+                            E:egpFont(O, Font1, 16)
                             E:egpAlign(O, 0, 1)
                             E:egpColor(O, LightBlue)
                             
                             #New values
                             O = 8
                             E:egpText(O, "NEW", vec2(64, 890))
-                            E:egpFont(O, "Marlett", 16)
+                            E:egpFont(O, Font1, 16)
                             E:egpAlign(O, 1, 1)
                             
                             O = 9
                             E:egpText(O, "0 " + (Units ? UNIT_DATA["kPa", string] : UNIT_DATA["PSI", string]), vec2(192, 890))
-                            E:egpFont(O, "Marlett", 16)
+                            E:egpFont(O, Font1, 16)
                             E:egpAlign(O, 1, 1)
                             
                             O = 10
                             E:egpText(O, "TRAIL", vec2(320, 890))
-                            E:egpFont(O, "Marlett", 16)
+                            E:egpFont(O, Font1, 16)
                             E:egpAlign(O, 1, 1)
                             
                             O = 11
                             E:egpText(O, "CUT IN", vec2(448, 890))
-                            E:egpFont(O, "Marlett", 16)
+                            E:egpFont(O, Font1, 16)
                             E:egpAlign(O, 1, 1)
                             
                             #Current values
                             O = 12
                             E:egpText(O, "CURRENT", vec2(64, 920))
-                            E:egpFont(O, "Marlett", 16)
+                            E:egpFont(O, Font1, 16)
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightBlue)
                             
                             O = 13
                             E:egpText(O, "0 " + (Units ? UNIT_DATA["kPa", string] : UNIT_DATA["PSI", string]), vec2(192, 920))
-                            E:egpFont(O, "Marlett", 16)
+                            E:egpFont(O, Font1, 16)
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightBlue)
                             
                             O = 14
                             E:egpText(O, "TRAIL", vec2(320, 920))
-                            E:egpFont(O, "Marlett", 16)
+                            E:egpFont(O, Font1, 16)
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightBlue)
                             
                             O = 15
                             E:egpText(O, "CUT IN", vec2(448, 920))
-                            E:egpFont(O, "Marlett", 16)
+                            E:egpFont(O, Font1, 16)
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightBlue)
                             
@@ -1329,7 +1332,7 @@ if(first()|dupefinished()){
                         case 1, #EQ res setup
                             O = 7 #Displayed pressure
                             E:egpText(O, "0 " + (Units ? UNIT_DATA["kPa", string] : UNIT_DATA["PSI", string]), vec2(256, 870))
-                            E:egpFont(O, "Marlett", 16)
+                            E:egpFont(O, Font1, 16)
                             E:egpAlign(O, 1, 1)
                             
                             O = 8 #Value underline
@@ -1362,7 +1365,7 @@ if(first()|dupefinished()){
                         #Current ID
                         O = 10
                         E:egpText(O, "0", vec2(64, 892))
-                        E:egpFont(O, "Marlett", 18)
+                        E:egpFont(O, Font1, 18)
                         E:egpAlign(O, 1, 1)
                         E:egpColor(O, LightBlue)
                         
@@ -1372,7 +1375,7 @@ if(first()|dupefinished()){
                         #Arm state readout
                         O = 14
                         E:egpText(O, "?", vec2(320, 892))
-                        E:egpFont(O, "Marlett", 18)
+                        E:egpFont(O, Font1, 18)
                         E:egpAlign(O, 1, 1)
                         E:egpColor(O, LightGreen)
                         
@@ -1382,7 +1385,7 @@ if(first()|dupefinished()){
                         #Current ID
                         O = 18
                         E:egpText(O, "-", vec2(704, 892))
-                        E:egpFont(O, "Marlett", 18)
+                        E:egpFont(O, Font1, 18)
                         E:egpAlign(O, 1, 1)
                         E:egpColor(O, LightBlue)
 
@@ -1392,7 +1395,7 @@ if(first()|dupefinished()){
                     
                         O = 7 #EOT ID readout text
                         E:egpText(O, format("%01d  %01d  %01d  %01d  %01d", EID1, EID2, EID3, EID4, EID5), vec2(448, 860))
-                        E:egpFont(O, "Marlett", 18)
+                        E:egpFont(O, Font1, 18)
                         E:egpAlign(O, 1, 1)
                         
                         #Number underlines
@@ -1608,7 +1611,7 @@ if(first()|dupefinished()){
                             #Brightness % text
                             O = 7
                             E:egpTextLayout(O, "100%", vec2(0, 856), vec2(256, 80))
-                            E:egpFont(O, "Marlett", 18)
+                            E:egpFont(O, Font1, 18)
                             E:egpAlign(O, 1, 1)
                             E:egpColor(O, LightBlue)
                             
