@@ -1,0 +1,1716 @@
+@name EMD ICE Displays V1 by Chessie Computer
+@inputs RLCPT:entity Driver:entity CtlTable:table [EGPMain EGPSec]:wirelink Num:string Battery Bell
+@outputs LeadBraking BrakeCutIn FeedPressure SlowSpeedOn SlowSpeedSetSpeed HumpMultiplier EmergencyBrake AlerterTime
+#config
+@persist AmpsMode MaxTE MaxDE MaxContTE MaxContDE Railroad:string LocoWeight NotchedDynamics Font:string QuickBoot Alerter AlerterKey:string AlerterResetTime AlerterVolume
+#main page and generics
+@persist Run OSBooted OSBooting OSBootSequence RLCPTW:wirelink Color:table BP EQ I MPH MPHMin MainPage MainSubPage AlerterTime Blink
+#length counting page
+@persist N1 N2 N3 N4 N5 NewLength:string Length CountingDown CountDownFt
+#second display
+@persist SecPage SecSubPage
+@persist SetMPHMin SetLoad NewLeadBraking NewBrakeCutIn NewFeedPressure NewNewFeedPressure
+#interaction
+@persist Unlock SecActive
+#em2000 page
+@persist Data_Shift
+@trigger none
+
+if(first()|duped()){
+    Run=0
+}
+if(first()|dupefinished()){
+    #[
+    
+    Wiring Instructions:
+    
+    Mandatory wiring for functionality:
+    
+    RLCPT -> RLCPT:entity on PT2 chip
+    Driver -> Driver:entity on operator's POD controller
+    CtlTable -> CtlTable:table on control stand
+    EGPMain/EGPSec -> EGP's on desk
+    Num -> E2 that outputs your road number in a string
+    Battery -> the on switch for ICE (probably best for this to be on engine run)
+    Bell -> Bell output on stand or anywhere else that controls your bell
+    
+    
+    For slow speed:
+    
+    Wire the HumpMultiplier on your stand to the output on ICE for the ability to use it for slow speed regulation
+    
+    
+    For alerter:
+    
+    If you want the alerter to apply the emergency brake when time's up, wire EMBrake on the control stand to ICE's EmergencyBrake output
+    
+    
+    For brake control:
+    
+    Wire BrakeCutIn on PT2 to BrakeCutIn on ICE, ignore LeadBraking unless you have a separate independent brake cut-in
+    
+    ]#
+    #config
+    
+    AmpsMode = 0 #set to 1 if you're in a modern DC locomotive like our SD60I (all of the below config vars turn to amps when this is on)
+    
+    MaxTE = 200 #max tractive effort in klb (or A if in AmpsMode)
+    MaxContTE = 150 #max continuous tractive effort in klb (or A if in AmpsMode) (this is the yellow zone for TE)
+    
+    MaxDE = 150 #max dynamic braking effort in klb (or A if in AmpsMode)
+    MaxContDE = 100 #max continuous dynamic braking effort in klb (or A if in AmpsMode) (this is the red zone for BE)
+    NotchedDynamics = 0 #if dynamics have notches, set this to 1
+    
+    Railroad = "conrail" #railroad that will be labeled
+    
+    LocoWeight = 395000 #locomotive weight in lbs
+    
+    Alerter = 1 #do you want an alerter (you know, the thing that goes beep beep and dumps your train if you don't tell it to shut up)
+    AlerterKey = "t" #key to acknowledge the alerter
+    AlerterVolume = 0.25 #volume of the alerter
+    AlerterResetTime = 35 #how many seconds you have after reset before it starts to go off again
+    
+    Font = "Txt_IV50" #may not want to change this, but it changes the whole system font
+    
+    QuickBoot = 0 #accelerates the boot process by 20x (i recommend this only for debugging but if you don't like the boot screen you hurt my feelings but go ahead)
+    
+    #end of config, please do not continue (you may not like what you see)
+    
+    
+    
+    Color["green",vector] = vec(85,255,95)
+    Color["teal",vector] = vec(120,230,255)
+    Color["blue",vector] = vec(120/3,230/3,255/1.3)
+    Color["yellow",vector] = vec(240,220,45)
+    Color["red",vector] = vec(240,45,35)
+    Color["purple",vector] = vec(160,45,170)
+    Color["pink",vector] = vec(200,100,240)
+    
+    SecPage=0
+    SecSubPage=0
+    MainPage=0
+    MainSubPage=0
+    OSBooted=0
+    OSBooting=0
+    OSBootSequence=0
+    
+    NewNewFeedPressure=90
+    NewFeedPressure=90
+    FeedPressure=90
+    LeadBraking=0
+    BrakeCutIn=0
+    NewLeadBraking=0
+    NewBrakeCutIn=0
+    AlerterTime=25+AlerterResetTime
+    
+    EGPMain:egpClear()
+    EGPSec:egpClear()
+    
+
+    #button generation
+    function void wirelink:egpButton(Position, Color:vector, Name:string){
+        D=This
+        D:egpRemove(278+Position*2)
+        D:egpRemove(279+Position*2)
+        
+        D:egpBox(278+Position*2,vec2(32+((Position-1)*64),488),vec2(62,40))
+        D:egpColor(278+Position*2,Color)
+        
+        D:egpTextLayout(279+Position*2,Name,vec2(32+((Position-1)*64)-31,488-20),vec2(62,40))
+        D:egpAlign(279+Position*2,1,1)
+        D:egpFont(279+Position*2,Font,11)
+        D:egpColor(279+Position*2,vec(0))
+    }
+    function void wirelink:egpEM2000Buttons(Index,Shift,TopRow:table,BottomRow:table){
+        D=This
+        
+        for(I=1,7){
+            Position=I
+            
+            D:egpBox(Index+0+(Position-1)*4,vec2(32+((Position-1)*64),488-26),vec2(62,24))
+            D:egpColor(Index+0+(Position-1)*4,Shift ? Color["blue",vector] : Color["teal",vector])
+            D:egpBox(Index+1+(Position-1)*4,vec2(32+((Position-1)*64),488),vec2(62,24))
+            D:egpColor(Index+1+(Position-1)*4,Shift ? Color["teal",vector] : Color["blue",vector])
+            D:egpTextLayout(Index+2+(Position-1)*4,TopRow[Position,string],vec2(32+((Position-1)*64)-31,488-26-12),vec2(62,24))
+            D:egpAlign(Index+2+(Position-1)*4,1,1)
+            D:egpFont(Index+2+(Position-1)*4,Font,20)
+            D:egpColor(Index+2+(Position-1)*4,vec(0))
+            D:egpTextLayout(Index+3+(Position-1)*4,BottomRow[Position,string],vec2(32+((Position-1)*64)-31,488-12),vec2(62,24))
+            D:egpAlign(Index+3+(Position-1)*4,1,1)
+            D:egpFont(Index+3+(Position-1)*4,Font,20)
+            D:egpColor(Index+3+(Position-1)*4,vec(0))
+        }
+    }
+    function void wirelink:bottomMainWipe(){
+        for(I=0,50){
+            Index=260+I
+            This:egpRemove(Index)
+        }
+    }
+    function void wirelink:mainButtons(Page, Subpage){
+        D=This
+        switch(Page){
+            case 0,
+                switch(Subpage){
+                    case 0,
+                        D:egpButton(4,Color["teal",vector],"CONTROLS")
+                        D:egpButton(6,Color["teal",vector],"COUNT")
+                        D:egpButton(8,Color["green",vector],"MORE\nMENU")
+                    break
+                }
+            break
+            case 2,
+                switch(Subpage){
+                    case 0,
+                        D:egpButton(1,Color["teal",vector],"CANCEL")
+                        D:egpButton(3,Color["teal",vector],"TRAIN\nLENGTH")
+                        D:egpButton(5,Color["teal",vector],"COUNT\nDOWN")
+                        D:egpButton(7,Color["teal",vector],"SPEED\nCHECK")
+                    break
+                    case 1,
+                        D:egpButton(1,Color["teal",vector],"CANCEL")
+                        D:egpButton(2,Color["teal",vector],"")
+                        D:egpButton(3,Color["teal",vector],"")
+                        D:egpButton(4,Color["teal",vector],"")
+                        D:egpButton(5,Color["teal",vector],"")
+                        D:egpButton(6,Color["teal",vector],"")
+                        D:egpButton(7,Color["teal",vector],"ENTER")
+                        
+                        D:egpBox(260,vec2(192+32,440),vec2(80,4))
+                        D:egpColor(260,Color["teal",vector])
+                        
+                        D:egpTextLayout(261,"88888",vec2(192+32-40,416),vec2(80,24))
+                        D:egpAlign(261,1,0)
+                        D:egpFont(261,Font,24)
+                        
+                        D:egpLine(262,vec2(192+32,440),vec2(192+32,470))
+                        D:egpColor(262,Color["teal",vector])
+                        D:egpSize(262,3)
+                        
+                        D:egpLine(263,vec2(192+32-16,440),vec2(192+32-64,470))
+                        D:egpColor(263,Color["teal",vector])
+                        D:egpSize(263,3)
+                        
+                        D:egpLine(264,vec2(192+32-32,440),vec2(192+32-128,470))
+                        D:egpColor(264,Color["teal",vector])
+                        D:egpSize(264,3)
+                        
+                        D:egpLine(265,vec2(192+32+16,440),vec2(192+32+64,470))
+                        D:egpColor(265,Color["teal",vector])
+                        D:egpSize(265,3)
+                        
+                        D:egpLine(266,vec2(192+32+32,440),vec2(192+32+128,470))
+                        D:egpColor(266,Color["teal",vector])
+                        D:egpSize(266,3)
+                    break
+                    case 2,
+                        D:egpButton(1,Color["teal",vector],"CANCEL")
+                        D:egpButton(5,Color["pink",vector],"COUNT\nDOWN")
+                        D:egpButton(7,Color["teal",vector],"RESET\nCOUNTER")
+                    break
+                }
+            break
+        }
+    }
+    function void wirelink:secondButtons(Page, Subpage, Data_Shift){
+        D=This
+        switch(Page){
+            case 0,
+                switch(Subpage){
+                    case 0,
+                        D:egpButton(3,Color["teal",vector],"LOCO\nDATA")
+                        D:egpButton(5,Color["teal",vector],"SLOW\nSPEED")
+                        D:egpButton(7,Color["teal",vector],"AIR\nBRAKE")
+                        D:egpButton(8,Color["green",vector],"MORE\nMENU")
+                    break
+                }
+            break
+            case 1,
+                D:egpEM2000Buttons(1,Data_Shift,table("#","#","F1","F2","F3","F4","SHIFT"),table("#","#","#","#","CREW","#","SHIFT"))
+            break
+            case 2,
+                D:egpEM2000Buttons(1,Data_Shift,table("#","#","F1","F2","F3","F4","SHIFT"),table("#","#","#","#","CREW","#","SHIFT"))
+            break
+            case 3,
+                switch(Subpage){
+                    case 0,
+                        D:egpButton(1,Color["teal",vector],"CANCEL")
+                        D:egpButton(2,Color["teal",vector],"EQ RES\nSETUP")
+                        D:egpButton(3,Color["teal",vector],"LEAD\nTRAIL")
+                        D:egpButton(4,Color["teal",vector],"CUT IN\nCUT OUT")
+                        D:egpButton(6,Color["teal",vector],"ACCEPT\nCHANGES")
+                    break
+                    case 1,
+                        D:egpButton(1,Color["teal",vector],"CANCEL")
+                        D:egpButton(2,Color["teal",vector],"INC")
+                        D:egpButton(3,Color["teal",vector],"DEC")
+                        D:egpButton(4,Color["teal",vector],"80 PSI")
+                        D:egpButton(5,Color["teal",vector],"90 PSI")
+                        D:egpButton(6,Color["teal",vector],"100 PSI")
+                        D:egpButton(7,Color["teal",vector],"110 PSI")
+                        D:egpButton(8,Color["teal",vector],"ACCEPT\nCHANGES")
+                    break
+                }
+            break
+        }
+    }
+    #boot screen generation
+    function void wirelink:bootInit(){
+        D=This
+        
+        D:egpText(1,"AMIBIOS (C)1993 American Megatrends Inc.,",vec2(6))
+        D:egpColor(1,vec(150))
+        D:egpFont(1,"Unispace",20)
+        
+        D:egpText(2,"016000 KB OK",vec2(6,6+50))
+        D:egpColor(2,vec(150))
+        D:egpFont(2,"Unispace",20)
+        
+        D:egpText(3,"WAIT......",vec2(6,6+75))
+        D:egpColor(3,vec(150))
+        D:egpFont(3,"Unispace",20)
+        
+        D:egpText(4,"Volume label BOOTDISK",vec2(6,6+125))
+        D:egpColor(4,vec(150))
+        D:egpFont(4,"Unispace",20)
+        D:egpText(5,"1,457,664 bytes total disk space",vec2(6+25,6+150))
+        D:egpColor(5,vec(150))
+        D:egpFont(5,"Unispace",20)
+        D:egpText(6,"386,560 bytes used by system",vec2(6+25,6+175))
+        D:egpColor(6,vec(150))
+        D:egpFont(6,"Unispace",20)
+        D:egpText(7,"1,071,104 bytes available on disk",vec2(6+25,6+200))
+        D:egpColor(7,vec(150))
+        D:egpFont(7,"Unispace",20)
+        
+        D:egpText(8,"CPU label",vec2(6,6+250))
+        D:egpColor(8,vec(150))
+        D:egpFont(8,"Unispace",20)
+        D:egpText(9,"Intel(R) Pentium(TM) P5 SPD:66MHz L1:16KB",vec2(6+25,6+275))
+        D:egpColor(9,vec(150))
+        D:egpFont(9,"Unispace",20)
+        
+        D:egpText(10,"Devices",vec2(6,6+325))
+        D:egpColor(10,vec(150))
+        D:egpFont(10,"Unispace",20)
+        D:egpText(11,"2 monitor(s): \"EGPMAIN\";VGA,\"EGPSEC\";VGA",vec2(6+25,6+350))
+        D:egpColor(11,vec(150))
+        D:egpFont(11,"Unispace",20)
+        D:egpText(12,"1 keyboards(s): \"OPERATORS_KEYS\";SERIAL",vec2(6+25,6+375))
+        D:egpColor(12,vec(150))
+        D:egpFont(12,"Unispace",20)
+        
+        D:egpText(13,"Starting OS......",vec2(6,6+425))
+        D:egpColor(13,vec(150))
+        D:egpFont(13,"Unispace",20)
+        
+        D:egpBox(14,vec2(256,256+35),vec2(512))
+        D:egpColor(14,vec(0))
+    }
+    function void wirelink:bootFinish(){
+        D=This
+        
+        D:egpText(1,"Microsoft(R) Windows 95",vec2(6))
+        D:egpColor(1,vec(150))
+        D:egpFont(1,"Unispace",20)
+        
+        D:egpText(2,"(C)Copyright Microsoft Corp 1981-1995.",vec2(6+25,6+25))
+        D:egpColor(2,vec(150))
+        D:egpFont(2,"Unispace",20)
+        
+        D:egpText(3,"C>start emd_ice.msi_",vec2(6,6+75))
+        D:egpColor(3,vec(150))
+        D:egpFont(3,"Unispace",20)
+    }
+    #main page generation
+    function void wirelink:mainPageInit(){
+        D=This
+        
+        #page separator
+        D:egpBox(1,vec2(256,250),vec2(512,2))
+        D:egpColor(1,Color["teal",vector])
+        
+        D:egpBox(2,vec2(256,210),vec2(512,2))
+        D:egpColor(2,Color["teal",vector])
+        
+        #speedometer and accelerometer
+        
+        D:egpBox(7,vec2(256,80),vec2(512,2))
+        
+        for(I=0,24){
+            Start=8
+            D:egpBox(Start+I*2,vec2(I*12.5-150,((!(I%2)*3)+6)/-2),vec2(2,(!(I%2)*3)+6))
+            D:egpParent(Start+I*2,7)
+            
+            if((!(I%2))){
+                D:egpTextLayout(Start+I*2+1,(I*5):toString(),vec2(I*12.5-150-20,-25),vec2(40,20))
+                D:egpAlign(Start+I*2+1,1,1)
+                D:egpParent(Start+I*2+1,7)
+                D:egpFont(Start+I*2+1,Font,12)
+            }
+        }
+        
+        D:egpBox(60,vec2(256-128-60,68),vec2(256,30))
+        D:egpColor(60,vec(0))
+        D:egpBox(61,vec2(256+128+60,68),vec2(256,30))
+        D:egpColor(61,vec(0))
+        
+        D:egpTriangle(62,vec2(256,82),vec2(256+6,92),vec2(256-6,92))
+        D:egpColor(62,Color["green",vector])
+        
+        D:egpBox(63,vec2(256,92),vec2(0,2))
+        D:egpColor(63,Color["green",vector])
+        
+        #air brake menu
+        #top bar
+        D:egpBox(64,vec2(90,20),vec2(150,1))
+        D:egpBox(65,vec2(90,20),vec2(70,4))
+        D:egpColor(65,vec(0))
+        D:egpTextLayout(66,"AIR BRAKE",vec2(90-50,20-10),vec2(100,20))
+        D:egpFont(66,Font,14)
+        D:egpAlign(66,1,1)
+        
+        #rear, flow, main, and bc
+        #rear
+        D:egpBoxOutline(67,vec2(30,50),vec2(40,30))
+        D:egpSize(67,1)
+        D:egpColor(67,Color["teal",vector])
+        
+        D:egpBox(68,vec2(30,35),vec2(30,6))
+        D:egpColor(68,vec(0))
+        D:egpBox(69,vec2(30,55),vec2(42,28))
+        D:egpColor(69,vec(0))
+        
+        D:egpTextLayout(70,"REAR",vec2(30-20,53-22),vec2(40,44))
+        D:egpAlign(70,1,0)
+        D:egpFont(70,Font,12)
+        
+        D:egpTextLayout(71,"000",vec2(30-20,50-16),vec2(40,44))
+        D:egpAlign(71,1,1)
+        D:egpFont(71,Font,20)
+        D:egpColor(71,Color["green",vector])
+        
+        #flow
+        D:egpBoxOutline(72,vec2(30+42,50),vec2(40,30))
+        D:egpSize(72,1)
+        D:egpColor(72,Color["teal",vector])
+        
+        D:egpBox(73,vec2(30+42,35),vec2(30,6))
+        D:egpColor(73,vec(0))
+        D:egpBox(74,vec2(30+42,55),vec2(42,28))
+        D:egpColor(74,vec(0))
+        
+        D:egpTextLayout(75,"FLOW",vec2(30-20+42,53-22),vec2(40,44))
+        D:egpAlign(75,1,0)
+        D:egpFont(75,Font,12)
+        
+        D:egpTextLayout(76,"000",vec2(30-20+42,50-16),vec2(40,44))
+        D:egpAlign(76,1,1)
+        D:egpFont(76,Font,24)
+        D:egpColor(76,Color["green",vector])
+        
+        #main
+        D:egpBoxOutline(77,vec2(30+42*2,50),vec2(40,30))
+        D:egpSize(77,1)
+        D:egpColor(77,Color["teal",vector])
+        
+        D:egpBox(78,vec2(30+42*2,35),vec2(30,6))
+        D:egpColor(78,vec(0))
+        D:egpBox(79,vec2(30+42*2,55),vec2(42,28))
+        D:egpColor(79,vec(0))
+        
+        D:egpTextLayout(80,"MAIN",vec2(30-20+42*2,53-22),vec2(40,44))
+        D:egpAlign(80,1,0)
+        D:egpFont(80,Font,12)
+        
+        D:egpTextLayout(81,"000",vec2(30-20+42*2,50-16),vec2(40,44))
+        D:egpAlign(81,1,1)
+        D:egpFont(81,Font,24)
+        D:egpColor(81,Color["green",vector])
+        
+        #bc
+        D:egpBoxOutline(82,vec2(30+42*3,50),vec2(40,30))
+        D:egpSize(82,1)
+        D:egpColor(82,Color["teal",vector])
+        
+        D:egpBox(83,vec2(30+42*3,35),vec2(30,6))
+        D:egpColor(83,vec(0))
+        D:egpBox(84,vec2(30+42*3,55),vec2(42,28))
+        D:egpColor(84,vec(0))
+        
+        D:egpTextLayout(85,"BC",vec2(30-20+42*3,53-22),vec2(40,44))
+        D:egpAlign(85,1,0)
+        D:egpFont(85,Font,12)
+        
+        D:egpTextLayout(86,"000",vec2(30-20+42*3,50-16),vec2(40,44))
+        D:egpAlign(86,1,1)
+        D:egpFont(86,Font,24)
+        D:egpColor(86,Color["green",vector])
+        
+        #bp and eq (time for another scroll bar ffs)
+        #scrolling of doom
+        D:egpBox(87,vec2(60,125),vec2(0))
+        D:egpBox(88,vec2(256,-16),vec2(512,2))
+        D:egpParent(88,87)
+        D:egpBox(89,vec2(256,16),vec2(512,2))
+        D:egpParent(89,87)
+        for(I=0,24){
+            Start=90
+            D:egpBox(Start+I,vec2(I*12.5,0),vec2(1,52-(I%2)*8))
+            D:egpParent(Start+I,87)
+        }
+        D:egpBox(120,vec2(256,0),vec2(512,30))
+        D:egpParent(120,87)
+        D:egpColor(120,vec(0))
+        
+        for(I=0,12){
+            Start=121
+            D:egpTextLayout(Start+I,(I*10):toString(),vec2(I*25-20,-10),vec2(40,20))
+            D:egpParent(Start+I,87)
+            D:egpFont(Start+I,Font,14)
+            D:egpAlign(Start+I,1,1)
+        }
+        
+        D:egpBox(146,vec2(60+256+100,125),vec2(512,54))
+        D:egpColor(146,vec(0))
+        D:egpBox(147,vec2(60-256-3,125),vec2(512,54))
+        D:egpColor(147,vec(0))
+        
+        #speedometer and accelerometer revisited real quick
+        D:egpTextLayout(3,"0.0",vec2(256-80,130),vec2(160,70))
+        D:egpAlign(3,1,1)
+        D:egpColor(3,Color["green",vector])
+        D:egpFont(3,Font,66)
+        
+        D:egpTextLayout(4,"MPH",vec2(256-80,120),vec2(154,62))
+        D:egpAlign(4,2,1)
+        D:egpColor(4,Color["green",vector])
+        D:egpFont(4,Font,12)
+        
+        D:egpTextLayout(5,"MPH/MIN",vec2(256-100,106),vec2(160,62))
+        D:egpAlign(5,2,0)
+        D:egpColor(5,Color["green",vector])
+        D:egpFont(5,Font,12)
+        
+        D:egpTextLayout(6,"0",vec2(256-156,103),vec2(160,62))
+        D:egpAlign(6,2,0)
+        D:egpColor(6,Color["green",vector])
+        D:egpFont(6,Font,24)
+        
+        #bp
+        D:egpBoxOutline(148,vec2(30,50+50),vec2(40,30))
+        D:egpSize(148,1)
+        D:egpColor(148,Color["teal",vector])
+        
+        D:egpBox(149,vec2(30,35+50),vec2(30,6))
+        D:egpColor(149,vec(0))
+        D:egpBox(150,vec2(30,55+50),vec2(42,28))
+        D:egpColor(150,vec(0))
+        
+        D:egpTextLayout(151,"BP",vec2(30-20,50-22+53),vec2(40,44))
+        D:egpAlign(151,1,0)
+        D:egpFont(151,Font,12)
+        
+        D:egpTextLayout(152,"000",vec2(30-20,50-16+50),vec2(40,44))
+        D:egpAlign(152,1,1)
+        D:egpFont(152,Font,28)
+        D:egpColor(152,Color["green",vector])
+        
+        #eq
+        D:egpBoxOutline(153,vec2(30,50+100),vec2(40,30))
+        D:egpSize(153,1)
+        D:egpColor(153,Color["teal",vector])
+        
+        D:egpBox(154,vec2(30,35+100),vec2(30,6))
+        D:egpColor(154,vec(0))
+        D:egpBox(155,vec2(30,55+100),vec2(42,28))
+        D:egpColor(155,vec(0))
+        
+        D:egpTextLayout(156,"EQ",vec2(30-20,50-22+103),vec2(40,44))
+        D:egpAlign(156,1,0)
+        D:egpFont(156,Font,12)
+        
+        D:egpTextLayout(157,"000",vec2(30-20,50-16+100),vec2(40,44))
+        D:egpAlign(157,1,1)
+        D:egpFont(157,Font,28)
+        D:egpColor(157,Color["green",vector])
+        
+        #scrolling brake arrows
+        D:egpTextLayout(158,"BP",vec2(160,50-22+50),vec2(40,44))
+        D:egpAlign(158,1,1)
+        D:egpFont(158,Font,18)
+        
+        D:egpTextLayout(159,"EQ",vec2(160,50-22+100),vec2(40,44))
+        D:egpAlign(159,1,1)
+        D:egpFont(159,Font,18)
+        
+        #bp arrow
+        D:egpBox(160,vec2(154,90),vec2(0))
+        D:egpTriangle(161,vec2(0,8),vec2(6,0),vec2(-6,0))
+        D:egpParent(161,160)
+        D:egpColor(161,Color["green",vector])
+        D:egpBox(162,vec2(0,-2),vec2(12,4))
+        D:egpParent(162,160)
+        D:egpColor(162,Color["green",vector])
+        
+        #eq arrow
+        D:egpBox(164,vec2(154,160),vec2(0))
+        D:egpTriangle(165,vec2(0,-8),vec2(6,0),vec2(-6,0))
+        D:egpParent(165,164)
+        D:egpColor(165,Color["green",vector])
+        D:egpBox(166,vec2(0,2),vec2(12,4))
+        D:egpParent(166,164)
+        D:egpColor(166,Color["green",vector])
+        
+        
+        #upper basic data
+        D:egpTextLayout(168,"00:00",vec2(190,10),vec2(100,16))
+        D:egpFont(168,Font,16)
+        D:egpColor(168,Color["teal",vector])
+        D:egpAlign(168,0,0)
+        
+        D:egpTextLayout(169,Railroad:upper()+" "+Num,vec2(290,10),vec2(150,16))
+        D:egpFont(169,Font,16)
+        D:egpColor(169,Color["teal",vector])
+        D:egpAlign(169,0,0)
+        
+        D:egpTextLayout(170,format("WT %01d LB",LocoWeight),vec2(416,10),vec2(100,16))
+        D:egpFont(170,Font,16)
+        D:egpColor(170,Color["teal",vector])
+        D:egpAlign(170,0,0)
+        
+        #feet counter
+        D:egpBoxOutline(171,vec2(420,60),vec2(80,20))
+        
+        D:egpTextLayout(172,format("**** FEET",0),vec2(420-40,60-10),vec2(80,20))
+        D:egpFont(172,Font,12)
+        D:egpColor(172,Color["teal",vector])
+        D:egpAlign(172,1,1)
+        
+        
+        #throttle bar
+        
+        D:egpTextLayout(192,"THROTTLE\nNEUTRAL",vec2(314,186-18),vec2(80,30))
+        D:egpAlign(192,0,1)
+        D:egpFont(192,Font,12)
+        
+        D:egpBox(193,vec2(440-59,202),vec2(0))
+        
+        D:egpTriangle(194,vec2(0,-8),vec2(6,0),vec2(-6,0))
+        D:egpColor(194,Color["green",vector])
+        D:egpParent(194,193)
+        
+        D:egpBox(212,vec2(440-59,203),vec2(40,4))
+        D:egpColor(212,Color["green",vector])
+        
+        #indicators
+        D:egpBox(213,vec2(32,230),vec2(48,36))
+        D:egpColor(213,Color["yellow",vector])
+        D:egpTextLayout(214,"WHEEL\nSLIP",vec2(32-24,230-18),vec2(48,36))
+        D:egpAlign(214,1,1)
+        D:egpFont(214,Font,12)
+        D:egpColor(214,vec(0))
+        
+        D:egpBox(215,vec2(32+50,230),vec2(48,36))
+        D:egpColor(215,Color["red",vector])
+        D:egpTextLayout(216,"PCS\nOPEN",vec2(32-24+50,230-18),vec2(48,36))
+        D:egpAlign(216,1,1)
+        D:egpFont(216,Font,12)
+        D:egpColor(216,vec(0))
+        
+        D:egpBox(217,vec2(32+100,230),vec2(48,36))
+        D:egpTextLayout(218,"SAND",vec2(32-24+100,230-18),vec2(48,36))
+        D:egpAlign(218,1,1)
+        D:egpFont(218,Font,12)
+        D:egpColor(218,vec(0))
+        
+        D:egpBox(219,vec2(32+150,230),vec2(48,36))
+        D:egpColor(219,Color["red",vector])
+        D:egpTextLayout(220,"BRAKE\nWARN",vec2(32-24+150,230-18),vec2(48,36))
+        D:egpAlign(220,1,1)
+        D:egpFont(220,Font,12)
+        D:egpColor(220,vec(0))
+        
+        D:egpBox(221,vec2(256,230),vec2(72,36))
+        D:egpColor(221,Color["red",vector])
+        D:egpTextLayout(222,"ALERT\n0",vec2(256-36,230-18),vec2(72,36))
+        D:egpAlign(222,1,1)
+        D:egpFont(222,Font,12)
+        D:egpColor(222,vec(0))
+        
+        D:egpBox(223,vec2(512-32-150,230),vec2(48,36))
+        D:egpColor(223,Color["red",vector])
+        D:egpTextLayout(224,"AR BK\nFAIL",vec2(512-32-24-150,230-18),vec2(48,36))
+        D:egpAlign(224,1,1)
+        D:egpFont(224,Font,12)
+        D:egpColor(224,vec(0))
+        
+        D:egpBox(225,vec2(512-32-100,230),vec2(48,36))
+        D:egpTextLayout(226,"BELL\nON",vec2(512-32-24-100,230-18),vec2(48,36))
+        D:egpAlign(226,1,1)
+        D:egpFont(226,Font,12)
+        D:egpColor(226,vec(0))
+        
+        D:egpBox(227,vec2(512-32-50,230),vec2(48,36))
+        D:egpColor(227,Color["red",vector])
+        D:egpTextLayout(228,"REAR\nEMER",vec2(512-32-24-50,230-18),vec2(48,36))
+        D:egpAlign(228,1,1)
+        D:egpFont(228,Font,12)
+        D:egpColor(228,vec(0))
+        
+        D:egpBox(229,vec2(512-32,230),vec2(48,36))
+        D:egpTextLayout(230,"EOT\nMOVE",vec2(512-32-24,230-18),vec2(48,36))
+        D:egpAlign(230,1,1)
+        D:egpFont(230,Font,12)
+        D:egpColor(230,vec(0))
+        
+        #below upper operations (slowspeed, fuel, airbrakes, cab signals, eot)
+        #ops
+        D:egpTextLayout(231,"SLOW SPEED",vec2(0,250),vec2(180,40))
+        D:egpColor(231,Color["teal",vector])
+        D:egpFont(231,Font,12)
+        D:egpAlign(231,1,1)
+        D:egpTextLayout(232,"SET SPEED 88 MPH",vec2(0,265),vec2(180,40))
+        D:egpFont(232,Font,16)
+        D:egpAlign(232,1,1)
+        
+        D:egpTextLayout(233,"FUEL QUANTITY",vec2(0,300),vec2(180,40))
+        D:egpColor(233,Color["teal",vector])
+        D:egpFont(233,Font,12)
+        D:egpAlign(233,1,1)
+        D:egpTextLayout(234,"---- GAL",vec2(0,315),vec2(180,40))
+        D:egpFont(234,Font,16)
+        D:egpAlign(234,1,1)
+        
+        D:egpTextLayout(235,"AIR BRAKES",vec2(0,350),vec2(180,40))
+        D:egpColor(235,Color["teal",vector])
+        D:egpFont(235,Font,12)
+        D:egpAlign(235,1,1)
+        D:egpTextLayout(236,"LEAD - CUT IN",vec2(0,365),vec2(180,40))
+        D:egpFont(236,Font,16)
+        D:egpAlign(236,1,1)
+        
+        #eot
+        D:egpTextLayout(237,"LAST CAR",vec2(256-80,250),vec2(160,40))
+        D:egpColor(237,Color["teal",vector])
+        D:egpFont(237,Font,12)
+        D:egpAlign(237,1,1)
+        D:egpTextLayout(238,"IDENT 02468",vec2(256-80,270),vec2(160,40))
+        D:egpFont(238,Font,16)
+        D:egpAlign(238,1,1)
+        D:egpTextLayout(239,"EM DISABLED",vec2(256-80,290),vec2(160,40))
+        D:egpColor(239,Color["green",vector])
+        D:egpFont(239,Font,16)
+        D:egpAlign(239,1,1)
+        D:egpTextLayout(240,"MARKER ON",vec2(256-80,310),vec2(160,40))
+        D:egpColor(240,Color["green",vector])
+        D:egpFont(240,Font,16)
+        D:egpAlign(240,1,1)
+        D:egpTextLayout(241,"FR NO COMM",vec2(256-80,330),vec2(160,40))
+        D:egpColor(241,Color["yellow",vector])
+        D:egpFont(241,Font,16)
+        D:egpAlign(241,1,1)
+        
+        #cab signal
+        D:egpTextLayout(242,"CAB SIGNALS",vec2(350,250),vec2(160,40))
+        D:egpColor(242,Color["teal",vector])
+        D:egpFont(242,Font,12)
+        D:egpAlign(242,1,1)
+        D:egpTextLayout(243,"TIME TO PENALTY",vec2(350,280),vec2(160,40))
+        D:egpColor(243,Color["teal",vector])
+        D:egpFont(243,Font,12)
+        D:egpAlign(243,1,1)
+        D:egpTextLayout(244,"000",vec2(350,300),vec2(160,40))
+        D:egpFont(244,Font,18)
+        D:egpAlign(244,1,1)
+        D:egpTextLayout(245,"MODE",vec2(430-90/2,330),vec2(90,40))
+        D:egpColor(245,Color["teal",vector])
+        D:egpFont(245,Font,18)
+        D:egpAlign(245,0,1)
+        D:egpTextLayout(246,"CAB",vec2(430-90/2,330),vec2(90,40))
+        D:egpFont(246,Font,18)
+        D:egpAlign(246,2,1)
+    }
+    
+    function string reverserName(Reverser){
+        if(Reverser>0){
+            return "FORWARD"
+        }
+        if(Reverser==0){
+            return "NEUTRAL"
+        }
+        if(Reverser<0){
+            return "REVERSE"
+        }
+    }
+    
+    function void wirelink:loadBarInit(Dynamics){
+        D=This
+        if(!Dynamics){
+            #load bar
+            D:egpBox(195,vec2(440,116),vec2(120,2))
+            D:egpBox(196,vec2(440+60-(MaxTE-MaxContTE)/MaxTE*60,116),vec2((MaxTE-MaxContTE)/MaxTE*120,2))
+            D:egpColor(196,Color["yellow",vector])
+            
+            D:egpBox(197,vec2(440-59,116+4),vec2(1,8))
+            D:egpColor(197,1-(MaxTE-MaxContTE)/MaxTE<0 ? Color["yellow",vector] : vec(255))
+            D:egpBox(198,vec2(440-59+30,116+4),vec2(1,8))
+            D:egpColor(198,1-(MaxTE-MaxContTE)/MaxTE<0.25 ? Color["yellow",vector] : vec(255))
+            D:egpBox(199,vec2(440-59+60,116+4),vec2(1,8))
+            D:egpColor(199,1-(MaxTE-MaxContTE)/MaxTE<0.5 ? Color["yellow",vector] : vec(255))
+            D:egpBox(200,vec2(440-59+90,116+4),vec2(1,8))
+            D:egpColor(200,1-(MaxTE-MaxContTE)/MaxTE<0.75 ? Color["yellow",vector] : vec(255))
+            D:egpBox(201,vec2(440-59+119,116+4),vec2(1,8))
+            D:egpColor(201,1-(MaxTE-MaxContTE)/MaxTE<1 ? Color["yellow",vector] : vec(255))
+            
+            D:egpTextLayout(202,round(MaxTE/4*0 / (AmpsMode ? 100 : 1),0):toString(),vec2(440-59-20,84),vec2(40,40))
+            D:egpAlign(202,1,1)
+            D:egpFont(202,Font,12)
+            D:egpColor(202,1-(MaxTE-MaxContTE)/MaxTE<0 ? Color["yellow",vector] : vec(255))
+            
+            D:egpTextLayout(203,round(MaxTE/4*1 / (AmpsMode ? 100 : 1),0):toString(),vec2(440-59+30-20,84),vec2(40,40))
+            D:egpAlign(203,1,1)
+            D:egpFont(203,Font,12)
+            D:egpColor(203,1-(MaxTE-MaxContTE)/MaxTE<0.25 ? Color["yellow",vector] : vec(255))
+            
+            D:egpTextLayout(204,round(MaxTE/4*2 / (AmpsMode ? 100 : 1),0):toString(),vec2(440-59+60-20,84),vec2(40,40))
+            D:egpAlign(204,1,1)
+            D:egpFont(204,Font,12)
+            D:egpColor(204,1-(MaxTE-MaxContTE)/MaxTE<0.5 ? Color["yellow",vector] : vec(255))
+            
+            D:egpTextLayout(205,round(MaxTE/4*3 / (AmpsMode ? 100 : 1),0):toString(),vec2(440-59+90-20,84),vec2(40,40))
+            D:egpAlign(205,1,1)
+            D:egpFont(205,Font,12)
+            D:egpColor(205,1-(MaxTE-MaxContTE)/MaxTE<0.75 ? Color["yellow",vector] : vec(255))
+            
+            D:egpTextLayout(206,round(MaxTE/4*4 / (AmpsMode ? 100 : 1),0):toString(),vec2(440-59+119-20,84),vec2(40,40))
+            D:egpAlign(206,1,1)
+            D:egpFont(206,Font,12)
+            D:egpColor(206,1-(MaxTE-MaxContTE)/MaxTE<1 ? Color["yellow",vector] : vec(255))
+            
+            
+            if(AmpsMode){
+                D:egpTextLayout(207,"LOAD",vec2(344,116-18),vec2(80,30))
+                D:egpAlign(207,0,1)
+                D:egpFont(207,Font,12)
+            }
+            else{
+                D:egpTextLayout(207,"TRACT\nEFF",vec2(338,116-30),vec2(80,50))
+                D:egpAlign(207,0,1)
+                D:egpFont(207,Font,12)
+            }
+        }
+        else{
+            #load bar
+            D:egpBox(195,vec2(440,116),vec2(120,2))
+            D:egpBox(196,vec2(440+60-(MaxDE-MaxContDE)/MaxDE*60,116),vec2((MaxDE-MaxContDE)/MaxDE*120,2))
+            D:egpColor(196,Color["red",vector])
+            
+            D:egpBox(197,vec2(440-59,116+4),vec2(1,8))
+            D:egpColor(197,1-(MaxDE-MaxContDE)/MaxDE<0 ? Color["red",vector] : vec(255))
+            D:egpBox(198,vec2(440-59+30,116+4),vec2(1,8))
+            D:egpColor(198,1-(MaxDE-MaxContDE)/MaxDE<0.25 ? Color["red",vector] : vec(255))
+            D:egpBox(199,vec2(440-59+60,116+4),vec2(1,8))
+            D:egpColor(199,1-(MaxDE-MaxContDE)/MaxDE<0.5 ? Color["red",vector] : vec(255))
+            D:egpBox(200,vec2(440-59+90,116+4),vec2(1,8))
+            D:egpColor(200,1-(MaxDE-MaxContDE)/MaxDE<0.75 ? Color["red",vector] : vec(255))
+            D:egpBox(201,vec2(440-59+119,116+4),vec2(1,8))
+            D:egpColor(201,1-(MaxDE-MaxContDE)/MaxDE<1 ? Color["red",vector] : vec(255))
+            
+            D:egpTextLayout(202,round(MaxDE/4*0 / (AmpsMode ? 100 : 1),0):toString(),vec2(440-59-20,84),vec2(40,40))
+            D:egpAlign(202,1,1)
+            D:egpFont(202,Font,12)
+            D:egpColor(202,1-(MaxDE-MaxContDE)/MaxDE<0 ? Color["red",vector] : vec(255))
+            
+            D:egpTextLayout(203,round(MaxDE/4*1 / (AmpsMode ? 100 : 1),0):toString(),vec2(440-59+30-20,84),vec2(40,40))
+            D:egpAlign(203,1,1)
+            D:egpFont(203,Font,12)
+            D:egpColor(203,1-(MaxDE-MaxContDE)/MaxDE<0.25 ? Color["red",vector] : vec(255))
+            
+            D:egpTextLayout(204,round(MaxDE/4*2 / (AmpsMode ? 100 : 1),0):toString(),vec2(440-59+60-20,84),vec2(40,40))
+            D:egpAlign(204,1,1)
+            D:egpFont(204,Font,12)
+            D:egpColor(204,1-(MaxDE-MaxContDE)/MaxDE<0.5 ? Color["red",vector] : vec(255))
+            
+            D:egpTextLayout(205,round(MaxDE/4*3 / (AmpsMode ? 100 : 1),0):toString(),vec2(440-59+90-20,84),vec2(40,40))
+            D:egpAlign(205,1,1)
+            D:egpFont(205,Font,12)
+            D:egpColor(205,1-(MaxDE-MaxContDE)/MaxDE<0.75 ? Color["red",vector] : vec(255))
+            
+            D:egpTextLayout(206,round(MaxDE/4*4 / (AmpsMode ? 100 : 1),0):toString(),vec2(440-59+119-20,84),vec2(40,40))
+            D:egpAlign(206,1,1)
+            D:egpFont(206,Font,12)
+            D:egpColor(206,1-(MaxDE-MaxContDE)/MaxDE<1 ? Color["red",vector] : vec(255))
+            
+            
+            if(AmpsMode){
+                D:egpTextLayout(207,"DYN\nLOAD",vec2(344,116-18),vec2(80,30))
+                D:egpAlign(207,0,1)
+                D:egpFont(207,Font,13)
+            }
+            else{
+                D:egpTextLayout(207,"DYN\nBRAKE\nEFF",vec2(338,116-30),vec2(80,50))
+                D:egpAlign(207,0,1)
+                D:egpFont(207,Font,12)
+            }
+        }
+        
+        D:egpTextLayout(208,"0 LB",vec2(320,124),vec2(150,50))
+        D:egpAlign(208,2,1)
+        D:egpFont(208,Font,22)
+        D:egpColor(208,Color["green",vector])
+        
+        D:egpBox(209,vec2(440-59,132),vec2(0))
+        
+        D:egpTriangle(210,vec2(0,-8),vec2(6,0),vec2(-6,0))
+        D:egpColor(210,Color["green",vector])
+        D:egpParent(210,209)
+        
+        D:egpBox(211,vec2(440-59,133),vec2(40,4))
+        D:egpColor(211,Color["green",vector])
+    }
+    
+    function void wirelink:throttleBarInit(Dynamics){
+        D=This
+        
+        D:egpBox(173,vec2(440,186),vec2(120,2))
+        if((!Dynamics)|NotchedDynamics){
+            
+            for(I=0,8){
+                D:egpBox(I*2+174,vec2(440+clamp(I*14.98,0,590)-59,186+4),vec2(1,8))
+                
+                D:egpTextLayout(I*2+175,I:toString(),vec2(440+clamp(I*14.98,0,590)-59-15,186-16),vec2(30,14))
+                D:egpAlign(I*2+175,1,1)
+                D:egpFont(I*2+175,Font,12)
+            }
+        }
+        else{
+            for(I=0,8){
+                D:egpRemove(I*2+174)
+                
+                D:egpRemove(I*2+175)
+                
+                if(I==0|I==8){
+                    D:egpBox(I*2+174,vec2(440+clamp(I*14.98,0,590)-59,186+4),vec2(1,8))
+                }
+            }
+        }
+    }
+    
+    #second screen generation
+    function void wirelink:secondScreenInit(Page,Subpage){
+        D=This
+        switch(Page){
+            case 0,
+                #top button labels
+                D:egpTextLayout(50,Railroad:upper()+" "+Num+"\nOPERATIONAL MENU",vec2(256-128,6),vec2(256,50))
+                D:egpAlign(50,1,1)
+                D:egpFont(50,Font,20)
+                
+                D:egpBoxOutline(51,vec2(70,90),vec2(80,40))
+                D:egpColor(51,Color["teal",vector])
+                D:egpSize(51,2)
+                D:egpTextLayout(52,"LOCO\nDATA",vec2(70-40,90-20),vec2(80,40))
+                D:egpAlign(52,1,1)
+                D:egpFont(52,Font,16)
+                D:egpTextLayout(53,"SELECT LOCOMOTIVE DATA",vec2(120,90-20),vec2(300,40))
+                D:egpAlign(53,0,1)
+                D:egpFont(53,Font,16)
+                
+                D:egpBoxOutline(54,vec2(70,90+45),vec2(80,40))
+                D:egpColor(54,Color["teal",vector])
+                D:egpSize(54,2)
+                D:egpTextLayout(55,"SLOW\nSPEED",vec2(70-40,90-20+45),vec2(80,40))
+                D:egpAlign(55,1,1)
+                D:egpFont(55,Font,16)
+                D:egpTextLayout(56,"SET SLOW SPEED CONTROL",vec2(120,90-20+45),vec2(300,40))
+                D:egpAlign(56,0,1)
+                D:egpFont(56,Font,16)
+                
+                D:egpBoxOutline(57,vec2(70,90+90),vec2(80,40))
+                D:egpColor(57,Color["teal",vector])
+                D:egpSize(57,2)
+                D:egpTextLayout(58,"AIR\nBRAKE",vec2(70-40,90-20+90),vec2(80,40))
+                D:egpAlign(58,1,1)
+                D:egpFont(58,Font,16)
+                D:egpTextLayout(59,"CHANGE AIR BRAKE SETUP",vec2(120,90-20+90),vec2(300,40))
+                D:egpAlign(59,0,1)
+                D:egpFont(59,Font,16)
+                
+                D:egpBoxOutline(60,vec2(70,90+135),vec2(80,40))
+                D:egpColor(60,Color["green",vector])
+                D:egpSize(60,2)
+                D:egpTextLayout(61,"MORE\nMENU",vec2(70-40,90-20+135),vec2(80,40))
+                D:egpAlign(61,1,1)
+                D:egpFont(61,Font,16)
+                D:egpTextLayout(62,"SELECT ADDITIONAL MENU ITEMS",vec2(120,90-20+135),vec2(300,40))
+                D:egpAlign(62,0,1)
+                D:egpFont(62,Font,16)
+                
+                D:secondButtons(0,0,0)
+            break
+            case 1,
+                D:secondButtons(1,0,0)
+                
+                D:egpTextLayout(45,"LOCOMOTIVE DATA",vec2(0,0),vec2(512,40))
+                D:egpAlign(45,1,1)
+                D:egpFont(45,Font,20)
+                
+                D:egpLine(46,vec2(32+((3-1)*64),440),vec2(256-60-120,360))
+                D:egpColor(46,Color["teal",vector])
+                D:egpSize(46,4)
+                D:egpLine(47,vec2(32+((4-1)*64),440),vec2(256-60,360))
+                D:egpColor(47,Color["teal",vector])
+                D:egpSize(47,4)
+                D:egpLine(48,vec2(32+((5-1)*64),440),vec2(256-60+120,360))
+                D:egpColor(48,Color["teal",vector])
+                D:egpSize(48,4)
+                D:egpLine(49,vec2(32+((6-1)*64),440),vec2(256-60+240,360))
+                D:egpColor(49,Color["teal",vector])
+                D:egpSize(49,4)
+                
+                D:egpBoxOutline(50,vec2(256,200),vec2(480,300))
+                D:egpSize(50,4)
+                
+                #em2000 function keys
+                D:egpTextLayout(51,"|",vec2(256-20-120,320-20),vec2(40,40))
+                D:egpAlign(51,1,1)
+                D:egpFont(51,Font,20)
+                D:egpColor(51,Color["purple",vector])
+                D:egpTextLayout(52,"|",vec2(256-20,320-20),vec2(40,40))
+                D:egpAlign(52,1,1)
+                D:egpFont(52,Font,20)
+                D:egpColor(52,Color["purple",vector])
+                D:egpTextLayout(53,"|",vec2(256-20+120,320-20),vec2(40,40))
+                D:egpAlign(53,1,1)
+                D:egpFont(53,Font,20)
+                D:egpColor(53,Color["purple",vector])
+                
+                D:egpTextLayout(57,"EXIT",vec2(256-60+240-60,320-20),vec2(120,40))
+                D:egpAlign(57,1,1)
+                D:egpFont(57,Font,20)
+                D:egpColor(57,Color["purple",vector])
+                
+                #page title and page number
+                D:egpTextLayout(58,"- CREW MESSAGES -",vec2(100,60),vec2(370,40))
+                D:egpAlign(58,0,1)
+                D:egpFont(58,Font,20)
+                D:egpColor(58,Color["purple",vector])
+                
+                D:egpTextLayout(59,"1 | 1",vec2(100,60),vec2(370,40))
+                D:egpAlign(59,2,1)
+                D:egpFont(59,Font,20)
+                D:egpColor(59,Color["purple",vector])
+                
+                #data
+                D:egpTextLayout(60,"CODE: 403",vec2(40,90),vec2(480,40))
+                D:egpAlign(60,0,1)
+                D:egpFont(60,Font,20)
+                D:egpColor(60,Color["purple",vector])
+                
+                D:egpTextLayout(61,"MSG: FORBIDDEN ACCESS",vec2(40,120),vec2(480,40))
+                D:egpAlign(61,0,1)
+                D:egpFont(61,Font,20)
+                D:egpColor(61,Color["purple",vector])
+                
+                
+            break
+            case 2,
+                D:secondButtons(2,0,0)
+                
+                D:egpTextLayout(45,"SLOW SPEED CONTROL",vec2(0,0),vec2(512,40))
+                D:egpAlign(45,1,1)
+                D:egpFont(45,Font,20)
+                
+                D:egpLine(46,vec2(32+((3-1)*64),440),vec2(256-60-120,360))
+                D:egpColor(46,Color["teal",vector])
+                D:egpSize(46,4)
+                D:egpLine(47,vec2(32+((4-1)*64),440),vec2(256-60,360))
+                D:egpColor(47,Color["teal",vector])
+                D:egpSize(47,4)
+                D:egpLine(48,vec2(32+((5-1)*64),440),vec2(256-60+120,360))
+                D:egpColor(48,Color["teal",vector])
+                D:egpSize(48,4)
+                D:egpLine(49,vec2(32+((6-1)*64),440),vec2(256-60+240,360))
+                D:egpColor(49,Color["teal",vector])
+                D:egpSize(49,4)
+                
+                D:egpBoxOutline(50,vec2(256,200),vec2(480,300))
+                D:egpSize(50,4)
+                
+                #em2000 function keys
+                D:egpTextLayout(51,"|",vec2(256-20-120,320-20),vec2(40,40))
+                D:egpAlign(51,1,1)
+                D:egpFont(51,Font,20)
+                D:egpColor(51,Color["purple",vector])
+                D:egpTextLayout(52,"|",vec2(256-20,320-20),vec2(40,40))
+                D:egpAlign(52,1,1)
+                D:egpFont(52,Font,20)
+                D:egpColor(52,Color["purple",vector])
+                D:egpTextLayout(53,"|",vec2(256-20+120,320-20),vec2(40,40))
+                D:egpAlign(53,1,1)
+                D:egpFont(53,Font,20)
+                D:egpColor(53,Color["purple",vector])
+                
+                D:egpTextLayout(54,"UP",vec2(256-60-60-120,320-20),vec2(120,40))
+                D:egpAlign(54,1,1)
+                D:egpFont(54,Font,20)
+                D:egpColor(54,Color["purple",vector])
+                
+                D:egpTextLayout(55,"DOWN",vec2(256-60-60,320-20),vec2(120,40))
+                D:egpAlign(55,1,1)
+                D:egpFont(55,Font,20)
+                D:egpColor(55,Color["purple",vector])
+                
+                D:egpTextLayout(56,"ON/OFF",vec2(256-60-60+120,320-20),vec2(120,40))
+                D:egpAlign(56,1,1)
+                D:egpFont(56,Font,20)
+                D:egpColor(56,Color["purple",vector])
+                
+                D:egpTextLayout(57,"EXIT",vec2(256-60+240-60,320-20),vec2(120,40))
+                D:egpAlign(57,1,1)
+                D:egpFont(57,Font,20)
+                D:egpColor(57,Color["purple",vector])
+                
+                #page title and page number
+                D:egpTextLayout(58,"- POWERED SLOW SPEED -",vec2(100,60),vec2(370,40))
+                D:egpAlign(58,0,1)
+                D:egpFont(58,Font,20)
+                D:egpColor(58,Color["purple",vector])
+                
+                D:egpTextLayout(59,"1 | 1",vec2(100,60),vec2(370,40))
+                D:egpAlign(59,2,1)
+                D:egpFont(59,Font,20)
+                D:egpColor(59,Color["purple",vector])
+                
+                #data
+                D:egpTextLayout(60,"STATUS: INACTIVE",vec2(40,90),vec2(480,40))
+                D:egpAlign(60,0,1)
+                D:egpFont(60,Font,20)
+                D:egpColor(60,Color["purple",vector])
+                
+                D:egpTextLayout(61,"SET SPEED: 0.0",vec2(40,150),vec2(480,40))
+                D:egpAlign(61,0,1)
+                D:egpFont(61,Font,20)
+                D:egpColor(61,Color["purple",vector])
+                
+                D:egpTextLayout(62,"ACTUAL SPEED: 0.0",vec2(40,180),vec2(480,40))
+                D:egpAlign(62,0,1)
+                D:egpFont(62,Font,20)
+                D:egpColor(62,Color["purple",vector])
+                
+                
+            break
+            case 3,
+                switch(Subpage){
+                    case 0,
+                        D:secondButtons(3,0,0)
+                        
+                        D:egpTextLayout(50,"NEW",vec2(2,410),vec2(512,40))
+                        D:egpAlign(50,0,1)
+                        D:egpFont(50,Font,12)
+                        D:egpTextLayout(51,"CURRENT",vec2(2,430),vec2(512,40))
+                        D:egpAlign(51,0,1)
+                        D:egpFont(51,Font,12)
+                        D:egpColor(51,Color["teal",vector])
+                        
+                        D:egpTextLayout(52,"888 PSI",vec2(38,410),vec2(120,40))
+                        D:egpAlign(52,1,1)
+                        D:egpFont(52,Font,14)
+                        D:egpTextLayout(53,"888 PSI",vec2(38,430),vec2(120,40))
+                        D:egpAlign(53,1,1)
+                        D:egpFont(53,Font,14)
+                        D:egpColor(53,Color["teal",vector])
+                        
+                        D:egpTextLayout(54,"TRAIL",vec2(38+64,410),vec2(120,40))
+                        D:egpAlign(54,1,1)
+                        D:egpFont(54,Font,14)
+                        D:egpTextLayout(55,"TRAIL",vec2(38+64,430),vec2(120,40))
+                        D:egpAlign(55,1,1)
+                        D:egpFont(55,Font,14)
+                        D:egpColor(55,Color["teal",vector])
+                        
+                        D:egpTextLayout(56,"CUT-OUT",vec2(38+128,410),vec2(120,40))
+                        D:egpAlign(56,1,1)
+                        D:egpFont(56,Font,14)
+                        D:egpTextLayout(57,"CUT-OUT",vec2(38+128,430),vec2(120,40))
+                        D:egpAlign(57,1,1)
+                        D:egpFont(57,Font,14)
+                        D:egpColor(57,Color["teal",vector])
+                    break
+                    case 1,
+                        D:secondButtons(3,1,0)
+                        
+                        D:egpBox(50,vec2(128,440),vec2(40,4))
+                        D:egpColor(50,Color["teal",vector])
+                        
+                        D:egpLine(51,vec2(128,440),vec2(128-32,470))
+                        D:egpColor(51,Color["teal",vector])
+                        D:egpSize(51,4)
+                        D:egpLine(52,vec2(128,440),vec2(128+32,470))
+                        D:egpColor(52,Color["teal",vector])
+                        D:egpSize(52,4)
+                        
+                        D:egpTextLayout(53,"888 PSI",vec2(128-60,410),vec2(120,40))
+                        D:egpAlign(53,1,1)
+                        D:egpFont(53,Font,18)
+                    break
+                }
+            break
+        }
+    }
+    
+
+    
+    timer("run",500)
+}
+if(clk("run")){
+    Run=1
+}
+if(Run){
+    timer("clk",500)
+    timer("keyclk",100)
+}
+
+#display interaction
+if(clk("unlock")){
+    Unlock=1
+    EGPMain:entity():soundPlay("keyout",1,"monkssounds/buttons/button2.wav")
+}
+if(changed(Battery)&Battery&!OSBooted&!first()&!dupefinished()){
+    OSBootSequence=0
+    OSBooting=1
+    
+    timer("bootclk",2000/(QuickBoot ? 20 : 1))
+}
+elseif(!Battery){
+    OSBootSequence=0
+    OSBooting=0
+    OSBooted=0
+    
+    EGPMain:egpClear()
+    
+    stoptimer("bootclk")
+    stoptimer("bootfinish")
+}
+if(changed(OSBooting)&OSBooting&Run){
+    EGPMain:bootInit()
+}
+if(changed(OSBootSequence)&OSBootSequence>6){
+    EGPMain:egpClear()
+    
+    EGPMain:bootFinish()
+    timer("bootfinish",randint(1500,2000)/(QuickBoot ? 20 : 1))
+}
+if(clk("bootfinish")){
+    EGPMain:egpClear()
+    
+    OSBooted=1
+}
+if(clk("bootclk")){
+    OSBootSequence++
+    
+    EGPMain:egpPos(14,vec2(256,256+35+(OSBootSequence>0)*40+(OSBootSequence>1)*40+(OSBootSequence>2)*120+(OSBootSequence>3)*80+(OSBootSequence>4)*90+(OSBootSequence>5)*90))
+    
+    if(OSBootSequence<7){
+        timer("bootclk",(randint(500,750)+OSBootSequence*500*random(0.4,1.3))/(QuickBoot ? 20 : 1))
+    }
+}
+if(changed(OSBooted)&!OSBooted){
+    EGPMain:egpClear()
+    EGPSec:egpClear()
+}
+if(changed(OSBooted)&OSBooted){
+    EGPMain:mainPageInit()
+    EGPSec:secondScreenInit(0,0)
+    
+    EGPMain:throttleBarInit(CtlTable["SetDynamics",number]>0)
+    EGPMain:loadBarInit(CtlTable["SetDynamics",number]>0)
+}
+
+if(clk("keyclk")&OSBooted){
+    SecActive = Driver:keyPressed("lshift")
+    
+    RLCPTW=RLCPT:wirelink()
+    
+    
+    
+    MPH=RLCPTW["MPH",number]
+    
+    MPHMin=($MPH)*2*60
+    
+    #alerter
+    if(changed(Driver:keyPressed(AlerterKey))&Driver:keyPressed(AlerterKey)){
+        AlerterTime=25+AlerterResetTime
+    }
+    if(MPH>5&Alerter){
+        AlerterTime-=0.1
+    }
+    else{
+        AlerterTime=25+AlerterResetTime
+    }
+    AlerterTime=max(AlerterTime,0)
+    if(Alerter&AlerterTime==0){
+        EmergencyBrake=1
+    }
+    else{
+        EmergencyBrake=0
+    }
+    
+    switch(MainPage){
+        case 0,
+            #main page
+            if(!SecActive&Driver:keyPressed("6")&Unlock){
+                MainPage=2
+                Unlock=0
+                MainSubPage=0
+            }
+        break
+        case 2,
+            #count page
+            switch(MainSubPage){
+                case 0,
+                    if(!SecActive&Driver:keyPressed("1")&Unlock){
+                        MainPage=0
+                        Unlock=0
+                        MainSubPage=0
+                    }
+                    if(!SecActive&Driver:keyPressed("3")&Unlock){
+                        Unlock=0
+                        MainSubPage=1
+                        
+                        N1=format("%05d",Length)[1]:toNumber()
+                        N2=format("%05d",Length)[2]:toNumber()
+                        N3=format("%05d",Length)[3]:toNumber()
+                        N4=format("%05d",Length)[4]:toNumber()
+                        N5=format("%05d",Length)[5]:toNumber()
+                    }
+                    if(!SecActive&Driver:keyPressed("5")&Unlock){
+                        Unlock=0
+                        MainSubPage=2
+                    }
+                break
+                case 1,
+                    if(!SecActive&Driver:keyPressed("1")&Unlock){
+                        Unlock=0
+                        MainSubPage=0
+                    }
+                    if(!SecActive&Driver:keyPressed("2")&Unlock){
+                        Unlock=0
+                        N1++
+                        if(N1>9){
+                            N1=0
+                        }
+                    }
+                    if(!SecActive&Driver:keyPressed("3")&Unlock){
+                        Unlock=0
+                        N2++
+                        if(N2>9){
+                            N2=0
+                        }
+                    }
+                    if(!SecActive&Driver:keyPressed("4")&Unlock){
+                        Unlock=0
+                        N3++
+                        if(N3>9){
+                            N3=0
+                        }
+                    }
+                    if(!SecActive&Driver:keyPressed("5")&Unlock){
+                        Unlock=0
+                        N4++
+                        if(N4>9){
+                            N4=0
+                        }
+                    }
+                    if(!SecActive&Driver:keyPressed("6")&Unlock){
+                        Unlock=0
+                        N5++
+                        if(N5>9){
+                            N5=0
+                        }
+                    }
+                    
+                    NewLength=format("%01d%01d%01d%01d%01d",N1,N2,N3,N4,N5)
+                    
+                    EGPMain:egpSetText(261,NewLength)
+                    
+                    if(!SecActive&Driver:keyPressed("7")&Unlock){
+                        Unlock=0
+                        MainSubPage=0
+                        
+                        Length=NewLength:toNumber()
+                        
+                        CountDownFt=Length
+                    }
+                    
+                break
+                case 2,
+                    if(!SecActive&Driver:keyPressed("1")&Unlock){
+                        Unlock=0
+                        MainSubPage=0
+                    }
+                    if(!SecActive&Driver:keyPressed("5")&Unlock){
+                        Unlock=0
+                        CountingDown=!CountingDown
+                    }
+                    if(!SecActive&Driver:keyPressed("7")&Unlock){
+                        Unlock=0
+                        CountDownFt=Length
+                    }
+                    if(CountingDown){
+                        CountDownFt-=MPH*1.4667/10
+                    }
+                    CountDownFt=clamp(CountDownFt,0,Length)
+                    
+                    if(CountDownFt<=0){
+                        CountingDown=0
+                        
+                        CountDownFt=Length
+                    }
+                break
+            }
+        break
+    }
+    switch(SecPage){
+        case 0, #main page
+            if(SecActive&Driver:keyPressed("3")&Unlock){
+                SecPage=1
+                Unlock=0
+                Data_Shift=0
+            }
+            if(SecActive&Driver:keyPressed("5")&Unlock){
+                SecPage=2
+                Unlock=0
+                Data_Shift=0
+            }
+            if(SecActive&Driver:keyPressed("7")&Unlock){
+                SecPage=3
+                Unlock=0
+            }
+        break
+        case 1, #locomotive data (incomplete)
+            if(SecActive&Driver:keyPressed("6")&Unlock){
+                SecPage=0
+                Unlock=0
+            }
+            if(SecActive&Driver:keyPressed("7")&Unlock){
+                Data_Shift=!Data_Shift
+                Unlock=0
+                EGPSec:secondButtons(SecPage,0,Data_Shift)
+            }
+        break
+        case 2, #slow speed page
+            if(SecActive&changed(Driver:keyPressed("3"))&Driver:keyPressed("3")&Unlock){
+                SlowSpeedSetSpeed+=0.5
+                Unlock=0
+            }
+            if(SecActive&changed(Driver:keyPressed("4"))&Driver:keyPressed("4")&Unlock){
+                SlowSpeedSetSpeed-=0.5
+                Unlock=0
+            }
+            SlowSpeedSetSpeed=clamp(SlowSpeedSetSpeed,0,10)
+            if(SecActive&changed(Driver:keyPressed("5"))&Driver:keyPressed("5")&Unlock){
+                SlowSpeedOn=!SlowSpeedOn
+                Unlock=0
+            }
+            if(SecActive&Driver:keyPressed("6")&Unlock){
+                SecPage=0
+                Unlock=0
+            }
+            if(SecActive&Driver:keyPressed("7")&Unlock){
+                Data_Shift=!Data_Shift
+                Unlock=0
+                EGPSec:secondButtons(SecPage,0,Data_Shift)
+            }
+        break
+        case 3, #air brake
+            switch(SecSubPage){
+                case 0,
+                    if(SecActive&Driver:keyPressed("1")&Unlock){
+                        SecPage=0
+                        Unlock=0
+                        
+                        NewLeadBraking=LeadBraking
+                        NewBrakeCutIn=BrakeCutIn
+                        NewFeedPressure=FeedPressure
+                    }
+                    if(SecActive&Driver:keyPressed("2")&Unlock){
+                        SecSubPage=1
+                        Unlock=0
+                    }
+                    if(SecActive&Driver:keyPressed("3")&Unlock){
+                        NewLeadBraking=!NewLeadBraking
+                        Unlock=0
+                    }
+                    if(SecActive&Driver:keyPressed("4")&Unlock){
+                        NewBrakeCutIn=!NewBrakeCutIn
+                        Unlock=0
+                    }
+                    if(SecActive&Driver:keyPressed("6")&Unlock){
+                        Unlock=0
+                        LeadBraking=NewLeadBraking
+                        BrakeCutIn=NewBrakeCutIn
+                        FeedPressure=NewFeedPressure
+                    }
+                case 1,
+                    if(SecActive&Driver:keyPressed("1")&Unlock){
+                        SecSubPage=0
+                        Unlock=0
+                        
+                        NewNewFeedPressure=NewFeedPressure
+                    }
+                    if(SecActive&Driver:keyPressed("2")&Unlock){
+                        Unlock=0
+                        
+                        NewNewFeedPressure+=1
+                    }
+                    if(SecActive&Driver:keyPressed("3")&Unlock){
+                        Unlock=0
+                        
+                        NewNewFeedPressure-=1
+                    }
+                    if(SecActive&Driver:keyPressed("4")&Unlock){
+                        Unlock=0
+                        
+                        NewNewFeedPressure=80
+                    }
+                    if(SecActive&Driver:keyPressed("5")&Unlock){
+                        Unlock=0
+                        
+                        NewNewFeedPressure=90
+                    }
+                    if(SecActive&Driver:keyPressed("6")&Unlock){
+                        Unlock=0
+                        
+                        NewNewFeedPressure=100
+                    }
+                    if(SecActive&Driver:keyPressed("7")&Unlock){
+                        Unlock=0
+                        
+                        NewNewFeedPressure=110
+                    }
+                    if(SecActive&Driver:keyPressed("8")&Unlock){
+                        NewFeedPressure=NewNewFeedPressure
+                        SecSubPage=0
+                        Unlock=0
+                    }
+                break
+            }
+        break
+    }
+    
+    if(SlowSpeedOn){
+        SetMPHMin=clamp((SlowSpeedSetSpeed-MPH)*100,-500,500)
+        SetLoad=clamp(SetMPHMin-MPHMin,0,500)
+        HumpMultiplier+=clamp((clamp((SetLoad-RLCPTW["Load1",number])/100,0,1)-HumpMultiplier),-0.2,0.1)
+    }
+    else{
+        HumpMultiplier=1
+    }
+}
+if(changed(Unlock)&!Unlock){
+    timer("unlock",250)
+    EGPMain:entity():soundPlay("keyin",1,"monkssounds/buttons/button16.wav")
+}
+
+#display updating
+if(clk("clk")&OSBooted){
+    #main page updating
+    #speedometer and accelerometer
+    EGPMain:egpSetText(3,MPH<10 ? format("%.01f",max(MPH,0)) : format("%01d",max(MPH,0)))
+    
+    EGPMain:egpSetText(6,format("%01d",MPHMin))
+    
+    EGPMain:egpPos(7,vec2(256+150-MPH*2.5,80))
+    
+    MPHMin=clamp(MPHMin,-999,999)
+    EGPMain:egpBox(63,vec2(256+clamp(MPHMin,-50,50)/2,92),vec2(abs(clamp(MPHMin,-50,50))/1,2))
+    
+    #brake data
+    BP=RLCPTW["BrakePipe",number]
+    EQ=RLCPTW["EqualRes",number]
+    
+
+    #data meters
+    EGPMain:egpSetText(71,"***")
+    EGPMain:egpSetText(76,format("%01d",RLCPTW["CFM",number]))
+    EGPMain:egpSetText(81,format("%01d",RLCPTW["MainRes",number]))
+    EGPMain:egpSetText(86,format("%01d",RLCPTW["Cyl",number]))
+    EGPMain:egpSetText(152,format("%01d",RLCPTW["BrakePipe",number]))
+    EGPMain:egpSetText(157,format("%01d",RLCPTW["EqualRes",number]))
+    
+    #scrolling data
+    
+    EGPMain:egpPos(87,vec2(60-130-(clamp(EQ,0,60)-60)*2.5,125))
+    
+    
+    #bp
+    EGPMain:egpPos(160,vec2(154+min((clamp(BP,clamp(EQ,0,60),90)-90-(clamp(EQ,0,60)-60))*2.5,0),90))
+    EGPMain:egpBox(163,vec2(154+(clamp(BP,clamp(EQ,0,60),90)-90-(clamp(EQ,0,60)-60))*1.25+6,88),vec2((90-clamp(BP,clamp(EQ,0,60),90)+(clamp(EQ,0,60)-60))*2.5,4))
+    EGPMain:egpColor(163,Color["green",vector])
+    
+    #eq
+    
+    EGPMain:egpPos(164,vec2(154+(clamp(EQ,60,90)-90)*2.5,160))
+    EGPMain:egpBox(167,vec2(154+(clamp(EQ,60,90)-90)*1.25+6,162),vec2((90-clamp(EQ,60,90))*2.5,4))
+    EGPMain:egpColor(167,Color["green",vector])
+    
+    
+    #upper data
+    EGPMain:egpSetText(168,format("%02d:%02d",time("hour"),time("min")))
+    
+    EGPMain:egpColor(172,(CountDownFt<Length)|CountingDown ? Color["pink",vector] : Color["teal",vector])
+    EGPMain:egpSetText(172,((CountDownFt<Length)|CountingDown ? format("%01d FEET",CountDownFt) : (Length ? format("%01d FEET",Length) : "**** FEET")))
+    
+    #throttle
+    
+    EGPMain:egpSetText(192,(CtlTable["SetDynamics",number] ? "DYNAMIC" : "THROTTLE")+"\n"+reverserName(CtlTable["SetReverser",number]))
+    
+    EGPMain:egpPos(193,vec2(440-59+(CtlTable["SetThrottle",number]+clamp(NotchedDynamics ? (CtlTable["SetDynamics",number]-10)*1.111111 : CtlTable["SetDynamics",number],0,100))/100*119,202))
+    
+    EGPMain:egpPos(212,vec2(440-59+(CtlTable["SetThrottle",number]+clamp(NotchedDynamics ? (CtlTable["SetDynamics",number]-10)*1.111111 : CtlTable["SetDynamics",number],0,100))/100*119/2,203))
+    EGPMain:egpSize(212,vec2((CtlTable["SetThrottle",number]+clamp(NotchedDynamics ? (CtlTable["SetDynamics",number]-10)*1.111111 : CtlTable["SetDynamics",number],0,100))/100*119+12,2))
+    
+    EGPMain:egpColor(194,CtlTable["SetDynamics",number] ? Color["yellow",vector] : Color["green",vector])
+    EGPMain:egpColor(212,CtlTable["SetDynamics",number] ? Color["yellow",vector] : Color["green",vector])
+    
+    if(changed(CtlTable["SetDynamics",number]>0)|changed(Run)|changed(Battery)|changed(OSBooted)){
+        EGPMain:throttleBarInit(CtlTable["SetDynamics",number]>0)
+    }
+    
+    if(changed(CtlTable["SetDynamics",number]>0)|changed(Run)|changed(Battery)|changed(OSBooted)){
+        EGPMain:loadBarInit(CtlTable["SetDynamics",number]>0)
+    }
+    
+
+    #loadmeter
+    if(AmpsMode){
+        EGPMain:egpSetText(208,format("%01d A",abs(RLCPTW["Load1",number])))
+        
+        if(CtlTable["SetDynamics",number]>0){
+            EGPMain:egpPos(209,vec2(449-69+abs(RLCPTW["Load1",number]/MaxDE*119),132))
+            
+            EGPMain:egpPos(211,vec2(449-69+abs(RLCPTW["Load1",number]/MaxDE)*119/2,133))
+            EGPMain:egpSize(211,vec2(abs(RLCPTW["Load1",number]/MaxDE)*119+12,2))
+        }
+        else{
+            EGPMain:egpPos(209,vec2(449-69+abs(RLCPTW["Load1",number]/MaxTE*119),132))
+            
+            EGPMain:egpPos(211,vec2(449-69+abs(RLCPTW["Load1",number]/MaxTE)*119/2,133))
+            EGPMain:egpSize(211,vec2(abs(RLCPTW["Load1",number]/MaxTE)*119+12,2))
+        }
+    }
+    else{
+        EGPMain:egpSetText(208,format("%01d LB",abs(RLCPTW["TE_LBF",number])))
+        
+        if(CtlTable["SetDynamics",number]>0){
+            EGPMain:egpPos(209,vec2(449-69+abs(RLCPTW["TE_LBF",number]/1000/MaxDE)*124,132))
+            
+            EGPMain:egpPos(211,vec2(449-69+abs(RLCPTW["TE_LBF",number]/1000/MaxDE)*124/2,132))
+            
+            EGPMain:egpPos(211,vec2(449-69+abs(RLCPTW["TE_LBF",number]/1000/MaxDE)*124/2,133))
+            EGPMain:egpSize(211,vec2(abs(RLCPTW["TE_LBF",number]/1000/MaxDE)*124+12,2))
+        }
+        else{
+            EGPMain:egpPos(209,vec2(449-69+abs((RLCPTW["TE_LBF",number])/1000/MaxTE)*120,132))
+            
+            EGPMain:egpPos(211,vec2(449-69+abs(RLCPTW["TE_LBF",number]/1000/MaxTE)*124/2,133))
+            EGPMain:egpSize(211,vec2(abs(RLCPTW["TE_LBF",number]/1000/MaxTE)*124+12,2))
+        }
+    }
+    
+    EGPMain:egpColor(208,CtlTable["SetDynamics",number] ? Color["yellow",vector] : Color["green",vector])
+    EGPMain:egpColor(210,CtlTable["SetDynamics",number] ? Color["yellow",vector] : Color["green",vector])
+    EGPMain:egpColor(211,CtlTable["SetDynamics",number] ? Color["yellow",vector] : Color["green",vector])
+    
+    #indicators
+    Blink=!Blink
+    EGPMain:egpAlpha(213,RLCPTW["WheelSlip",number]*235+20)
+    EGPMain:egpAlpha(215,RLCPTW["Emergency",number]*235+20)
+    EGPMain:egpAlpha(217,RLCPTW["ForceSand",number]*235+20)
+    EGPMain:egpAlpha(219,RLCPTW["BrakeWarn",number]*235+20)
+
+    if(changed(AlerterTime<=20)&(AlerterTime<=20)&(!EmergencyBrake)){
+        EGPMain:entity():soundPlay("alert",0,"opencontrol/alerter.wav")
+        soundVolume("alert",AlerterVolume)
+    }
+    elseif((AlerterTime>20)|EmergencyBrake){
+        soundStop("alert",0.05)
+    }
+    EGPMain:egpAlpha(221,((AlerterTime<=20) ? 255 : (AlerterTime<=25 ? Blink*235+20 : 20)))
+    EGPMain:egpSetText(222,format("ALERT\n%01d",AlerterTime))
+    
+    
+    EGPMain:egpAlpha(223,20)
+    EGPMain:egpAlpha(225,Bell*235+20)
+    EGPMain:egpAlpha(227,20)
+    EGPMain:egpAlpha(229,(MPH>1)*235+20)
+    
+    #main page lower data
+    EGPMain:egpAlpha(231,SlowSpeedOn*255)
+    EGPMain:egpAlpha(232,SlowSpeedOn*255)
+    EGPMain:egpSetText(232,format("SET SPEED %.01f MPH",SlowSpeedSetSpeed))
+    
+    EGPMain:egpSetText(236,(LeadBraking ? "LEAD - "+(BrakeCutIn ? "CUT-IN" : "CUT-OUT") : "TRAIL"))
+    
+    
+    #page updating
+    if(changed(MainPage)|changed(MainSubPage)){
+        EGPMain:bottomMainWipe()
+        
+        switch(MainPage){
+            case 0,
+                EGPMain:mainButtons(0,0)
+            break
+            case 2,
+                switch(MainSubPage){
+                    case 0,
+                        EGPMain:mainButtons(2,0)
+                    break
+                    case 1,
+                        EGPMain:mainButtons(2,1)
+                    break
+                    case 2,
+                        EGPMain:mainButtons(2,2)
+                    break
+                }
+            break
+        }
+    }
+    
+    if(changed(SecPage)|changed(SecSubPage)){
+        EGPSec:egpClear()
+        EGPSec:secondScreenInit(SecPage,SecSubPage)
+    }
+    
+    switch(SecPage){
+        case 0,
+        break
+        case 1,
+        break
+        case 2,
+            EGPSec:egpSetText(60,"STATUS: "+(SlowSpeedOn ? "ACTIVE" : "INACTIVE"))
+            EGPSec:egpSetText(61,format("SET SPEED: %.01f",SlowSpeedSetSpeed))
+            EGPSec:egpSetText(62,format("ACTUAL SPEED: %.01f",MPH))
+        break
+        case 3,
+            switch(SecSubPage){
+                case 0,
+                    EGPSec:egpSetText(52,format("%01d PSI",NewFeedPressure))
+                    EGPSec:egpSetText(53,format("%01d PSI",FeedPressure))
+                    
+                    EGPSec:egpSetText(54,NewLeadBraking ? "LEAD" : "TRAIL")
+                    EGPSec:egpSetText(55,LeadBraking ? "LEAD" : "TRAIL")
+                    
+                    EGPSec:egpSetText(56,NewBrakeCutIn ? "CUT-IN" : "CUT-OUT")
+                    EGPSec:egpSetText(57,BrakeCutIn ? "CUT-IN" : "CUT-OUT")
+                break
+                case 1,
+                    EGPSec:egpSetText(53,format("%01d PSI",NewNewFeedPressure))
+                break
+            }
+        break
+    }
+
+}
