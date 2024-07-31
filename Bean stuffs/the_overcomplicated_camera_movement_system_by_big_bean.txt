@@ -15,18 +15,27 @@ if(first()|duped()){
     Setup or whatever:
     ------------------
     Before you start telling me how this "doesn't work", look at (and ideally edit to your liking) the fucking config, aye bud?
-    Put this somewhere on your locomotive and parent the chip (so like literally every first step when using any E2-).
-    Connect DRIVER_SEAT to the driver's seat (holy shit), repeat this for all the other seats (if you have them that is).
-    Connect VEHICLE_BODY to the vehicle body (come on now).
-    Next, go to the wire Cam Controller menu and tick 'Client side movement' and 'Localized movement' and untick 'Coords local to parent' (the other options are optional),
-        Make sure you untick Draw player, unless you want to see your head-ass from the inside,
-        Finally, make sure you connect the controller to the seat that it belongs to (same as connecting a Wire Pod controller).
-    Now, spawn this controller on your unit and connect it to its specific seat (do this the same way as you would do a pod controller).
-    Connect the controller's 'Active' input to the respective 'CameraActive' output on this E2,
-        connect the controller's 'Position' and 'Parent' to the respective outputs on this E2 as well.
+
+    >Put this somewhere on your locomotive and parent the chip (so like literally every first step when using any E2-).
+    >Connect 'DRIVER_SEAT' to the driver's seat (holy shit), repeat this for all the other seats (if you have them that is).
+    >Connect 'VEHICLE_BODY' to the vehicle body (come on now).
+    >[This part is IMPORTANT] Next, go to the wire Cam Controller menu and tick:
+        >'Client side movement' and 'Localized movement'
+    -and untick:
+        >'Coords local to parent' (the other options are optional),
+    >Make sure you untick Draw player, unless you want to see your head-ass from the inside,
+    >Finally, make sure you connect the controller to the seat that it belongs to.
+
+    >Now, spawn this controller on your unit and connect it to its respective seat (do this the same way as you would do a pod controller).
+    >Connect the controller's 'Active' input to the respective 'CameraActive' output on this E2.
+    >Connect the controller's 'Position' and 'Parent' to the respective outputs on this E2 as well.
+    >Refresh the E2 once all the seats are connected.
+
     Experience the peak locomotive (or any other vehicle for that matter) driving experience that you've been craving for 1.8 decades.
-    
+
     Disclaimer: for some reason, this breaks when you have 'Terminate' and 'Strip weapons' enabled on the POD controller (thanks James).
+    Another disclaimer: you cannot go into third person (it makes it more realistic so I don't care,
+        not to mention you can set a position outside of the cab if you really need that feature)
     ]#
     
     #Config:
