@@ -2,8 +2,8 @@
 @inputs [DRIVER_SEAT PASSENGER_SEAT PASSENGER2_SEAT VEHICLE_BODY]:entity
 @outputs [CAMERA_PARENT_DRIVER CAMERA_PARENT_PASSENGER CAMERA_PARENT_PASSENGER2]:entity [CameraPosition_Driver CameraPosition_Passenger CameraPosition_Passenger2]:vector CameraActive_Driver CameraActive_Passenger CameraActive_Passenger2
 @persist [E DS PS P2S VB]:entity [DriverSeatToVehiclePos PassengerSeatToVehiclePos Passenger2SeatToVehiclePos]:vector [DriverSeatAngle PassengerSeatAngle Passenger2SeatAngle]:angle Run DeltaT PlayerHeight
-@persist [SMOOTH_DATA CAM_DATA CAM_INTERPOLATION_DATA]:table [VehicleVelocity VehicleVelocity_Normalized RawVehicleAcceleration]:vector
-@persist HeadHeight SeatHeight PlayerUpperMass [MaxAngle_Vertical MaxAngle_Side AngleIntensity  MaxPos_Forward MaxPos_Side MaxPos_Vertical]:vector2 ModelAxis MovementIntensity:vector  
+@persist [SMOOTH_DATA CAM_DATA CAM_INTERPOLATION_DATA]:table [VehicleVelocity VehicleVelocity_True RawVehicleAcceleration]:vector
+@persist HeadHeight SeatHeight PlayerUpperMass [MaxAngle_Vertical MaxAngle_Side AngleIntensity  MaxPos_Forward MaxPos_Side MaxPos_Vertical]:vector2 ModelAxis FlipCameraAxes MovementIntensity:vector  
 @persist [NextCameraPosition PreviousCameraPosition]:string InitialDriverCameraPosition InitialPassengerCameraPosition InitialPassenger2CameraPosition [DriverCameraPositions PassengerCameraPositions Passenger2CameraPositions]:table
 @persist HasPassengerSeat HasSecondPassengerSeat DCameraPosIndex PCameraPosIndex P2CameraPosIndex DCamMoveUp DCamMoveDown PCamMoveUp PCamMoveDown P2CamMoveUp P2CamMoveDown CameraTransitionSmoothing
 @trigger none
@@ -23,6 +23,8 @@ if(first()|duped()){
         Finally, make sure you connect the controller to the seat that it belongs to (same as connecting a Wire Pod controller).
     Connect the controller's Active input to the respective CameraActive output on this E2, connect the controller's Position and Parent to the respective outputs on this E2.
     Experience the peak locomotive (or any other vehicle for that matter) driving experience that you've been craving for 1.8 decades.
+    
+    Disclaimer: for some reason, this breaks when you have 'Terminate' and 'Strip weapons' enabled on the POD controller (thanks James).
     ]#
     
     #Config:
@@ -33,35 +35,47 @@ if(first()|duped()){
     PlayerUpperMass = 40 #Upper body mass of the player - affects camera acceleration.
     MaxAngle_Vertical = vec2(5, 25) #Sets the max vertical camera acceleration and deceleration angles.
     MaxAngle_Side = vec2(4, 4) #Sets the max side-to-side camera acceleration and deceleration angles.
-    AngleIntensity = vec2(-0.2, -0.2) #Sets how intense the change in angle is for a given acceleration change. If the angling of the camera is wrong during movement, invert these numbers.
-    MaxPos_Forward = vec2(4.5, 20) #Sets the maximum back-to-front camera deflection.
-    MaxPos_Side = vec2(4, 4) #Sets the max side-to-side camera deflection.
+    AngleIntensity = vec2(-0.2, 0.2) #Sets how intense the change in angle is for a given acceleration change. If the angling of the camera is wrong during movement, invert these numbers.
+    MaxPos_Forward = vec2(20, 4.5) #Sets the maximum back-to-front camera deflection.
+    MaxPos_Side = vec2(5, 5) #Sets the max side-to-side camera deflection.
     MaxPos_Vertical = vec2(1, 1) #Sets the max bottom-to-top camera deflection.
-    ModelAxis = 0 #When set to 0, uses the X axis as the vehicle's "front", when set to 1, uses the Y axis as the vehicle's "front"
-    MovementIntensity = vec(1, 1, 0.5) #Allows you to change the velocity effects from every axis. If certain axes are flipped, try making the respective axis in this vector negative.
+    ModelAxis = 0 #When set to 0, uses the X axis as the vehicle's "front", when set to 1, uses the Y axis as the vehicle's "front".
+    FlipCameraAxes = 1 #Set this to 1 when the model's forward axis is the Y axis.
+    MovementIntensity = vec(-1, -1, 0.5) #Allows you to change the velocity effects from every axis. If certain axes are flipped, try making the respective axis in this vector negative.
     
     NextCameraPosition = "pad_3" #Defines the key to press that moves the camera to the next position in the list.
     PreviousCameraPosition = "pad_1" #Same but for moving the camera a position back.
     InitialDriverCameraPosition = 3 #The initial position index of the camera.
     DriverCameraPositions = table( #Define camera positions here.
-        vec(-5, -17, 8),
-        vec(-4, 0, 12),
+        vec(12, -4, 14),
+        vec(0, -4, 14),
         vec(0),
-        vec(-6, 23, 2)
+        vec(-23, -3, 0.5)
     )
-    InitialPassengerCameraPosition = 1
+    InitialPassengerCameraPosition = 2
     PassengerCameraPositions = table(
+        vec(0, -4, 14),
         vec(0),
-        vec(-6, -23, 2)
+        vec(23, -3, 0.5)
     )
-    InitialPassenger2CameraPosition = 1
+    InitialPassenger2CameraPosition = 2
     Passenger2CameraPositions = table(
-        vec(0)
+        vec(22, 1, 2.5),
+        vec(0),
+        vec(0, -4, 14)
     )
     #End of config#
     
     
     #Init:
+    #Making sure MaxPos_Forward actually points forward
+    if(FlipCameraAxes){
+        local MaxPosFwdSave = MaxPos_Forward
+        MaxPos_Forward = MaxPos_Side
+        MaxPos_Side = MaxPosFwdSave
+    }
+    
+    
     function vector vecDeadzone(Val:vector, Deadzone){
         return maxVec(Val + vec(-Deadzone), vec(0)) + minVec(Val + vec(Deadzone), vec(0))
     }
@@ -105,7 +119,7 @@ if(first()|duped()){
     
     function vector entity:setCameraParentPosition(ParentIndex, Position:vector, Angle:angle){
         holoPos(ParentIndex, This:toWorld(Position))
-        holoAng(ParentIndex, This:toWorld(Angle))
+        holoAng(ParentIndex, This:toWorld((FlipCameraAxes ? ang(Angle:roll(), Angle:yaw(), Angle:pitch()) : Angle)))
         return holoEntity(ParentIndex):pos()
     }
     
@@ -125,7 +139,7 @@ if(first()|duped()){
         local CameraOverlapFactor = clamp(vec(1) - vecRangeOverlapAbs(CamPosition, MaxPos_Forward, MaxPos_Side, MaxPos_Vertical) * 0.1, vec(0), vec(1))
         CamVelocity += (-SystemAcceleration - CounterAcceleration - CamVelocity*4) * DeltaT
         CamPosition += clamp(CamVelocity * 39.37007874 * DeltaT, -vec(MaxPos_Forward:x(), MaxPos_Side:x(), MaxPos_Vertical:x()) - CamPosition, vec(MaxPos_Forward:y(), MaxPos_Side:y(), MaxPos_Vertical:y()) - CamPosition)
-        local CameraAngle = ang(-atan(CamPosition:y() / PlayerHeight) * AngleIntensity:x(), AngleOffset:yaw(), -atan(CamPosition:x() / PlayerHeight) * AngleIntensity:y())
+        local CameraAngle = ang(-atan(CamPosition:y() / PlayerHeight) * AngleIntensity:x(),  AngleOffset:yaw(),  -atan(CamPosition:x() / PlayerHeight) * AngleIntensity:y())
         
         Camera[1, vector] = CamPosition
         Camera[2, vector] = CamVelocity
@@ -195,11 +209,11 @@ if(clk("clk")){
     #Acceleration calculations
     VehicleVelocity = vecSmooth(VEHICLE_BODY:velL() * 0.0254 * (4/3), 3, "velocity_smooth", vec(0)) #m/s in player scaling
     if(ModelAxis){
-        VehicleVelocity_Normalized = vec(VehicleVelocity:y(), -VehicleVelocity:x(), VehicleVelocity:z()) * MovementIntensity
+        VehicleVelocity_True = vec(VehicleVelocity:y(), -VehicleVelocity:x(), VehicleVelocity:z()) * MovementIntensity
     }else{
-        VehicleVelocity_Normalized = vec(VehicleVelocity:x(), -VehicleVelocity:y(), VehicleVelocity:z()) * MovementIntensity
+        VehicleVelocity_True = vec(VehicleVelocity:x(), -VehicleVelocity:y(), VehicleVelocity:z()) * MovementIntensity
     }
-    RawVehicleAcceleration = $VehicleVelocity_Normalized * 20
+    RawVehicleAcceleration = $VehicleVelocity_True * 20
     
     #Driver cam
     #Custom camera movement
@@ -252,7 +266,7 @@ if(clk("clk")){
         }elseif(!(Passenger:keyPressed(NextCameraPosition) | Passenger:keyPressed(PreviousCameraPosition))){
             P2CamMoveDown = P2CamMoveUp = 0
         }
-        interpolateCameraMovement(3, PassengerCameraPositions[P2CameraPosIndex, vector], vec(0))
+        interpolateCameraMovement(3, Passenger2CameraPositions[P2CameraPosIndex, vector], vec(0))
         
         CameraPosition_Passenger2 = VB:runCameraPhysics(3, RawVehicleAcceleration, Passenger2SeatToVehiclePos, Passenger2SeatAngle)
         CameraActive_Passenger2 = PASSENGER2_SEAT:driver():isPlayer()
