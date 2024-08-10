@@ -6,7 +6,7 @@
 #Generic variables
 @persist Run  Units SkipBoot ShowCredits UseAlerter AlerterMaxVolume AlerterResetKey:string MaxSpeedoVelocity SetToAmps MaxTE MaxContTE MaxTMCurrent MaxContTMCurrent MaxDynCurrent MaxContDynCurrent FuelTankCap 
 @persist BrakePanelYeet TimeFormat Timezone HasDST TimezoneName:string LocoDataInfo:table SetupScreenLogo [SetupLogoScale SetupLogoCol]:vector SetupLogoMat:string
-@persist RLCPTW:wirelink [Driver User]:entity [UNIT_DATA SmoothTable]:table MainPage SecPage CanRun OSLoaded OSLoadProgress OSLoadBarPos OSLoading
+@persist RLCPTW:wirelink [Driver User]:entity [UNIT_DATA SmoothTable]:table MainPage SecPage CanRun OSLoaded OSLoadProgress OSLoading OSLoadSteps OS_TerminalLine OS_TerminalLineCount
 @persist [White LightBlue DarkBlue LightPurple LightGreen LightRed OffWhite OnWhite OffRed OnRed OffYellow OnYellow OffBlue LightGray VLightGreen VLightYellow DarkerGreen DarkerYellow]:vector
 @persist BCI AlerterOn AlerterReset  DrivenDistMI Accel MPH1 MPH2 ACheck Speed1 Speed2 AETripped FirmwareVersion:string TMCurrent  Year Month Day Hours Minutes Seconds  HTZ HoursTZ DayTZ MonthTZ YearTZ Font1:string
 #----
@@ -20,21 +20,23 @@
 #Page specific vars
 @persist DynBrakeWarn UnitAlarm EOTMove  EID1 EID2 EID3 EID4 EID5 EIDStr:string
 @persist MoreOptionsMain Brightness OPControlsPage  LengthCounterPage LengthChangePage MeasureLengthFinished MeasuredLength MeasuredLTooShort IL1 IL2 IL3 IL4 IL5 CountdownLength 
-@persist MeasuringLength MeasuredMileRun MMFinished MMTimeElapsed MMCheckFailed MMAverageSpeed CountdownRun MMDrivenDistance MMSpeedChecks:table MMSpeedSum
+@persist MeasuringLength MeasuredMileRun MMFinished MMTimeElapsed MMCheckFailed MMAverageSpeed CountdownRun MMDrivenDistance MMSpeedChecks:table FC_DATA:array MMSpeedSum
 @persist MainPagePort MoreOptionsSec  AirBrakePage ABLockout BCI_New IsoBrk_New EQSet_New  EOTIDSetup EOTDArmState CommTestResult CommTestRun CommTestFinished EOTDArmed EOTDSetID RearPres
 #Commands & buttons
 @persist [PressedKey KeyCMD]:string IsShifting KeyTimeout  MB1 MB2 MB3 MB4 MB5 MB6 MB7 MB8 SB1 SB2 SB3 SB4 SB5 SB6 SB7 SB8
 #----
 @trigger none
-FirmwareVersion = "102.03"
+FirmwareVersion = "102.04"
 #----
 #[ Hello there.
 This is a recreation of the EMD FIRE locomotive displays by, you guessed it, Big ol' Bean.
-While not completely realistic, I think it's pretty solid for anybody who doesn't feel like spending over a year on something "pointless", so yeah, have fun using it.
+It's the ultimate (and definitely not dumbed-down) version of FIRE for your viewing pleasures.
 
 ------------
 Version log:
 ------------
+V:102.04 - Revamped the loading screen (again), it should be pretty realistic now.
+--------
 V:102.03 - Fixed the fonts being whack because EGP updated their default font.
 --------
 V:102.02 - So you know how the config says that you can change the units in-game? That's a feature now. Additionally changed the metric pressure units to kPa from bar (thanks West)
@@ -291,83 +293,22 @@ if(first()|dupefinished()){
     }
     
     
-    #A cool bootup thing for your eyes to enjoy
-    #------------------------------------------
-    function void wirelink:bootupScreenLoad(ShowOSScreen, SetupScreen){
+    #Yeah I rewrote this for the 3rd time because it sucked.
+    OSLoadSteps = 300
+    OSLoadProgress = 0
+    OS_TerminalLine = 1
+    OS_TerminalLineCount = 26
+    function void wirelink:bootupScreenLoad(ShowBoot){
         local E = This
-        local Gray = vec(136)
-        local Blue = vec(53, 75, 115)
-        local Orange = vec(247, 140, 30)
-        local DarkGray = vec(60)
         
-        if(ShowOSScreen){
-            if(!SetupScreen){ #Stuff to show if this is the main screen
-                #OS logo
-                local O = 1
-                E:egpTextLayout(O, "Bean", vec2(142, 370), vec2(740, 240))
-                E:egpFont(O, "Consolas Bold", 120)
-                E:egpAlign(O, 0, 1)
-                E:egpColor(O, Blue)
-                
-                O = 2
-                E:egpTextLayout(O, "OS", vec2(142, 370), vec2(740, 240))
-                E:egpFont(O, "Consolas Bold", 120)
-                E:egpAlign(O, 2, 1)
-                E:egpColor(O, Gray)
-                
-                O = 3
-                E:egpText(O, ":", vec2(620, 490))
-                E:egpFont(O, "Consolas Bold", 120)
-                E:egpAlign(O, 1, 1)
-                E:egpColor(O, Orange)
-                #---
-                
-                
-                #Loading bar rim of the dark variety
-                O = 4
-                E:egpRoundedBox(O, vec2(512, 610), vec2(714, 32))
-                E:egpRadius(O, 5)
-                E:egpColor(O, DarkGray * vec(0.6))
-                
-                
-                #Loading bar of the bright variety
-                O = 5 #Bar center piece
-                E:egpRoundedBox(O, vec2(0, 0), vec2(68, 24))
-                E:egpRadius(O, 4)
-                E:egpColor(O, Orange)
-                
-                O = 6 #Darker inner piece
-                E:egpRoundedBox(O, vec2(0, 610), vec2(64, 20)) #range 100 - 924
-                E:egpRadius(O, 4)
-                E:egpColor(O, Orange * vec(0.95))
-                E:egpParent(5, 6)
-                
-                
-                #A rim of the loading bar rim of slightly brighter variety
-                O = 12
-                E:egpRoundedBoxOutline(O, vec2(512, 610), vec2(716, 36))
-                E:egpRadius(O, 5)
-                E:egpSize(O, 2)
-                E:egpColor(O, DarkGray)
-                
-                O = 13 #Cover box right
-                E:egpBox(O, vec2(950, 610), vec2(156, 32))
-                E:egpColor(O, vec(0))
-                
-                O = 14 #Cover box left
-                E:egpBox(O, vec2(74, 610), vec2(156, 32))
-                E:egpColor(O, vec(0))
-                #---
-                
-                
-                #Won't be copying this any time soon my man
-                O = 15
-                E:egpTextLayout(O, format("Copyright BeanTek 2020-%04d\n All rights reserved", time("year")), vec2(620, 970), vec2(400, 50))
-                E:egpFont(O, "Consolas", 12)
-                E:egpAlign(O, 2, 1)
-                E:egpColor(O, Gray)
-                #----
+        if(ShowBoot){
+            for(I = 1, OS_TerminalLineCount){
+                E:egpText(I, "", vec2(8, 120 + (I-1) * 32)) #AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890
+                E:egpFont(I, "Cascadia Mono", 16)
+                E:egpAlign(I, 0, 0)
+                E:egpColor(I, vec(200))
             }
+            
         }else{
             #"Starting Applications" box
             local O = 1
@@ -375,20 +316,252 @@ if(first()|dupefinished()){
             
             O = 2
             E:egpText(O, "Starting Applications...", vec2(512, 512))
-            E:egpFont(O, "Arial", 20)
+            E:egpFont(O, Font1, 20)
             E:egpAlign(O, 1, 1)
             E:egpColor(O, vec(0))
             
-            if(!SetupScreen){
-                #Firmware version indicator
-                O = 3
-                E:egpText(O, format("Firmware ver.: %s", FirmwareVersion), vec2(10, 1014))
-                E:egpFont(O, "Arial", 18)
-                E:egpAlign(O, 0, 2)
-            }
+            #Firmware version indicator
+            O = 3
+            E:egpText(O, format("Firmware ver.: %s", FirmwareVersion), vec2(10, 1014))
+            E:egpFont(O, Font1, 18)
+            E:egpAlign(O, 0, 2)
         }
     }
-    #----
+    
+    function void wirelink:egpClearTerminal(){
+        for(I = 1, OS_TerminalLineCount){
+            This:egpSetText(I, "")
+        }
+        OS_TerminalLine = 1
+        
+        if(This:egpHasObject(30)){
+            This:egpRemove(30)
+            This:egpRemove(31)
+            This:egpRemove(32)
+            This:egpRemove(33)
+        }
+    }
+    
+    function void wirelink:egpWriteTerminal(Text:string, Offset){
+        OS_TerminalLine += Offset
+        This:egpSetText(OS_TerminalLine, Text)
+        OS_TerminalLine++
+    }
+    function void wirelink:egpWriteTerminal(Text:string){
+        This:egpWriteTerminal(Text, 0)
+    }
+    
+    function void wirelink:egpWriteTerminalAbs(Text:string, Line){
+        This:egpSetText(Line, Text)
+    }
+    
+    
+    #DISCLAIMER: These sentences do not reflect the beliefs of the author in any way. They are for amusement and entertainment purposes only.
+    #Taking these seriously may result in symptoms not limited to: Wanting to install twitter, Fighting for social rights,
+    #Putting pronouns into your online profile(s), Believing in astrology, Wishing death upon the author and The need for new diapers.
+    FC_DATA = array(
+        "EMD is going under in favor of GE due to their price cuts.\\We need to do something.",
+        "We keep pushing these shitty products out and we wonder\\why the company is going under.",
+        "They aren't even trying to hide it anymore. There must be\\something we can do.",
+        "They're pushing eco bullshit for what? The destruction of our jobs?",
+        "How many times have you seen a GE turbo explode?\\Let that be an indication of the quality status quo.",
+        "They just fired somebody for voicing their opinion!\\This has to be stopped."
+    )
+    function void wirelink:bootupScreenUpdate(){
+        local E = This
+        local AwardBiosBlue = vec(89,93,253)
+        
+        #You know, maybe using a switch statement wasn't such a great idea
+        switch(OSLoadProgress){
+            case 1,
+                E:egpWriteTerminal("   Award Modular BIOS v6.00PG, An Energy Star Ally")
+                E:egpWriteTerminal("   Copyright (C) 1984-2002, Award Software, Inc.")
+                E:egpWriteTerminalAbs("Press DEL to enter Setup", OS_TerminalLineCount - 1)
+                E:egpWriteTerminalAbs(format("%02d/%02d/%s-a452BX,W145667P-9A154GPS9C-00", time("month"), time("day"), toString(time("year")):sub(3)), OS_TerminalLineCount)
+                
+                local O = 30
+                E:egpCircle(O, vec2(30, 140), vec2(10))
+                E:egpColor(O, AwardBiosBlue)
+                
+                O = 31
+                E:egpPoly(O, array(vec2(40, 155), vec2(35, 175), vec2(28, 165), vec2(15, 175), vec2(20, 155)))
+                E:egpColor(O, AwardBiosBlue)
+                
+                O = 32
+                E:egpPoly(O, array(vec2(18, 155), vec2(17.5, 165), vec2(8, 165)))
+                E:egpColor(O, AwardBiosBlue)
+                
+                O = 33
+                E:egpBox(O, vec2(1024 - 138, 210), vec2(260))
+                E:egpMaterial(O, "models/res/egp/energy_star_logo.png")
+                E:egpColor(O, vec(255, 255, 0))
+            break
+            case 8,
+                E:egpWriteTerminal("ASUS E3V141 ACPI BIOS Revision 1003 Release 001", 1)
+            break
+            
+            case 20,
+                E:egpWriteTerminal("Main Processor : AMD Athlon(tm) 500", 1)
+                E:egpWriteTerminal("Memory Testing : 0K")
+            break
+            case 22,
+                E:egpWriteTerminal("Memory Testing : 19211K", -1)
+            break
+            case 28,
+                E:egpWriteTerminal("Memory Testing : 45312K", -1)
+            break
+            case 37,
+                E:egpWriteTerminal("Memory Testing : 176322K", -1)
+            break
+            case 48,
+                E:egpWriteTerminal("Memory Testing : 372010K", -1)
+            break
+            case 60,
+                E:egpWriteTerminal("Memory Testing : 524302K OK", -1)
+            break
+            
+            case 64,
+                E:egpWriteTerminal("  Primary Master : ... [Press F4 to Skip]", 2)
+            break
+            case 70,
+                E:egpWriteTerminal("  Primary Master : WDC AC12100-00H", -1)
+                E:egpWriteTerminal("   Primary Slave : ... [Press F4 to Skip]")
+            break
+            case 74,
+                E:egpWriteTerminal("   Primary Slave : None", -1)
+                E:egpWriteTerminal("Secondary Master : ... [Press F4 to Skip]")
+            break
+            case 84,
+                E:egpWriteTerminal("Secondary Master : MOS MPS6540", -1)
+                E:egpWriteTerminal(" Secondary Slave : ... [Press F4 to Skip]")
+            break
+            case 100,
+                E:egpWriteTerminal(" Secondary Slave : None", -1)
+            break
+            
+            case 120,
+                E:egpWriteTerminalAbs("", OS_TerminalLineCount - 1)
+                E:egpWriteTerminalAbs("", OS_TerminalLineCount)
+                E:egpRemove(33)
+                E:egpWriteTerminalAbs("_", 15)
+            break
+            case 124,
+                E:egpWriteTerminalAbs("", 15)
+            break
+            case 128,
+                E:egpWriteTerminalAbs("_", 15)
+            break
+            case 132,
+                E:egpWriteTerminalAbs("", 15)
+            break
+            case 136,
+                E:egpWriteTerminalAbs("_", 15)
+            break
+            
+            case 140,
+                E:egpClearTerminal()
+                
+                E:egpWriteTerminal("-------------------------------------------------")
+                E:egpWriteTerminal("CPU Type         : AMD Athlon(tm) 500 at 499 MHz")
+                E:egpWriteTerminal("Cache Memory     : 513462K")
+                E:egpWriteTerminal("Memory Installed : 524M DRAM")
+                E:egpWriteTerminal("-------------------------------------------------")
+                E:egpWriteTerminal("Pri. Master Disk : 2048MB")
+                E:egpWriteTerminal("Sec. Master Disk : 64MB, ROM")
+                E:egpWriteTerminal("Display Type     : True HD-IPS+LCD 1024x796", 1)
+                E:egpWriteTerminal("Serial Port(s)   : 2xRS-232")
+                E:egpWriteTerminal("-------------------------------------------------")
+                
+                E:egpWriteTerminal("PCI device listing.....", 2)
+                E:egpWriteTerminal("Bus No. Device No. Device ID Device Class")
+                E:egpWriteTerminal("-----------------------------------------------------------------------")
+                E:egpWriteTerminal("  0        21      11FA      Network Controller")
+                E:egpWriteTerminal("  0        15      22A1      Network Controller")
+                E:egpWriteTerminal("  0        11      0102      IDE Controller")
+                E:egpWriteTerminal("  0        12      0103      Multimedia Device")
+                E:egpWriteTerminal("  0        13      0104      Display Controller")
+                E:egpWriteTerminal("  0        09      0E11      Serial Bus Controller")
+            break
+            
+            case 148,
+                E:egpWriteTerminalAbs("_", 24)
+            break
+            case 152,
+                E:egpWriteTerminalAbs("", 24)
+            break
+            case 156,
+                E:egpWriteTerminalAbs("_", 24)
+            break
+            case 160,
+                E:egpWriteTerminalAbs("", 24)
+            break
+            case 162,
+                E:egpWriteTerminal("Verifying DMI Pool Data .......", 1)
+                E:egpWriteTerminal("_")
+            break
+            
+            case 200,
+                E:egpClearTerminal()
+            break
+            
+            case 220,
+                E:egpWriteTerminal("Starting External ROM Script ...")
+            break
+            case 226,
+                E:egpWriteTerminal("", -1)
+            break
+            case 230,
+                E:egpWriteTerminal("C:\\>_", -1)
+            break
+            case 232,
+                E:egpWriteTerminal("C:\\>cd \"EMD Software\\FIRE\\\"_", -1)
+            break
+            case 234,
+                E:egpWriteTerminal("C:\\>cd \"EMD Software\\FIRE\\\"", -1)
+                E:egpWriteTerminal("C:\\EMD Software\\FIRE\\>_")
+            break
+            case 238,
+                E:egpWriteTerminal("C:\\EMD Software\\FIRE\\>exec.bat_", -1)
+            break
+            
+            case 242,
+                E:egpWriteTerminal("C:\\EMD Software\\FIRE\\>exec.bat", -1)
+                E:egpWriteTerminal("_")
+            break
+            case 254,
+                E:egpWriteTerminal("", -1)
+                E:egpWriteTerminal("Starting FIRE display system ..._")
+            break
+            case 260,
+                E:egpWriteTerminal("Starting FIRE display system ...", -1)
+                E:egpWriteTerminal("System author: The Big Bean_")
+            break
+            case 268,
+                E:egpWriteTerminal("System author: The Big Bean", -1)
+                E:egpWriteTerminal("Checking system integrity ..._")
+            break
+            case 274,
+                E:egpWriteTerminal("Checking system integrity ...", -1)
+                E:egpWriteTerminal("Initializing peripherals ..._")
+            break
+            case 282,
+                E:egpWriteTerminal("Initializing peripherals ...", -1)
+                E:egpWriteTerminal("Loading user configurations ..._")
+            break
+            case 288,
+                E:egpWriteTerminal("Loading user configurations ...", -1)
+                local SubFC = FC_DATA[randint(1, FC_DATA:count()), string]:explode("\\")
+                E:egpWriteTerminal(SubFC[1, string])
+                if(SubFC:exists(2)){
+                    E:egpWriteTerminal(SubFC[2, string] + "_")
+                }
+            break
+            
+            default,
+            break
+        }
+    }
+    
     
     #The main function that loads all of the stuff on the EGP screens
     #----------------------------------------------------------------
@@ -2267,14 +2440,16 @@ if(Battery & !Running & !SkipBoot){
     
     #Operating system load
     if(!OSLoaded){
-        if(!OSLoading){ #This just makes sure the screen doesn't keep on reloading
-            EGPMain:bootupScreenLoad(1, 0)
-            EGPSec:bootupScreenLoad(1, 1)
+        if(!OSLoading){
+            EGPMain:bootupScreenLoad(1)
+            EGPSec:egpClear()
+            OSLoadProgress = 0
+            OS_TerminalLine = 1 
             OSLoading = 1
         }
         
-        if(OSLoadProgress >= 1){ #OS Loaded, run the funny
-            OSLoadProgress = 1
+        if(OSLoadProgress >= OSLoadSteps){
+            OSLoadProgress = OSLoadSteps
             OSLoading = 0
             stoptimer("osLoadNext")
             
@@ -2284,38 +2459,26 @@ if(Battery & !Running & !SkipBoot){
             timer("startApps", randint(1000, 1500))
             OSLoaded = 1
             #----
-        }else{ #Updating the load progress bar
-            timer("osClk", 100)
-            
-            if(clk("osClk")){ #This runs all the loading animations and the loading process itself
-                OSLoadBarPos += 40
-                if(OSLoadBarPos >= 1024){
-                    OSLoadBarPos -= 1024
+        }else{
+            timer("os_clk", 100)
+            if(clk("os_clk")){
+                OSLoadProgress++
+                
+                EGPMain:bootupScreenUpdate()
+                
+                if(OSLoadProgress >= OSLoadSteps){
+                    OSLoadProgress = OSLoadSteps
+                    stoptimer("os_clk")
                 }
-                
-                #Moving the bar
-                EGPMain:egpPos(6, vec2(OSLoadBarPos, 610))
-                
-                #Blinking colors cause it looks cool
-                local ColFactor = abs(sin(OSLoadBarPos / 2.84))
-                local Color = (vec(247, 140, 30) * (1 - ColFactor) + vec(207, 100, 0) * ColFactor)
-                EGPMain:egpColor(3, Color)
-                EGPMain:egpColor(5, Color)
-                EGPMain:egpColor(6, Color * vec(0.95))
-                #---
-                
-                #Loading
-                OSLoadProgress += (randint(0, 100) > 80 ? randint(5, 15) / 100 : 0)
-                #----
             }
         }
     }
     
     #Loading screen
     if(clk("startApps")){
-        EGPMain:bootupScreenLoad(0, 0)
+        EGPMain:bootupScreenLoad(0)
         if(->EGPSec){
-            EGPSec:bootupScreenLoad(0, 1)
+            EGPSec:bootupScreenLoad(0)
         }
         
         timer("start", 6000)
