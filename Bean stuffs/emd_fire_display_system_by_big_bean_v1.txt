@@ -3521,7 +3521,8 @@ event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
             KeyTimeout = 1
             
             if("12345678":find(Key)){
-                (IsShifting ? EGPSec : EGPMain):entity():soundPlayEX("key_click", 0.5, "monkssounds/buttons/button5.wav", 0.5, 100)
+                (IsShifting ? EGPSec : EGPMain):entity():soundPlay("key_click", 0.5, "monkssounds/buttons/button5.wav")
+                soundVolume("key_click", 0.4)
             }
         }elseif(!Down & Key == "lshift"){
             IsShifting = 0
