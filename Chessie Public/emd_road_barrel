@@ -1,0 +1,160 @@
+@name EMD Road Barrel by Chessie Computer
+@inputs CS:entity RLCPT:entity CtlTable:table Reverser_Inserted FuelPump EngRun GenFld BrakeCutIn
+@outputs 
+#configurables
+@persist SelectorType AirThrottle
+@trigger none
+
+if(first()|dupefinished()){
+    #config
+    
+    SelectorType=1 #0 for GP9 no dynamics, 1 for dynamics, 2 for GP7 no dynamics
+    #fyi the dynamics work with linear only for my own sake
+    AirThrottle=1 #air throttle presence? :) (0 is notched, 1 is linear)
+    
+    #end of config
+    
+    CS:setBodygroup(2,SelectorType)
+
+    
+    A=1
+    holoCreate(A)
+    holoPos(A,CS:toWorld(vec(-1.897, 10.561, 46.425)))
+    holoAng(A,CS:toWorld(ang(90,40,90)))
+    holoParent(A,CS)
+    holoModel(A,"models/rlc_delta_lua/accessories/gauge_dp3.5_standard.mdl")
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/invisible")
+    holoEntity(A):setSubMaterial(2,"models/gsgtrainprops/cab/gauge_air_westinghouse_200_1_black")
+    holoEntity(A):setSubMaterial(3,"models/proppertextures/invisible")
+    holoBodygroup(A,2,1)
+    holoBodygroup(A,3,1)
+
+    A=2
+    holoCreate(A)
+    holoPos(A,CS:toWorld(vec(5.748, 17.093, 46.414)))
+    holoAng(A,CS:toWorld(ang(90,40,90)))
+    holoParent(A,CS)
+    holoModel(A,"models/rlc_delta_lua/accessories/gauge_dp3.5_standard.mdl")
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/invisible")
+    holoEntity(A):setSubMaterial(2,"models/gsgtrainprops/cab/gauge_air_westinghouse_200_1_black")
+    holoEntity(A):setSubMaterial(3,"models/proppertextures/invisible")
+    holoBodygroup(A,2,1)
+    holoBodygroup(A,3,1)
+    
+    A=3
+    holoCreate(A)
+    holoPos(A,CS:toWorld(vec(1.913, 13.816, 46.857)))
+    holoAng(A,CS:toWorld(ang(90,40,90)))
+    holoParent(A,CS)
+    holoModel(A,"models/rlc_delta_lua/accessories/gauge_dp3.5_standard.mdl")
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/invisible")
+    holoEntity(A):setSubMaterial(3,"models/proppertextures/invisible")
+    holoBodygroup(A,3,1)
+    
+    A=4
+    holoCreate(A)
+    holoPos(A,CS:toWorld(vec(1.9136-0.4, 13.816+0.4, 46.857+6)))
+    holoAng(A,CS:toWorld(ang(90,40,90)))
+    holoParent(A,CS)
+    holoModel(A,"models/rlc_delta_lua/accessories/gauge_dp3.5_standard.mdl")
+    holoEntity(A):setSubMaterial(1,"models/proppertextures/invisible")
+    holoEntity(A):setSubMaterial(2,"models/proppertextures/invisible")
+    holoEntity(A):setSubMaterial(3,"models/proppertextures/invisible")
+    holoEntity(A):setSubMaterial(4,"models/proppertextures/invisible")
+    holoEntity(A):setSubMaterial(5,"models/proppertextures/invisible")
+    holoBodygroup(A,3,1)
+    holoScale(A,vec(2.6))
+    holoClipEnabled(A,1,1)
+    holoClip(A,1,vec(),vec(0,-1,0),0)
+}
+if(!timerExists("clk")){
+    timer("clk",0.2,function(){
+        local CT=CtlTable:clone()
+        
+        #selector
+        switch(SelectorType){
+            case 0,
+                CS:setBoneAngRelative(CS:boneIndex("selector"),ang(-CT["SetSelector",number]*10,0,0))
+                CS:setBoneAngRelative(CS:boneIndex("selectorwheel"),ang(-CT["SetSelector",number]*10,0,0))
+            break
+            case 1,
+                CS:setBoneAngRelative(CS:boneIndex("selector"),ang(-CT["SetSelector",number]*10+((CT["SetDynamics",number]>0)*10)+max(CT["SetDynamics",number]-10,0)/1.125,0,0))
+                CS:setBoneAngRelative(CS:boneIndex("selectorwheel"),ang(-CT["SetSelector",number]*10+((CT["SetDynamics",number]>0)*10)+max(CT["SetDynamics",number]-10,0)/1.125,0,0))
+            break
+            case 2,
+                CS:setBoneAngRelative(CS:boneIndex("selector"),ang(-CT["SetSelector",number]*10,0,0))
+                CS:setBoneAngRelative(CS:boneIndex("selectorwheel"),ang(-CT["SetSelector",number]*10,0,0))
+            break
+            
+        }
+        if(changed(CT["SetSelector",number]+(CT["SetDynamics",number]>0))){
+            CS:soundPlay("sel",1,"gsgtrainsounds/misc/cab/reverser_neutral_3.wav")
+            soundPitch("sel",random(98,102))
+        }
+        
+        
+        #throttle
+        switch(AirThrottle){
+            case 0,
+                CS:setBoneAngRelative(CS:boneIndex("throttle"),ang(-CT["SetThrottle",number]/(100/60),0,0))
+                CS:setBoneAngRelative(CS:boneIndex("throttlewheel"),ang(-max(CT["SetThrottle",number]-12.5,0)/1.25-(CT["SetThrottle",number]>0)*10,0,0))
+                
+                if(changed(CT["SetThrottle",number])){
+                    CS:soundPlay("thr",1,"gsgtrainsounds/misc/cab/emd_composite_throttle_1.wav")
+                    soundPitch("thr",random(98,102))
+                }
+            break
+            case 1,
+                CS:setBoneAngRelative(CS:boneIndex("throttle"),ang(-CT["SetThrottle",number]/(100/60),0,0))
+                CS:setBoneAngRelative(CS:boneIndex("throttlewheel"),ang(-CT["SetThrottle",number]/(100/80),0,0))
+                
+                if(changed(CT["SetThrottle",number]>0)|changed(CT["SetThrottle",number]<99)){
+                    CS:soundPlay("thr",1,"gsgtrainsounds/misc/cab/reverser_neutral_3.wav")
+                    soundPitch("thr",random(98,102))
+                }
+            break
+        }
+        
+        #reverser
+        CS:setBoneAngRelative(CS:boneIndex("reverser"),ang(18*CT["SetReverser",number],0,0))
+        CS:setBodygroup(1,Reverser_Inserted>0)
+        
+        if(changed(CT["SetReverser",number])){
+            CS:soundPlay("rev",1,format("gsgtrainsounds/misc/cab/reverser_%s_emd_d00.wav",CT["SetReverser",number]!=0 ? "fr" : "n"))
+        }
+        
+        #loco brake
+        CS:setBoneAngRelative(CS:boneIndex("independentrotate"),ang(CT["SetLocoBrakePressure",number],0,0))
+        CS:setBoneAngRelative(CS:boneIndex("independenthandle"),ang(CT["SetBleeding",number]*10,0,0))
+        CS:setBoneAngRelative(CS:boneIndex("bailring"),ang(4*CT["SetBleeding",number],0,0))
+        CS:setBonePosRelative(CS:boneIndex("bailpiston"),vec(0,-0.2*CT["SetBleeding",number],0))
+        
+        #auto brake
+        CS:setBoneAngRelative(CS:boneIndex("autobrake"),ang(select(CT["SetBrakeNotch",number]+1,0,25,55,82-8,82+8,140),0,0))
+        if(changed(CT["SetBrakeNotch",number])){
+            CS:soundPlay("tb",1,"trans_train_sounds/controls/aar/auto_lever_release.wav")
+        }
+        CS:setBoneAngRelative(CS:boneIndex("bpcohinge"),ang(80-(BrakeCutIn>0)*80,0,0))
+        
+        
+        #misc systems
+        CS:setBoneAngRelative(CS:boneIndex("switchcontrol"),ang(-45*(EngRun>0),0,0))
+        CS:setBoneAngRelative(CS:boneIndex("switchfuelpump"),ang(-45*(FuelPump>0),0,0))
+        CS:setBoneAngRelative(CS:boneIndex("switchgenfield"),ang(-45*(GenFld>0),0,0))
+        
+
+        #brake gauges
+        RLCPTW=RLCPT:wirelink()
+        holoEntity(1):setBoneAngRelative(2,ang(-45-RLCPTW["MainRes",number]/200*270,0,0))
+        holoEntity(1):setBoneAngRelative(3,ang(-45-RLCPTW["EqualRes",number]/200*270,0,0))
+        
+        holoEntity(2):setBoneAngRelative(2,ang(-45-RLCPTW["Cyl",number]/200*270,0,0))
+        holoEntity(2):setBoneAngRelative(3,ang(-45-RLCPTW["BrakePipe",number]/200*270,0,0))
+        
+        holoEntity(3):setBoneAngRelative(3,ang(-45-RLCPTW["CFM",number]/100*270,0,0))
+        
+        holoEntity(4):setBoneAngRelative(3,ang(180+66-abs(RLCPTW["Load1",number])/1500*132,0,0))
+        
+        timerRestart("clk")
+    })
+}
