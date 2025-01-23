@@ -1,7 +1,7 @@
 @name GP9 Cash Register Stand Controller
-@inputs CtlTable:table Stand:entity RLCPT:entity KeySelUp KeySelDn Horn Bell CutInCycle MU_Master
+@inputs CtlTable:table Stand:entity RLCPT:entity KeySelUp KeySelDn Horn Bell CutInCycle MU_Master EngRun GenFld ControlFp HDLTFront HDLTRear GroundGaLT
 @outputs SHorn BrakeCutIn PassengerBraking
-@persist Reverser Throttle SelectorLever Selector TrainBrake LocoBrake Bleed SHorn SBell CutInPos SCutInPos RLCPTW:wirelink MainRes EqualRes Cyl BrakePipe
+@persist CutInPos RLCPTW:wirelink
 @trigger CutInCycle
 if(first()|dupefinished()|~Stand){
     A=1
@@ -12,26 +12,16 @@ if(first()|dupefinished()|~Stand){
     holoModel(A,"models/anytrains/props/detail/cstand_gp9-18-20_indicators.mdl")
     holoBodygroup(A,3,1)
     holoBodygroup(A,5,1)
+    
+    
+    CutInPos=0
 }
-runOnTick(1)
-Reverser+=(CtlTable["SetReverser",number]-Reverser)/3
-Throttle+=((CtlTable["SetDynamics",number]  ? (CtlTable["SetDynamics",number]-10)*1.111111 : CtlTable["SetThrottle",number])-Throttle)/2
-SelectorLever+=(((KeySelUp-KeySelDn)*10)-SelectorLever)/2
-Selector+=((CtlTable["SetSelector",number]-(CtlTable["SetDynamics",number]>0))-Selector)/2
-TrainBrake+=(CtlTable["SetBrakeNotch",number]-TrainBrake)/4
-LocoBrake+=(CtlTable["SetLocoBrakePressure",number]-LocoBrake)/2
-Bleed+=(CtlTable["SetBleeding",number]-Bleed)/2
-SHorn+=(Horn-SHorn)/3
-SBell+=(Bell-SBell)/2
-SCutInPos+=(CutInPos-SCutInPos)/3
-MainRes+=(RLCPTW["MainRes",number]-MainRes)/2
-EqualRes+=(RLCPTW["EqualRes",number]-EqualRes)/2
-Cyl+=(RLCPTW["Cyl",number]-Cyl)/2
-BrakePipe+=(RLCPTW["BrakePipe",number]-BrakePipe)/2
+interval(100)
+
 if(CutInCycle&~CutInCycle){
     CutInPos++
 }
-if(CutInPos>2){
+if(CutInPos>1){
     CutInPos=0
 }
 switch(CutInPos){
@@ -48,24 +38,34 @@ switch(CutInPos){
         PassengerBraking=1
         break
 } 
-RLCPTW=RLCPT:wirelink()
-Stand:setBoneAngle(1,ang(Reverser*17,0,0))
-Stand:setBoneAngle(2,ang(-Throttle*0.74,0,0))
-Stand:setBoneAngle(3,ang(-Throttle*2.4,0,0))
-Stand:setBoneAngle(4,ang(SelectorLever,0,0))
-Stand:setBoneAngle(5,ang(Selector*30,0,0))
-Stand:setBoneAngle(6,ang(TrainBrake*23,0,0))
-Stand:setBoneAngle(7,ang(LocoBrake*1.75,0,0))
-Stand:setBoneAngle(8,ang(0,0-Bleed*10,0))
-Stand:setBoneAngle(9,ang(0,0,-SCutInPos*90))
-Stand:setBoneAngle(11,ang(0,0-SHorn*15,0))
-Stand:setBoneAngle(12,ang(0,0,(-SBell*64)+32))
-Stand:setBoneAngle(14,ang(0,0,abs(RLCPTW["Load1",number]*0.06)))
-Stand:setBoneAngle(15,ang(0,0,-MainRes*1.67))
-Stand:setBoneAngle(16,ang(0,0,-EqualRes*1.67))
-Stand:setBoneAngle(17,ang(0,0,-Cyl*1.67))
-Stand:setBoneAngle(18,ang(0,0,-BrakePipe*1.67))
-Stand:setBodygroup(3,MU_Master)
-holoEntity(1):setSubMaterial(2,"models/proppertextures/bulb_orange_"+(RLCPTW["WheelSlip",number] ? "" : "un") +"lit")
-holoEntity(1):setSubMaterial(3,"models/proppertextures/bulb_offwhite_"+(RLCPTW["Emergency",number] ? "" : "un") +"lit")
-holoEntity(1):setSubMaterial(6,"models/proppertextures/bulb_red_"+(RLCPTW["BrakeWarn",number] ? "" : "un") +"lit")
+if(Stand:isValid()){
+    RLCPTW=RLCPT:wirelink()
+    Stand:setBoneAngRelative(1,ang(CtlTable["SetReverser",number]*17,0,0))
+    Stand:setBoneAngRelative(2,ang(-((CtlTable["SetDynamics",number]  ? (CtlTable["SetDynamics",number]-10)*1.111111 : CtlTable["SetThrottle",number]))*0.74,0,0))
+    Stand:setBoneAngRelative(3,ang(-((CtlTable["SetDynamics",number]  ? (CtlTable["SetDynamics",number]-10)*1.111111 : CtlTable["SetThrottle",number]))*2.4,0,0))
+    Stand:setBoneAngRelative(4,ang((((KeySelUp-KeySelDn)*10)),0,0))
+    Stand:setBoneAngRelative(5,ang(((CtlTable["SetSelector",number]-(CtlTable["SetDynamics",number]>0)))*30,0,0))
+    Stand:setBoneAngRelative(6,ang((CtlTable["SetBrakeNotch",number])*23,0,0))
+    Stand:setBoneAngRelative(7,ang(CtlTable["SetLocoBrakePressure",number]*1.75,0,0))
+    Stand:setBoneAngRelative(8,ang(0,0-CtlTable["SetBleeding",number]*10,0))
+    Stand:setBoneAngRelative(9,ang(0,0,-CutInPos*90))
+    Stand:setBoneAngRelative(11,ang(0,0-Horn*15,0))
+    Stand:setBoneAngRelative(12,ang(0,0,(-Bell*64)+32))
+    Stand:setBoneAngRelative(14,ang(0,0,RLCPTW["Load1",number]*0.06))
+    Stand:setBoneAngRelative(15,ang(0,0,-RLCPTW["MainRes",number]*1.67))
+    Stand:setBoneAngRelative(16,ang(0,0,-RLCPTW["EqualRes",number]*1.67))
+    Stand:setBoneAngRelative(17,ang(0,0,-RLCPTW["Cyl",number]*1.67))
+    Stand:setBoneAngRelative(18,ang(0,0,-RLCPTW["BrakePipe",number]*1.67))
+    Stand:setBodygroup(3,MU_Master)
+    holoEntity(1):setSubMaterial(2,"models/proppertextures/bulb_orange_"+(RLCPTW["WheelSlip",number] ? "" : "un") +"lit")
+    holoEntity(1):setSubMaterial(3,"models/proppertextures/bulb_offwhite_"+(RLCPTW["Emergency",number] ? "" : "un") +"lit")
+    holoEntity(1):setSubMaterial(6,"models/proppertextures/bulb_red_"+(RLCPTW["BrakeWarn",number] ? "" : "un") +"lit")
+    Stand:setBodygroup(14,EngRun>0)
+    Stand:setBodygroup(13,GenFld>0)
+    Stand:setBodygroup(12,ControlFp>0)    
+    Stand:setBodygroup(16,HDLTFront>0)
+    Stand:setBodygroup(17,HDLTRear>0)     
+    Stand:setBodygroup(15,GroundGaLT>0)     
+    
+    
+}
