@@ -1,0 +1,1197 @@
+@name GE SDIS 2019 V1 by Chessie Computer
+@inputs EGPL:wirelink EGPR:wirelink Battery RLCPT:entity CtlTable:table Driver:entity Num:string
+@outputs BCI MU2A FEEDPSI EmBrake
+#general
+@persist Run CL:table CFG:table PG:table BOOT_DATA:table Booted FullBoot ALERT_TIME
+#controls
+@persist AltHold ShiftHold
+#air brake
+@persist BCI MU2A FEEDPSI NBCI NMU2A NFEEDPSI
+#distance counter
+@persist DIST DISTP_S:string DISTP DISTP_T:table DISTP_SEL DIST_MODE DIST_BTN DIST_ON
+@trigger none
+
+if(first()|duped()){
+    #[
+    quick start guide
+    
+    inputs:
+    Wire EGPL and EGPR to your left and right EGP respectively
+    Wire Battery to whatever switch you want your displays to turn on to
+    Wire RLCPT to your PT2 chip
+    Wire CtlTable to your control stand
+    Wire Driver to the Driver output on the driver's pod controller
+    Wire Num to your skin E2's number output
+    
+    outputs:
+    Wire BCI to your PT2 BrakeCutIn
+    Don't have to wire MU2A or FEEDPSI unless your stand is advanced
+    Wire EmBrake to your stand if you have your alerter configured
+    
+    
+    usage:
+    Controls use your number keys
+    Hold ALT to access the lower keys 0-9
+    Hold SHIFT to access the right display's keys (same binds from above apply on the right display)
+    
+    
+    NOTE: If you're only going to use a single display, use EGPL. It will have the most functionality out of the two
+    
+    ]#
+    
+    
+    #config
+    
+    CFG = table(
+    "railroad" = "RKRR",
+    
+    "max_te" = 180,
+    "max_de" = 100,
+    
+    "alerter_reset_key" = "t",
+    "alerter_reset_time" = 60, #set to 0 to disable alerter
+    
+    "system_font" = "bahnschrift light",
+    "system_font_2" = "bahnschrift",
+    
+    "skip_boot" = 0
+    
+    )
+    
+    #end of config
+    
+    #[
+    version history
+    
+    v0.1: creation & basic functions
+    v0.2: main page complete and functions in place for future pages
+    v0.21: boot screen added
+    v0.22: air brake data/setup as well as distance functions complete
+    v0.23: alertor
+    v0.25: public release
+    
+    ]#
+    
+    
+    #fun stuff begins here
+    Run=0
+    CL=table()
+    CL["black",vector] = vec(4,6,12)
+    CL["white",vector] = vec(225,230,255)
+    CL["owhite",vector] = vec(250,245,240)
+    CL["blue",vector] = vec(50,140,220)
+    CL["lblue",vector] = vec(100,190,240)
+    CL["yellow",vector] = vec(255,220,80)
+    CL["red",vector] = vec(255,90,70)
+    CL["green",vector] = vec(45,240,65)
+    PG=table(
+    "left" = table(0,0,0),
+    "right" = table(0,0,0)
+    )
+
+    Booted=0
+    FullBoot=0
+    FEEDPSI=90
+    BCI=0
+    MU2A=0
+    
+    DISTP_T=table(0,0,0,0,0)
+    DISTP_SEL=0
+    DIST_MODE=0
+    DIST_BTN=0
+    DISTP_S="00000"
+    
+    ALERT_TIME=CFG["alerter_reset_time",number]
+    EmBrake=0
+    
+    
+    setName("General Electric Company 2019 SDIS Displays V1\nVersion 0.23 - Chessie Computer\nPublic Use Version")
+    
+    function void wirelink:labeledBox(INDEX:number, POS:vector2, SCALE:vector2, TITLE:string, TITLE_SIZE:number, TITLE_SPACE:number, COLOR:vector){
+        local E=This
+        
+        E:egpBoxOutline(INDEX,POS,SCALE)
+        E:egpColor(INDEX,COLOR)
+        E:egpSize(INDEX,1)
+        
+        E:egpBox(INDEX+1,POS+vec2(0,-SCALE:y()/2),vec2(TITLE:length()*TITLE_SIZE/2+TITLE_SPACE,4))
+        E:egpColor(INDEX+1,CL["black",vector])
+        
+        E:egpTextLayout(INDEX+2,TITLE,POS+vec2(0,-SCALE:y()/2),vec2(TITLE:length()*TITLE_SIZE/1+TITLE_SPACE,TITLE_SIZE+4))
+        E:egpAlign(INDEX+2,1,1)
+        E:egpFont(INDEX+2,CFG["system_font_2",string],TITLE_SIZE)
+        E:egpColor(INDEX+2,COLOR)
+    }
+    function void wirelink:buttonGenerate(BT:table){
+        E=This
+        local BT_CFG = table(
+        "horizontal_scale" = 46,
+        "pos_offset" = 0
+        )
+        if(BT[9,string]!="NUM_ROW"){
+            for(I=0,16){
+                if(BT[I+1,string]!=""){
+                    E:egpBox(268+I*2,vec2(256+BT_CFG["pos_offset",number]-((BT_CFG["horizontal_scale",number]+1)*3.5)+I*(BT_CFG["horizontal_scale",number]+1)-(I>7)*(BT_CFG["horizontal_scale",number]+1)*8,466+(I>7)*27),vec2((BT_CFG["horizontal_scale",number]),26))
+                    E:egpColor(268+I*2,(I>7 ? CL["lblue",vector] : CL["owhite",vector])*(BT[I+1,string]:find("\0") ? 0.25 : 1))
+                    
+                    E:egpTextLayout(269+I*2,BT[I+1,string],vec2(256+BT_CFG["pos_offset",number]-((BT_CFG["horizontal_scale",number]+1)*3.5)+I*(BT_CFG["horizontal_scale",number]+1)-(I>7)*(BT_CFG["horizontal_scale",number]+1)*8,466+(I>7)*27),vec2((BT_CFG["horizontal_scale",number]),26))
+                    E:egpAlign(269+I*2,1,1)
+                    E:egpFont(269+I*2,CFG["system_font_2",string],10)
+                    E:egpColor(269+I*2,CL["black",vector])
+                }
+            }
+        }
+        else{
+            for(I=0,18){
+                if(I<8){
+                    if(BT[I+1,string]!=""){
+                        E:egpBox(264+I*2,vec2(256+BT_CFG["pos_offset",number]-((BT_CFG["horizontal_scale",number]+1)*3.5)+I*(BT_CFG["horizontal_scale",number]+1)-(I>7)*(BT_CFG["horizontal_scale",number]+1)*8,466+(I>7)*27),vec2((BT_CFG["horizontal_scale",number]),26))
+                        E:egpColor(264+I*2,(I>7 ? CL["lblue",vector] : CL["owhite",vector])*(BT[I+1,string]:find("\0") ? 0.25 : 1))
+                        
+                        E:egpTextLayout(265+I*2,BT[I+1,string],vec2(256+BT_CFG["pos_offset",number]-((BT_CFG["horizontal_scale",number]+1)*3.5)+I*(BT_CFG["horizontal_scale",number]+1)-(I>7)*(BT_CFG["horizontal_scale",number]+1)*9,466+(I>7)*27),vec2((BT_CFG["horizontal_scale",number]),26))
+                        E:egpAlign(265+I*2,1,1)
+                        E:egpFont(265+I*2,CFG["system_font_2",string],10)
+                        E:egpColor(265+I*2,CL["black",vector])
+                    }
+                }
+                else{
+                        E:egpBox(264+I*2,vec2(256+BT_CFG["pos_offset",number]-((BT_CFG["horizontal_scale",number]+1)*3.5)+I*(BT_CFG["horizontal_scale",number]+1)-(I>7)*(BT_CFG["horizontal_scale",number]+1)*9,466+(I>7)*27),vec2((BT_CFG["horizontal_scale",number]),26))
+                        E:egpColor(264+I*2,(I>7 ? CL["lblue",vector] : CL["owhite",vector])*(BT[I+1,string]:find("\0") ? 0.25 : 1))
+                        
+                        E:egpTextLayout(265+I*2,format("%01d",I-8),vec2(256+BT_CFG["pos_offset",number]-((BT_CFG["horizontal_scale",number]+1)*3.5)+I*(BT_CFG["horizontal_scale",number]+1)-(I>7)*(BT_CFG["horizontal_scale",number]+1)*9,493),vec2((BT_CFG["horizontal_scale",number]),26))
+                        E:egpAlign(265+I*2,1,1)
+                        E:egpFont(265+I*2,CFG["system_font_2",string],10)
+                        E:egpColor(265+I*2,CL["black",vector])
+                }
+            }
+        }
+    }
+    
+    function void wirelink:loadingCircleGenerate(INDEX:number, POS:vector2, SCALE:number, COLOR:vector, BACKGROUND_COLOR:vector){
+        E=This
+        
+        E:egpWedge(INDEX,POS,vec2(26)*SCALE)
+        E:egpColor(INDEX,COLOR)
+        E:egpCircle(INDEX+1,POS,vec2(18)*SCALE)
+        E:egpColor(INDEX+1,BACKGROUND_COLOR)
+    }
+    
+
+    BOOT_DATA=table(
+        "sequence" = 0,
+        "circle" = 0
+    )
+    function number wirelink:w11Bootup(INDEX:number,BOOT_DATA:table){
+        E=This
+        local SEQ = BOOT_DATA["sequence",number]
+        
+        BOOT_DATA["sequence",number]=BOOT_DATA["sequence",number]+1
+        
+        
+        
+        if(changed(SEQ>0)&SEQ>0){
+            E:egpClear()
+            
+            BOOT_DATA["circle",number] = 0
+            
+            E:egpBox(INDEX,vec2(256-27,256-80-27),vec2(50))
+            E:egpBox(INDEX+1,vec2(256+27,256-80-27),vec2(50))
+            E:egpBox(INDEX+2,vec2(256-27,256-80+27),vec2(50))
+            E:egpBox(INDEX+3,vec2(256+27,256-80+27),vec2(50))
+            E:egpColor(INDEX,vec(50,120,200))
+            E:egpColor(INDEX+1,vec(50,120,200))
+            E:egpColor(INDEX+2,vec(50,120,200))
+            E:egpColor(INDEX+3,vec(50,120,200))
+        }
+        BOOT_DATA["circle",number]=BOOT_DATA["circle",number]+30
+        if(changed(SEQ>15)&SEQ>15){
+            E:egpWedge(INDEX+4,vec2(256,256+80),vec2(26)*0.8)
+            E:egpColor(INDEX+4,vec(255))
+            E:egpCircle(INDEX+5,vec2(256,256+80),vec2(18)*0.8)
+            E:egpColor(INDEX+5,vec(0))
+        }
+        local Visibility=sin(BOOT_DATA["circle",number]/2)+1
+        E:egpAngle(INDEX+4,-BOOT_DATA["circle",number])
+        E:egpSize(INDEX+4,-0.1-Visibility*85-10)
+        
+        E:egpAlpha(INDEX,255*clamp(SEQ/4,0,1)-clamp((SEQ-135)*51,0,255))
+        E:egpAlpha(INDEX+1,255*clamp(SEQ/4,0,1)-clamp((SEQ-135)*51,0,255))
+        E:egpAlpha(INDEX+2,255*clamp(SEQ/4,0,1)-clamp((SEQ-135)*51,0,255))
+        E:egpAlpha(INDEX+3,255*clamp(SEQ/4,0,1)-clamp((SEQ-135)*51,0,255))
+        E:egpAlpha(INDEX+4,255*clamp(SEQ/4,0,1)-clamp((SEQ-135)*51,0,255))
+        E:egpAlpha(INDEX+5,255*clamp(SEQ/4,0,1)-clamp((SEQ-139)*255,0,255))
+        
+        if(SEQ>140){
+            E:egpClear()
+            
+            return 1
+            
+        }
+        return 0
+    }
+    
+    function void wirelink:mainGenerate(SC:string){
+        local E=This
+        E:egpClear()
+        #speedometer
+        
+        E:egpWedge(2,vec2(256,90),vec2(54,74))
+        E:egpSize(2,-16)
+        E:egpAngle(2,0)
+        E:egpColor(2,CL["red",vector])
+        
+        E:egpWedge(3,vec2(256,90),vec2(54,74))
+        E:egpSize(3,-4)
+        E:egpAngle(3,6)
+        E:egpColor(3,CL["yellow",vector])
+        
+        E:egpCircle(4,vec2(256,90),vec2(54,74)/1.08)
+        E:egpColor(4,CL["black",vector])
+        
+        E:egpCircleOutline(5,vec2(256,90),vec2(54,74))
+        E:egpSize(5,2)
+        E:egpColor(5,CL["white",vector])
+        
+        E:egpBox(6,vec2(256,150),vec2(108,80))
+        E:egpColor(6,CL["black",vector])
+        
+        E:egpCircle(7,vec2(256,90),vec2(6,8))
+        E:egpColor(7,CL["white",vector])
+        
+        E:egpTriangle(8,vec2(256-54,90),vec2(256,90+5),vec2(256,90-5))
+        E:egpColor(8,CL["white",vector])
+        
+        for(I=0,16){
+            local Ang=-15+I*210/16
+            E:egpLine(9+I,vec2(256-cos(Ang)*54,90-sin(Ang)*74),vec2(256-cos(Ang)*(I%2 ? 50 : 46),90-sin(Ang)*(I%2 ? 68 : 64)))
+            E:egpColor(9+I,CL["white",vector])
+            E:egpSize(9+I,1)
+            
+            if(!(I%2)){
+                E:egpTextLayout(28+I/2,(I*5):toString(),vec2(256-cos(Ang)*38,90-sin(Ang)*56),vec2(20,20))
+                E:egpAlign(28+I/2,1,1)
+                E:egpFont(28+I/2,CFG["system_font",string],10)
+                E:egpColor(28+I/2,CL["white",vector])
+            }
+        }
+        
+        E:egpTextLayout(26,"0.00",vec2(256,120),vec2(100,26))
+        E:egpAlign(26,1,1)
+        E:egpFont(26,CFG["system_font",string],24)
+        E:egpColor(26,CL["white",vector])
+        
+        E:egpTextLayout(27,"mph",vec2(256,120),vec2(100,22))
+        E:egpAlign(27,2,2)
+        E:egpFont(27,CFG["system_font_2",string],12)
+        E:egpColor(27,CL["white",vector])
+        
+        
+        #brakes
+        E:labeledBox(37, vec2(44,60), vec2(80,70), "ER", 12, 8, CL["white",vector])
+        E:egpTextLayout(40,"888",vec2(44,60),vec2(80,60))
+        E:egpFont(40,CFG["system_font",string],36)
+        E:egpAlign(40,1,1)
+        E:egpColor(40,CL["white",vector])
+        
+        E:labeledBox(41, vec2(128,60), vec2(80,70), "BP", 12, 8, CL["white",vector])
+        E:egpTextLayout(44,"888",vec2(128,60),vec2(80,60))
+        E:egpFont(44,CFG["system_font",string],36)
+        E:egpAlign(44,1,1)
+        E:egpColor(44,CL["white",vector])
+        
+        E:labeledBox(45, vec2(44-21,120), vec2(38,30), "Rear", 12, 8, CL["white",vector])
+        E:egpTextLayout(48,"888",vec2(44-21,120),vec2(38,30))
+        E:egpFont(48,CFG["system_font",string],16)
+        E:egpAlign(48,1,1)
+        E:egpColor(48,CL["white",vector])
+        
+        E:labeledBox(49, vec2(44+21,120), vec2(38,30), "Flow", 12, 8, CL["white",vector])
+        E:egpTextLayout(52,"888",vec2(44+21,120),vec2(38,30))
+        E:egpFont(52,CFG["system_font",string],16)
+        E:egpAlign(52,1,1)
+        E:egpColor(52,CL["white",vector])
+        
+        E:labeledBox(53, vec2(128-21,120), vec2(38,30), "Main", 12, 8, CL["white",vector])
+        E:egpTextLayout(56,"888",vec2(128-21,120),vec2(38,30))
+        E:egpFont(56,CFG["system_font",string],16)
+        E:egpAlign(56,1,1)
+        E:egpColor(56,CL["white",vector])
+        
+        E:labeledBox(57, vec2(128+21,120), vec2(38,30), "BC", 12, 8, CL["white",vector])
+        E:egpTextLayout(60,"888",vec2(128+21,120),vec2(38,30))
+        E:egpFont(60,CFG["system_font",string],16)
+        E:egpAlign(60,1,1)
+        E:egpColor(60,CL["white",vector])
+        
+        #power/braking panel
+        
+        E:labeledBox(61, vec2(390,120-40), vec2(100,30), "Consist Klb", 12, -6, CL["white",vector])
+        E:egpTextLayout(64,"0:0",vec2(390-21,120-40),vec2(38,30))
+        E:egpFont(64,CFG["system_font",string],16)
+        E:egpAlign(64,1,1)
+        E:egpColor(64,CL["white",vector])
+        E:egpTextLayout(65,"0",vec2(390+21,120-40),vec2(38,30))
+        E:egpFont(65,CFG["system_font",string],16)
+        E:egpAlign(65,0,1)
+        E:egpColor(65,CL["green",vector])
+        
+        E:labeledBox(66, vec2(470,120-40), vec2(50,30), "Reverser", 12, -2, CL["white",vector])
+        E:egpTextLayout(69,"Fwd",vec2(470,120-40),vec2(50,30))
+        E:egpFont(69,CFG["system_font",string],16)
+        E:egpAlign(69,1,1)
+        E:egpColor(69,CL["white",vector])
+        
+        E:labeledBox(70, vec2(390,120), vec2(100,30), "Effort Klb", 12, -6, CL["green",vector])
+        E:egpTextLayout(73,"180",vec2(390-32,120),vec2(38,30))
+        E:egpFont(73,CFG["system_font",string],16)
+        E:egpAlign(73,1,1)
+        E:egpColor(73,CL["green",vector])
+        
+        E:egpBox(74,vec2(404,124),vec2(60,1))
+        E:egpColor(74,CL["white",vector])
+        E:egpBox(75,vec2(404,119),vec2(60,8))
+        E:egpColor(75,CL["green",vector])
+        E:egpTextLayout(76,"0",vec2(404-30,129),vec2(38,30))
+        E:egpFont(76,CFG["system_font",string],8)
+        E:egpAlign(76,1,1)
+        E:egpColor(76,CL["white",vector])
+        E:egpTextLayout(77,"180",vec2(404+30,129),vec2(38,30))
+        E:egpFont(77,CFG["system_font",string],8)
+        E:egpAlign(77,1,1)
+        E:egpColor(77,CL["white",vector])
+        
+        E:labeledBox(78, vec2(470,120), vec2(50,30), "Throttle", 12, -2, CL["green",vector])
+        E:egpTextLayout(81,"Idle",vec2(470,120),vec2(38,30))
+        E:egpFont(81,CFG["system_font",string],16)
+        E:egpAlign(81,1,1)
+        E:egpColor(81,CL["green",vector])
+        
+        #indicators
+        E:egpBox(82,vec2(26,164),vec2(40,30))
+        E:egpColor(82,CL["white",vector])
+        E:egpTextLayout(83,"WHEEL\nSLIP",vec2(26,164),vec2(40,30))
+        E:egpFont(83,CFG["system_font_2",string],12)
+        E:egpColor(83,CL["black",vector])
+        E:egpAlign(83,1,1)
+        
+        E:egpBox(84,vec2(26+44,164),vec2(40,30))
+        E:egpColor(84,CL["red",vector])
+        E:egpTextLayout(85,"PCS\nOPEN",vec2(26+44,164),vec2(40,30))
+        E:egpFont(85,CFG["system_font_2",string],12)
+        E:egpColor(85,CL["black",vector])
+        E:egpAlign(85,1,1)
+        
+        E:egpBox(86,vec2(26+44*2,164),vec2(40,30))
+        E:egpColor(86,CL["white",vector])
+        E:egpTextLayout(87,"AUTOSTOP\n00:00:00",vec2(26+44*2,164),vec2(40,30))
+        E:egpFont(87,CFG["system_font_2",string],10)
+        E:egpColor(87,CL["black",vector])
+        E:egpAlign(87,1,1)
+        
+        E:egpBox(88,vec2(26+44*3,164),vec2(40,30))
+        E:egpColor(88,CL["white",vector])
+        E:egpTextLayout(89,"SAND",vec2(26+44*3,164),vec2(40,30))
+        E:egpFont(89,CFG["system_font_2",string],12)
+        E:egpColor(89,CL["black",vector])
+        E:egpAlign(89,1,1)
+        
+        E:egpBox(90,vec2(256,164),vec2(60,30))
+        E:egpColor(90,CL["red",vector])
+        E:egpTextLayout(91,"ALERTER\n60",vec2(256,164),vec2(60,30))
+        E:egpFont(91,CFG["system_font_2",string],12)
+        E:egpColor(91,CL["black",vector])
+        E:egpAlign(91,1,1)
+        
+        E:egpBox(92,vec2(512-26-44*3,164),vec2(40,30))
+        E:egpColor(92,CL["yellow",vector])
+        E:egpTextLayout(93,"BRAKE\nWARN",vec2(512-26-44*3,164),vec2(40,30))
+        E:egpFont(93,CFG["system_font_2",string],12)
+        E:egpColor(93,CL["black",vector])
+        E:egpAlign(93,1,1)
+        
+        E:egpBox(94,vec2(512-26-44*2,164),vec2(40,30))
+        E:egpColor(94,CL["yellow",vector])
+        E:egpTextLayout(95,"UNIT\nALARM",vec2(512-26-44*2,164),vec2(40,30))
+        E:egpFont(95,CFG["system_font_2",string],12)
+        E:egpColor(95,CL["black",vector])
+        E:egpAlign(95,1,1)
+        
+        E:egpBox(96,vec2(512-26-44*1,164),vec2(40,30))
+        E:egpColor(96,CL["white",vector])
+        E:egpTextLayout(97,"EOT\nMOVE",vec2(512-26-44*1,164),vec2(40,30))
+        E:egpFont(97,CFG["system_font_2",string],12)
+        E:egpColor(97,CL["black",vector])
+        E:egpAlign(97,1,1)
+        
+        E:egpBox(98,vec2(512-26-44*0,164),vec2(40,30))
+        E:egpColor(98,CL["yellow",vector])
+        E:egpTextLayout(99,"LOW\nBATT",vec2(512-26-44*0,164),vec2(40,30))
+        E:egpFont(99,CFG["system_font_2",string],12)
+        E:egpColor(99,CL["black",vector])
+        E:egpAlign(99,1,1)
+        
+        #upper data
+        E:egpTextLayout(100,"00:00:00",vec2(58,8),vec2(100,16))
+        E:egpFont(100,"bahnschrift light",14)
+        E:egpColor(100,CL["lblue",vector])
+        E:egpAlign(100,0,0)
+        
+        E:egpTextLayout(101,"00/00/0000",vec2(130,8),vec2(100,16))
+        E:egpFont(101,"bahnschrift light",14)
+        E:egpColor(101,CL["lblue",vector])
+        E:egpAlign(101,0,0)
+        
+        E:egpTriangle(102,vec2(360,2),vec2(360-5,12),vec2(360+5,12))
+        E:egpColor(102,CL["blue",vector])
+        
+        E:egpTriangleOutline(103,vec2(360,2),vec2(360-5,12),vec2(360+5,12))
+        E:egpColor(103,CL["lblue",vector])
+        
+        E:egpTextLayout(104,"0 ft",vec2(424,8),vec2(100,16))
+        E:egpFont(104,CFG["system_font",string],14)
+        E:egpColor(104,CL["white",vector])
+        E:egpAlign(104,0,0)
+        
+        
+        E:egpTextLayout(105,format("%s  %01d",CFG["railroad",string],Num:toNumber()),vec2(452,8),vec2(100,16))
+        E:egpFont(105,"bahnschrift light",14)
+        E:egpColor(105,CL["lblue",vector])
+        E:egpAlign(105,2,0)
+        
+        #crew message & page
+        E:egpBoxOutline(106,vec2(256,426),vec2(504,44))
+        E:egpColor(106,CL["white",vector])
+        E:egpBoxOutline(107,vec2(256+252-25,426-11),vec2(50,22))
+        E:egpColor(107,CL["white",vector])
+        E:egpBoxOutline(108,vec2(256+252-25,426+11),vec2(50,22))
+        E:egpColor(108,CL["white",vector])
+        
+        E:egpTextLayout(109,"Ready",vec2(256,426),vec2(496,28))
+        E:egpFont(109,"bahnschrift light",14)
+        E:egpColor(109,CL["white",vector])
+        E:egpAlign(109,0,2)
+        
+        E:egpTextLayout(110,"L1",vec2(256+252-25,426-11),vec2(50,22))
+        E:egpFont(110,"bahnschrift light",14)
+        E:egpColor(110,CL["lblue",vector])
+        E:egpAlign(110,1,1)
+        E:egpTextLayout(111,"0000-0",vec2(256+252-25,426+11),vec2(50,22))
+        E:egpFont(111,"bahnschrift light",14)
+        E:egpColor(111,CL["lblue",vector])
+        E:egpAlign(111,1,1)
+        
+        switch(PG[SC,table][1,number]){
+            case 0, #main page
+                E:labeledBox(112, vec2(64,260), vec2(120,30), "Rail Cleaner", 12, -10, CL["white",vector])
+                E:egpTextLayout(115,"Suspend",vec2(64,260),vec2(120,30))
+                E:egpFont(115,CFG["system_font_2",string],12)
+                E:egpColor(115,CL["white",vector])
+                E:egpAlign(115,1,1)
+                
+                E:labeledBox(116, vec2(64,320), vec2(120,70), "EOT", 12, 0, CL["white",vector])
+                E:egpTextLayout(119,"ID Code: 00000",vec2(64,320-20),vec2(120,90))
+                E:egpFont(119,CFG["system_font_2",string],12)
+                E:egpColor(119,CL["white",vector])
+                E:egpAlign(119,1,1)
+                E:egpTextLayout(120,"Marker: On",vec2(64,320),vec2(120,90))
+                E:egpFont(120,CFG["system_font_2",string],12)
+                E:egpColor(120,CL["white",vector])
+                E:egpAlign(120,1,1)
+                E:egpTextLayout(121,"EM: Enabled",vec2(64,320+20),vec2(120,90))
+                E:egpFont(121,CFG["system_font_2",string],12)
+                E:egpColor(121,CL["white",vector])
+                E:egpAlign(121,1,1)
+                
+                E:labeledBox(122, vec2(64-31,380), vec2(58,30), "Ind Brk", 12, 0, CL["yellow",vector])
+                E:egpTextLayout(125,"Trail",vec2(64-31,380),vec2(58,30))
+                E:egpFont(125,CFG["system_font_2",string],14)
+                E:egpColor(125,CL["yellow",vector])
+                E:egpAlign(125,1,1)
+                
+                E:labeledBox(126, vec2(64+31,380), vec2(58,30), "Auto Brk", 12, 0, CL["yellow",vector])
+                E:egpTextLayout(129,"Cut Out",vec2(64+31,380),vec2(58,30))
+                E:egpFont(129,CFG["system_font_2",string],14)
+                E:egpColor(129,CL["yellow",vector])
+                E:egpAlign(129,1,1)
+                
+                E:buttonGenerate(table("Air\nBrake","End Of\nTrain\0","","Distributed\nPower\0","Operator\nMessages\0","Speed\nControl\0","Switches\0","","Distance\nStart","Distance\nSetup","Auto\nStart/Stop\0","","Trip\nOptimizer\0","Rail\nCleaner\0","Screen\nControls\0","More\nMenu\0"))
+            break
+            case 1, #air brakes
+                switch(PG[SC,table][2,number]){
+                    case 0,
+                        E:egpBoxOutline(112,vec2(256,250),vec2(480,32))
+                        E:egpColor(112,CL["white",vector])
+                        
+                        E:egpTextLayout(113,"Electronic Air Brake Data",vec2(256,250),vec2(480,32))
+                        E:egpFont(113,CFG["system_font_2",string],18)
+                        E:egpColor(113,CL["white",vector])
+                        E:egpAlign(113,1,1)
+                        
+                        E:labeledBox(114, vec2(90,300), vec2(120,50), "Feed Valve Setting", 12, 0, CL["white",vector])
+                        E:egpTextLayout(117,"90",vec2(90,300),vec2(120,50))
+                        E:egpFont(117,CFG["system_font_2",string],20)
+                        E:egpColor(117,CL["white",vector])
+                        E:egpAlign(117,1,1)
+                        E:labeledBox(118, vec2(90+130,300), vec2(120,50), "Automatic Brake", 12, 0, CL["white",vector])
+                        E:egpTextLayout(121,"Cut-Out",vec2(90+130,300),vec2(120,50))
+                        E:egpFont(121,CFG["system_font_2",string],20)
+                        E:egpColor(121,CL["white",vector])
+                        E:egpAlign(121,1,1)
+                        E:labeledBox(122, vec2(90+260,300), vec2(120,50), "Independent Brake", 12, 0, CL["white",vector])
+                        E:egpTextLayout(125,"Trail",vec2(90+260,300),vec2(120,50))
+                        E:egpFont(125,CFG["system_font_2",string],20)
+                        E:egpColor(125,CL["white",vector])
+                        E:egpAlign(125,1,1)
+                        
+                        E:egpTextLayout(126,"Current\nSetup",vec2(90+365,300),vec2(120,50))
+                        E:egpFont(126,CFG["system_font_2",string],18)
+                        E:egpColor(126,CL["white",vector])
+                        E:egpAlign(126,1,1)
+                        
+                        
+                    
+                        E:buttonGenerate(table("","","Change\nSetup","","","","","Exit"))
+                    break
+                    case 1,
+                        E:egpBoxOutline(112,vec2(256,250),vec2(480,32))
+                        E:egpColor(112,CL["white",vector])
+                        
+                        E:egpTextLayout(113,"Electronic Air Brake Data",vec2(256,250),vec2(480,32))
+                        E:egpFont(113,CFG["system_font_2",string],18)
+                        E:egpColor(113,CL["white",vector])
+                        E:egpAlign(113,1,1)
+                        
+                        E:labeledBox(114, vec2(90,300), vec2(120,50), "Feed Valve Setting", 12, 0, CL["white",vector])
+                        E:egpTextLayout(117,"90",vec2(90,300),vec2(120,50))
+                        E:egpFont(117,CFG["system_font_2",string],20)
+                        E:egpColor(117,CL["white",vector])
+                        E:egpAlign(117,1,1)
+                        E:labeledBox(118, vec2(90+130,300), vec2(120,50), "Automatic Brake", 12, 0, CL["white",vector])
+                        E:egpTextLayout(121,"Cut-Out",vec2(90+130,300),vec2(120,50))
+                        E:egpFont(121,CFG["system_font_2",string],20)
+                        E:egpColor(121,CL["white",vector])
+                        E:egpAlign(121,1,1)
+                        E:labeledBox(122, vec2(90+260,300), vec2(120,50), "Independent Brake", 12, 0, CL["white",vector])
+                        E:egpTextLayout(125,"Trail",vec2(90+260,300),vec2(120,50))
+                        E:egpFont(125,CFG["system_font_2",string],20)
+                        E:egpColor(125,CL["white",vector])
+                        E:egpAlign(125,1,1)
+                        
+                        E:egpTextLayout(126,"Current\nSetup",vec2(90+365,300),vec2(120,50))
+                        E:egpFont(126,CFG["system_font_2",string],18)
+                        E:egpColor(126,CL["white",vector])
+                        E:egpAlign(126,1,1)
+                        
+                        
+                        E:labeledBox(127, vec2(90,360), vec2(120,50), "Feed Valve Setting", 12, 0, CL["white",vector])
+                        E:egpTextLayout(130,"90",vec2(90,360),vec2(120,50))
+                        E:egpFont(130,CFG["system_font_2",string],20)
+                        E:egpColor(130,CL["white",vector])
+                        E:egpAlign(130,1,1)
+                        E:labeledBox(131, vec2(90+130,360), vec2(120,50), "Automatic Brake", 12, 0, CL["white",vector])
+                        E:egpTextLayout(134,"Cut-Out",vec2(90+130,360),vec2(120,50))
+                        E:egpFont(134,CFG["system_font_2",string],20)
+                        E:egpColor(134,CL["white",vector])
+                        E:egpAlign(134,1,1)
+                        E:labeledBox(135, vec2(90+260,360), vec2(120,50), "Independent Brake", 12, 0, CL["white",vector])
+                        E:egpTextLayout(138,"Trail",vec2(90+260,360),vec2(120,50))
+                        E:egpFont(138,CFG["system_font_2",string],20)
+                        E:egpColor(138,CL["white",vector])
+                        E:egpAlign(138,1,1)
+                        
+                        E:egpTextLayout(139,"New\nSetup",vec2(90+365,360),vec2(120,50))
+                        E:egpFont(139,CFG["system_font_2",string],18)
+                        E:egpColor(139,CL["white",vector])
+                        E:egpAlign(139,1,1)
+                    
+                        E:buttonGenerate(table("Increase","Decrease","Cut-In/Out","Lead/Trail","","Apply\nChanges","","Exit"))
+                    break
+                }
+            break
+            case 7, #distance setup
+                switch(PG[SC,table][2,number]){
+                    case 0,
+                        E:egpBoxOutline(112,vec2(256,250),vec2(480,32))
+                        E:egpColor(112,CL["white",vector])
+                                
+                        E:egpTextLayout(113,"Distance Counter Setup",vec2(256,250),vec2(480,32))
+                        E:egpFont(113,CFG["system_font_2",string],18)
+                        E:egpColor(113,CL["white",vector])
+                        E:egpAlign(113,1,1)
+                        
+                        E:labeledBox(127, vec2(110,340), vec2(150,60), "Distance Counter Preset", 12, 0, CL["white",vector])
+                        E:egpTextLayout(130,"00000",vec2(110,340),vec2(150,60))
+                        E:egpFont(130,"Lucida Sans Unicode",36)
+                        E:egpColor(130,CL["white",vector])
+                        E:egpAlign(130,1,1)
+                        
+                        E:labeledBox(132, vec2(512-120,340), vec2(170,80), "Distance Counter Mode", 12, 0, CL["white",vector])
+                        
+                        E:egpBox(135,vec2(512-120,340-16),vec2(160,18))
+                        E:egpColor(135,CL["blue",vector])
+                        E:egpTextLayout(136,"Count Up From Zero",vec2(512-120,340-16),vec2(170,60))
+                        E:egpFont(136,CFG["system_font_2",string],16)
+                        E:egpColor(136,CL["white",vector])
+                        E:egpAlign(136,1,1)
+                        E:egpTextLayout(137,"Count Down From Preset",vec2(512-120,340+16),vec2(170,60))
+                        E:egpFont(137,CFG["system_font_2",string],16)
+                        E:egpColor(137,CL["white",vector])
+                        E:egpAlign(137,1,1)
+                        
+                        E:buttonGenerate(table("","","","Change\nPreset","Distance\nStart","Change\nMode","","Exit"))
+                        
+                    break
+                    case 1,
+                        E:egpBoxOutline(112,vec2(256,250),vec2(480,32))
+                        E:egpColor(112,CL["white",vector])
+                                
+                        E:egpTextLayout(113,"Distance Counter Setup",vec2(256,250),vec2(480,32))
+                        E:egpFont(113,CFG["system_font_2",string],18)
+                        E:egpColor(113,CL["white",vector])
+                        E:egpAlign(113,1,1)
+                        
+                        E:labeledBox(127, vec2(110,340), vec2(150,60), "Distance Counter Preset", 12, 0, CL["white",vector])
+                        E:egpBox(130,vec2(110-34,340),vec2(16,30))
+                        E:egpColor(130,CL["blue",vector])
+                        E:egpTextLayout(131,"00000",vec2(110,340),vec2(150,60))
+                        E:egpFont(131,"Lucida Sans Unicode",36)
+                        E:egpColor(131,CL["white",vector])
+                        E:egpAlign(131,1,1)
+                        
+                        
+                        E:labeledBox(132, vec2(512-120,340), vec2(170,80), "Distance Counter Mode", 12, 0, CL["white",vector])
+                        E:egpBox(135,vec2(512-120,340-16),vec2(160,18))
+                        E:egpColor(135,CL["blue",vector])
+                        E:egpTextLayout(136,"Count Up From Zero",vec2(512-120,340-16),vec2(170,60))
+                        E:egpFont(136,CFG["system_font_2",string],16)
+                        E:egpColor(136,CL["white",vector])
+                        E:egpAlign(136,1,1)
+                        E:egpTextLayout(137,"Count Down From Preset",vec2(512-120,340+16),vec2(170,60))
+                        E:egpFont(137,CFG["system_font_2",string],16)
+                        E:egpColor(137,CL["white",vector])
+                        E:egpAlign(137,1,1)
+                        
+                        E:buttonGenerate(table("","","","Back\nSpace","","","Save\nPreset","Exit","NUM_ROW"))
+                    break
+                }
+            break
+        }
+        
+        
+    }
+    
+    function void pageHandler(SC:string,K:string,D:number,ALT:number){
+        if(K==CFG["alerter_reset_key",string]&D){
+            ALERT_TIME=CFG["alerter_reset_time",number]
+        }
+        if(K=="0"|K=="1"|K=="2"|K=="3"|K=="4"|K=="5"|K=="6"|K=="7"|K=="8"|K=="9"){
+            
+            #sounds
+            if(SC=="left"&D){
+                EGPL:entity():soundPlay("key",1,"monkssounds/buttons/button32_push.wav")
+                soundPitch("key",120)
+                soundVolume("key",0.5)
+            }
+            if(SC=="left"&!D){
+                EGPL:entity():soundPlay("key",1,"monkssounds/buttons/button32_release.wav")
+                soundPitch("key",120)
+                soundVolume("key",0.5)
+            }
+            
+            
+            if(SC=="right"&D){
+                EGPR:entity():soundPlay("key",1,"monkssounds/buttons/button32_push.wav")
+                soundPitch("key",120)
+                soundVolume("key",0.5)
+            }
+            if(SC=="right"&!D){
+                EGPR:entity():soundPlay("key",1,"monkssounds/buttons/button32_release.wav")
+                soundPitch("key",120)
+                soundVolume("key",0.5)
+            }
+            switch(PG[SC,table][1,number]){
+                case 0, #main page
+                    if(!ALT&K=="1"&D){
+                        PG[SC,table][1,number]=1
+                    }
+                    #v1 users don't look, you don't want to see these pages
+                    #[
+                    if(!ALT&K=="2"&D){
+                        PG[SC,table][1,number]=2
+                    }
+                    if(!ALT&K=="4"&D){
+                        PG[SC,table][1,number]=3
+                    }
+                    if(!ALT&K=="5"&D){
+                        PG[SC,table][1,number]=4
+                    }
+                    if(!ALT&K=="6"&D){
+                        PG[SC,table][1,number]=5
+                    }
+                    if(!ALT&K=="7"&D){
+                        PG[SC,table][1,number]=6
+                    }
+                    ]#
+                    if(ALT&K=="2"&D){
+                        PG[SC,table][1,number]=7
+                    }
+                    
+                            if(ALT&K=="1"&D){
+                                switch(DIST_BTN){
+                                    case 0,
+                                        DIST_ON=1
+                                    break
+                                    case 1,
+                                        DIST_ON=0
+                                    break
+                                    case 2,
+                                        DIST_ON=0
+                                        DIST=DIST_MODE ? DISTP_S:toNumber() : 0
+                                    break
+                                }
+                                
+                                DIST_BTN++
+                                DIST_BTN = (DIST_BTN>2 ? DIST_BTN-3 : DIST_BTN)
+                                
+                            }
+                break
+                case 1, #air brakes
+                    switch(PG[SC,table][2,number]){
+                        case 0, #data
+                            if(!ALT&K=="3"&D){
+                                PG[SC,table][2,number]=1
+                                
+                                NFEEDPSI=FEEDPSI
+                                NMU2A=MU2A
+                                NBCI=BCI
+                            }
+                            if(!ALT&K=="8"&D){
+                                PG[SC,table][1,number]=0
+                            }
+                        break
+                        case 1, #setup
+                            
+                            if(!ALT&K=="1"&D){
+                                NFEEDPSI+=5
+                            }
+                            if(!ALT&K=="2"&D){
+                                NFEEDPSI-=5
+                            }
+                            if(!ALT&K=="3"&D){
+                                NBCI=!NBCI
+                            }
+                            if(!ALT&K=="4"&D){
+                                NMU2A=!NMU2A
+                            }
+                            NFEEDPSI=clamp(NFEEDPSI,80,110)
+                            
+                            if(!ALT&K=="6"&D){
+                                BCI=NBCI
+                                MU2A=NMU2A
+                                FEEDPSI=NFEEDPSI
+                            }
+                            if(!ALT&K=="8"&D){
+                                PG[SC,table][1,number]=0
+                                PG[SC,table][2,number]=0
+                            }
+                        break
+                    }
+                break
+                case 7, #distance setup
+                    switch(PG[SC,table][2,number]){
+                        case 0, #main page
+                            if(!ALT&K=="4"&D){
+                                PG[SC,table][2,number]=1
+                                DISTP_SEL=0
+                                DISTP_T=table(0,0,0,0,0)
+                            }
+                            if(!ALT&K=="5"&D){
+                                switch(DIST_BTN){
+                                    case 0,
+                                        DIST_ON=1
+                                    break
+                                    case 1,
+                                        DIST_ON=0
+                                    break
+                                    case 2,
+                                        DIST_ON=0
+                                        DIST=DIST_MODE ? DISTP_S:toNumber() : 0
+                                    break
+                                }
+                                
+                                DIST_BTN++
+                                DIST_BTN = (DIST_BTN>2 ? DIST_BTN-3 : DIST_BTN)
+                                
+                            }
+                            if(!ALT&K=="6"&D){
+                                DIST_MODE=!DIST_MODE
+                                DIST_ON=0
+                                DIST=DIST_MODE ? DISTP_S:toNumber() : 0
+                                DIST_BTN=0
+                            }
+                            if(!ALT&K=="8"&D){
+                                PG[SC,table][1,number]=0
+                            }
+                        break
+                        case 1, #counter preset
+                            if(!ALT&K=="4"&D){
+                                DISTP_T[DISTP_SEL,number]=0
+                                DISTP_SEL--
+                            }
+                            if(!ALT&K=="7"&D){
+                                DISTP_S=format("%s%s%s%s%s",DISTP_T[1,number],DISTP_T[2,number],DISTP_T[3,number],DISTP_T[4,number],DISTP_T[5,number])
+                                PG[SC,table][2,number]=0
+                            }
+                            if(!ALT&K=="8"&D){
+                                PG[SC,table][2,number]=0
+                            }
+                            if(ALT&D){
+                                DISTP_T[DISTP_SEL+1,number] = K:toNumber()
+                                DISTP_SEL++
+                            }
+                            DISTP_SEL=clamp(DISTP_SEL,0,5)
+                        break
+                    }
+                break
+            }
+        }
+    }
+    
+    function void wirelink:mainUpdate(SC:string){
+        local E=This
+        
+        
+        
+        local RL=RLCPT:wirelink()
+        local SD=CtlTable:clone()
+        
+        
+        #speedometer
+        local SpeedAngle=-15+(RL["MPH",number]/80)*210
+        E:egpTriangle(8,vec2(256-cos(SpeedAngle)*54,90-sin(SpeedAngle)*74),vec2(256+sin(SpeedAngle)*3.5,90-cos(SpeedAngle)*4),vec2(256-sin(SpeedAngle)*3.5,90+cos(SpeedAngle)*4))
+        E:egpColor(8,CL["white",vector])
+        
+        E:egpSetText(26,round(RL["MPH",number],2)<10 ? format("%.02f",RL["MPH",number]) : format("%.01f",RL["MPH",number]))
+        
+        #brake gauges
+        E:egpSetText(40,format("%01d",RL["EqualRes",number]))
+        E:egpSetText(44,format("%01d",RL["BrakePipe",number]))
+        E:egpSetText(48,format("%01d",RL["BrakePipe",number]))
+        E:egpSetText(52,format("%01d",RL["CFM",number]))
+        E:egpSetText(56,format("%01d",RL["MainRes",number]))
+        E:egpSetText(60,format("%01d",RL["Cyl",number]))
+        
+        #loadmeter
+        E:egpSetText(73,format("%01d",RL["TE_LBF",number]/1000))
+        if(!SD["SetDynamics",number]){
+            E:egpBox(75,vec2(404-29+clamp(RL["TE_LBF",number]/CFG["max_te",number],0,1000)*0.029,119),vec2(60-59+clamp(RL["TE_LBF",number]/CFG["max_te",number],0,1000)*0.058,8))
+            E:egpSetText(77,format("%01d",CFG["max_te",number]))
+            
+            E:egpColor(70,CL["green",vector])
+            E:egpColor(72,CL["green",vector])
+            E:egpColor(73,CL["green",vector])
+            E:egpColor(75,CL["green",vector])
+            
+        }
+        else{
+            E:egpBox(75,vec2(404-29+clamp(RL["TE_LBF",number]/CFG["max_de",number],0,1000)*0.029,119),vec2(60-59+clamp(RL["TE_LBF",number]/CFG["max_de",number],0,1000)*0.058,8))
+            E:egpSetText(77,format("%01d",CFG["max_de",number]))
+            
+            E:egpColor(70,CL["yellow",vector])
+            E:egpColor(72,CL["yellow",vector])
+            E:egpColor(73,CL["yellow",vector])
+            E:egpColor(75,CL["yellow",vector])
+        }
+        
+        #controls
+        E:egpSetText(69,select(SD["SetReverser",number]+2,"Rev","Cntr","Fwd"))
+        if(!SD["SetDynamics",number]){
+            E:egpSetText(81,(SD["SetThrottle",number]/12.5)<1 ? "Idle" : format("N%01d",(SD["SetThrottle",number]/12.5)))
+            E:egpColor(78,CL["green",vector])
+            E:egpColor(80,CL["green",vector])
+            E:egpColor(81,CL["green",vector])
+        }
+        else{
+            E:egpSetText(81,SD["SetDynamics",number]<12 ? "Set" : format("D%01d",SD["SetDynamics",number]/12.5))
+            E:egpColor(78,CL["yellow",vector])
+            E:egpColor(80,CL["yellow",vector])
+            E:egpColor(81,CL["yellow",vector])
+        }
+        
+        #indicators
+        E:egpColor(82,RL["WheelSlip",number] ? CL["white",vector] : CL["black",vector])
+        E:egpColor(84,RL["Emergency",number] ? CL["red",vector] : CL["black",vector])
+        E:egpColor(86,CL["black",vector])
+        E:egpColor(88,RL["ForceSand",number] ? CL["white",vector] : CL["black",vector])
+        
+        E:egpColor(92,RL["BrakeWarn",number] ? CL["yellow",vector] : CL["black",vector])
+        E:egpColor(94,CL["black",vector])
+        E:egpColor(96,RL["MPH",number]>2 ? CL["white",vector] : CL["black",vector])
+        E:egpColor(98,CL["black",vector])
+        
+        if(CFG["alerter_reset_time",number]){
+            if(inrange(ALERT_TIME,20,25)){
+                ALERT_IND=round(ALERT_TIME*2-1,0)%2
+            }
+            elseif(ALERT_TIME<20){
+                ALERT_IND=1
+            }
+            else{
+                ALERT_IND=0
+            }
+            
+            if(changed(ALERT_TIME<20)&(ALERT_TIME<20)){
+                This:entity():soundPlay("alert"+SC,0,"gsgtrainsounds/misc/airbrakes/deadman_ge.wav")
+            }
+            elseif(!(ALERT_TIME<20)|(ALERT_TIME==0)){
+                soundStop("alert"+SC)
+            }
+            E:egpColor(90,ALERT_IND ? CL["red",vector] : CL["black",vector])
+            E:egpSetText(91,format("ALERTER\n%01d",ALERT_TIME))
+        }
+        else{
+            E:egpColor(90,CL["black",vector])
+            E:egpSetText(91,format("ALERTER\n%01d",0))
+        }
+        
+        #upper data
+        E:egpSetText(100,format("%02d:%02d:%02d",time("hour"),time("min"),time("sec")))
+        
+        E:egpSetText(101,format("%02d/%02d/%04d",time("month"),time("day"),time("year")))
+        
+        
+        
+        #distance stuff
+        E:egpTriangle(102,vec2(360,2+DIST_MODE*10),vec2(360-5,12-DIST_MODE*10),vec2(360+5,12-DIST_MODE*10))
+        E:egpColor(102,CL["blue",vector])
+        
+        E:egpTriangleOutline(103,vec2(360,2+DIST_MODE*10),vec2(360-5,12-DIST_MODE*10),vec2(360+5,12-DIST_MODE*10))
+        E:egpColor(103,CL["lblue",vector])
+        
+        E:egpSetText(104,format("%01d ft",DIST))
+        
+        
+        if(DIST_ON){
+            if(DIST_MODE){
+                DIST-=1.467*RL["MPH",number]*(1/3)
+                
+                DIST=clamp(DIST,0,DISTP_S:toNumber())
+            }
+            else{
+                DIST+=1.467*RL["MPH",number]*(1/3)
+                
+                DIST=max(DIST,0)
+            }
+        }
+        
+        
+        
+        #page data
+        E:egpSetText(111,format("%01d%01d%01d%01d-0",PG[SC,table][1,number],PG[SC,table][2,number],PG[SC,table][3,number],PG[SC,table][4,number]))
+        
+        
+        
+        #brake valves brake_pipe_cutout_valve
+        switch(PG[SC,table][1,number]){
+            case 0, #main menu
+                E:egpColor(122,MU2A ? CL["green",vector] : CL["yellow",vector])
+                E:egpColor(124,MU2A ? CL["green",vector] : CL["yellow",vector])
+                E:egpColor(125,MU2A ? CL["green",vector] : CL["yellow",vector])
+                E:egpSetText(125,select(MU2A+1,"Trail","Lead"))
+                E:egpColor(126,BCI ? CL["green",vector] : CL["yellow",vector])
+                E:egpColor(128,BCI ? CL["green",vector] : CL["yellow",vector])
+                E:egpColor(129,BCI ? CL["green",vector] : CL["yellow",vector])
+                E:egpSetText(129,select(BCI+1,"Cut Out","Freight","Passenger"))
+                
+                E:egpSetText(285,select(DIST_BTN+1,"Distance\nStart","Distance\nStop","Distance\nReset"))
+            break
+            case 1, #air brake
+                switch(PG[SC,table][2,number]){
+                    case 0,
+                        E:egpSetText(117,format("%01d",FEEDPSI))
+                        E:egpSetText(121,BCI ? "Freight" : "Cut-Out")
+                        E:egpSetText(125,MU2A ? "Lead" : "Trail")
+                    break
+                    case 1,
+                        E:egpSetText(117,format("%01d",FEEDPSI))
+                        E:egpSetText(121,BCI ? "Freight" : "Cut-Out")
+                        E:egpSetText(125,MU2A ? "Lead" : "Trail")
+                        
+                        E:egpSetText(130,format("%01d",NFEEDPSI))
+                        E:egpSetText(134,NBCI ? "Freight" : "Cut-Out")
+                        E:egpSetText(138,NMU2A ? "Lead" : "Trail")
+                    break
+                }
+            break
+            case 7, #distance setup
+                switch(PG[SC,table][2,number]){
+                    case 0,
+                        DISTP = DISTP_S:toNumber()
+                        E:egpSetText(130,format("%01d",DISTP))
+                        
+                        E:egpPos(135,vec2(512-120,340-16+DIST_MODE*32))
+                        
+                        E:egpSetText(277,select(DIST_BTN+1,"Distance\nStart","Distance\nStop","Distance\nReset"))
+                    break
+                    case 1,
+                        E:egpPos(130,vec2(110-38+(19*DISTP_SEL),340))
+                        E:egpAlpha(130,(DISTP_SEL<5)*255)
+                        DISTP = DISTP_S:toNumber()
+                        E:egpSetText(131,format("%s",format("%s%s%s%s%s",DISTP_T[1,number],DISTP_T[2,number],DISTP_T[3,number],DISTP_T[4,number],DISTP_T[5,number])))
+                        
+                        E:egpPos(135,vec2(512-120,340-16+DIST_MODE*32))
+                        
+                    break
+                }
+            break
+        }
+    }
+    
+    function void main(){
+        
+        local RL=RLCPT:wirelink()
+        
+        EGPL:egpBox(1,vec2(256),vec2(512))
+        EGPL:egpColor(1,CL["black",vector]*(Battery>0))
+        EGPL:egpOrder(1,1)
+            
+        EGPR:egpBox(1,vec2(256),vec2(512))
+        EGPR:egpColor(1,CL["black",vector]*(Battery>0))
+        EGPR:egpOrder(1,1)
+
+        
+        
+        #alerter
+        if(CFG["alerter_reset_time",number]!=0){
+            if(RL["MPH",number]>2){
+                ALERT_TIME-=(1/3)
+            }
+            else{
+                ALERT_TIME=CFG["alerter_reset_time",number]
+            }
+            ALERT_TIME=clamp(ALERT_TIME,0,CFG["alerter_reset_time",number])
+            
+            EmBrake=ALERT_TIME==0
+        }
+        
+        
+        if(changed(PG["left",table][1,number]+PG["left",table][2,number]+PG["left",table][3,number])&FullBoot){
+            
+            
+            
+            EGPL:mainGenerate("left")
+            
+            EGPL:egpBox(1,vec2(256),vec2(512))
+            EGPL:egpColor(1,CL["black",vector]*(Battery>0))
+            EGPL:egpOrder(1,1)
+        }
+        if(changed(PG["right",table][1,number]+PG["right",table][2,number]+PG["right",table][3,number])&FullBoot){
+            
+            
+            
+            EGPR:mainGenerate("right")
+            
+            EGPR:egpBox(1,vec2(256),vec2(512))
+            EGPR:egpColor(1,CL["black",vector]*(Battery>0))
+            EGPR:egpOrder(1,1)
+        }
+        
+        if(FullBoot){
+            if(->EGPL){
+                EGPL:mainUpdate("left")
+            }
+            if(->EGPR){
+                EGPR:mainUpdate("right")
+            }
+        }
+        
+        
+        
+        
+    }
+    
+    
+}
+if(first()|dupefinished()){
+    
+    
+    EGPL:egpClear()
+    EGPR:egpClear()
+    
+    Run=1
+}
+if(Run){
+    if(!timerExists("clk")){
+        timer("clk",(1/3),function(){
+            if(Booted){
+                main()
+            }
+            timerRestart("clk")
+        }
+        )
+    }
+    if(!timerExists("fast")){
+        timer("fast",(1/9),function(){
+            
+            
+            
+            if(changed(Battery>0)){
+                EGPL:egpClear()
+                EGPR:egpClear()
+                
+                BOOT_DATA["sequence",number]=0
+            
+                FullBoot=0
+            }
+            
+            if(!Booted&Battery){
+                if(!CFG["skip_boot",number]){
+                    Booted=EGPL:w11Bootup(2,BOOT_DATA)
+                }
+                else{
+                    Booted=1
+                }
+            }
+            if(!Battery){
+                Booted=0
+                EGPL:egpClear()
+                EGPR:egpClear()
+                
+            }
+            
+            if(changed(Booted>0)&Booted){
+                FullBoot=0
+                
+                EGPL:egpClear()
+                EGPL:mainGenerate("left")
+                
+                timer("bootdelay",0.4,function(){
+                    EGPR:egpClear()
+                    EGPR:mainGenerate("right")
+                    
+                    FullBoot=1
+                })
+            }
+            
+            
+            timerRestart("fast")
+        }
+        )
+    }
+}
+event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
+    if(Player==Driver){
+        if(Key=="lalt"){
+            AltHold=Down
+        }
+        if(Key=="lshift"){
+            ShiftHold=Down
+        }
+        if(!ShiftHold){
+            pageHandler("left",Key,Down,AltHold)
+        }
+        else{
+            pageHandler("right",Key,Down,AltHold)
+        }
+    }
+}
