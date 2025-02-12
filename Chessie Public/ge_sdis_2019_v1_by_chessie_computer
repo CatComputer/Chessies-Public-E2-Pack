@@ -1063,7 +1063,7 @@ if(first()|duped()){
         
         #alerter
         if(CFG["alerter_reset_time",number]!=0){
-            if(RL["MPH",number]>2){
+            if((RL["MPH",number]>2)&(Driver)){
                 ALERT_TIME-=(1/3)
             }
             else{
