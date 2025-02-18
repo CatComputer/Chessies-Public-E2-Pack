@@ -1,5 +1,5 @@
 @name GE SDIS 2019 V1 by Chessie Computer
-@inputs EGPL:wirelink EGPR:wirelink Battery RLCPT:entity CtlTable:table Driver:entity Num:string
+@inputs EGPL:wirelink EGPR:wirelink Battery RLCPT:entity CtlTable:table Driver:entity Num:string Horn Bell
 @outputs BCI MU2A FEEDPSI EmBrake
 #general
 @persist Run CL:table CFG:table PG:table BOOT_DATA:table Booted FullBoot ALERT_TIME
@@ -45,6 +45,9 @@ if(first()|duped()){
     CFG = table(
     "railroad" = "RKRR",
     
+    "timezone" = -5, #sets the timezone offset from UTC
+    "daylight_savings" = 1, #if your location adheres to daylight savings, turn this on
+    
     "max_te" = 180,
     "max_de" = 100,
     
@@ -69,6 +72,7 @@ if(first()|duped()){
     v0.22: air brake data/setup as well as distance functions complete
     v0.23: alertor
     v0.25: public release
+    v0.26: changes made to alerter functionality and added horn/bell indicators
     
     ]#
     
@@ -105,7 +109,7 @@ if(first()|duped()){
     EmBrake=0
     
     
-    setName("General Electric Company 2019 SDIS Displays V1\nVersion 0.23 - Chessie Computer\nPublic Use Version")
+    setName("General Electric Company 2019 SDIS Displays V1\nVersion 0.26 - Chessie Computer\nPublic Use Version")
     
     function void wirelink:labeledBox(INDEX:number, POS:vector2, SCALE:vector2, TITLE:string, TITLE_SIZE:number, TITLE_SPACE:number, COLOR:vector){
         local E=This
@@ -480,6 +484,8 @@ if(first()|duped()){
         E:egpColor(111,CL["lblue",vector])
         E:egpAlign(111,1,1)
         
+        
+        
         switch(PG[SC,table][1,number]){
             case 0, #main page
                 E:labeledBox(112, vec2(64,260), vec2(120,30), "Rail Cleaner", 12, -10, CL["white",vector])
@@ -513,6 +519,28 @@ if(first()|duped()){
                 E:egpFont(129,CFG["system_font_2",string],14)
                 E:egpColor(129,CL["yellow",vector])
                 E:egpAlign(129,1,1)
+                
+                E:egpCircleOutline(130,vec2(280,200),vec2(9,6))
+                E:egpColor(130,CL["blue",vector])
+                E:egpSize(130,2)
+                E:egpBox(131,vec2(280,200-6),vec2(24,2))
+                E:egpColor(131,CL["blue",vector])
+                E:egpCircle(132,vec2(280+12,200-6),vec2(2,2))
+                E:egpColor(132,CL["blue",vector])
+                E:egpCircle(133,vec2(280-12,200-6),vec2(2,6))
+                E:egpColor(133,CL["blue",vector])
+                
+                E:egpCircleOutline(134,vec2(320,200),vec2(6,10))
+                E:egpColor(134,CL["blue",vector])
+                E:egpSize(134,2)
+                E:egpBox(135,vec2(320,200+8),vec2(12,8))
+                E:egpColor(135,CL["black",vector])
+                E:egpSize(135,2)
+                E:egpCircleOutline(136,vec2(320,200+5),vec2(7,3))
+                E:egpColor(136,CL["blue",vector])
+                E:egpSize(136,2)
+                E:egpCircle(137,vec2(320,200-11),vec2(2,2))
+                E:egpColor(137,CL["blue",vector])
                 
                 E:buttonGenerate(table("Air\nBrake","End Of\nTrain\0","","Distributed\nPower\0","Operator\nMessages\0","Speed\nControl\0","Switches\0","","Distance\nStart","Distance\nSetup","Auto\nStart/Stop\0","","Trip\nOptimizer\0","Rail\nCleaner\0","Screen\nControls\0","More\nMenu\0"))
             break
@@ -955,9 +983,12 @@ if(first()|duped()){
         }
         
         #upper data
-        E:egpSetText(100,format("%02d:%02d:%02d",time("hour"),time("min"),time("sec")))
+        local Epoch = time()+(CFG["timezone",number]+(date()["isdst",number]*(CFG["daylight_savings",number]>0)))*3600
+        local Time = date(Epoch)
         
-        E:egpSetText(101,format("%02d/%02d/%04d",time("month"),time("day"),time("year")))
+        E:egpSetText(100,format("%02d:%02d:%02d",Time["hour",number],Time["min",number],Time["sec",number]))
+        
+        E:egpSetText(101,format("%02d/%02d/%04d",Time["month",number],Time["day",number],Time["year",number]))
         
         
         
@@ -1002,6 +1033,18 @@ if(first()|duped()){
                 E:egpColor(128,BCI ? CL["green",vector] : CL["yellow",vector])
                 E:egpColor(129,BCI ? CL["green",vector] : CL["yellow",vector])
                 E:egpSetText(129,select(BCI+1,"Cut Out","Freight","Passenger"))
+                
+                E:egpAlpha(130,(Horn>0)*255)
+                E:egpAlpha(131,(Horn>0)*255)
+                E:egpAlpha(132,(Horn>0)*255)
+                E:egpAlpha(133,(Horn>0)*255)
+                
+                E:egpAlpha(134,(Bell>0)*255)
+                E:egpAlpha(135,(Bell>0)*255)
+                E:egpAlpha(136,(Bell>0)*255)
+                E:egpAlpha(137,(Bell>0)*255)
+
+
                 
                 E:egpSetText(285,select(DIST_BTN+1,"Distance\nStart","Distance\nStop","Distance\nReset"))
             break
@@ -1072,7 +1115,12 @@ if(first()|duped()){
             ALERT_TIME=clamp(ALERT_TIME,0,CFG["alerter_reset_time",number])
             
             EmBrake=ALERT_TIME==0
+            
+            if(changed(Horn>0)|changed(CtlTable["SetThrottle",number])|changed(CtlTable["SetDynamics",number])|changed(CtlTable["SetEqualRes",number])|changed(CtlTable["SetLocoBrakePressure",number])){
+                ALERT_TIME=CFG["alerter_reset_time",number]
+            }
         }
+        
         
         
         if(changed(PG["left",table][1,number]+PG["left",table][2,number]+PG["left",table][3,number])&FullBoot){
