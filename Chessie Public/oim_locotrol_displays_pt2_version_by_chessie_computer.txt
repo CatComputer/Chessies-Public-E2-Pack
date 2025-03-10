@@ -1,7 +1,7 @@
 @name OIM LOCOTROL Displays PT2 Version by Chessie Computer
-@inputs EGPMain:wirelink EGPSec:wirelink RLCPT:entity DP_DATA_BUS:table Driver:entity Num:string Battery
+@inputs EGPMain:wirelink EGPSec:wirelink RLCPT:entity CtlTable:table DP_DATA_BUS:table Driver:entity Num:string Battery
 @outputs DISPLAY_DATA_BUS:table BCI
-@persist NEW_EAB:table EAB_SETUP:table Run CL:table PG:table F:string F2:string Timezone DST ACTraction
+@persist NEW_EAB:table EAB_SETUP:table Run CL:table PG:table F:string F2:string Timezone DST ACTraction #ModernColors
 #distributed power
 @persist FencePos UnitList:table UnitDigit:table UnitSetDigit UnitDigit_S:string LeadUnitNumber DPRunning RemoteSel RemoteModes:table RemoteMode DPType TravelDir PowerBrake PBMode RemoteSand Unlink
 @trigger none
@@ -15,6 +15,8 @@ if(first()|duped()){
     Timezone=-5 #timezone offset from UTC
     DST=1 #does your timezone have daylight savings time
     ACTraction=0 #is your unit equipped with AC traction (otherwise it'll be DC)
+    
+    #ModernColors=0 #sets your LCD to be colored (this doesn't exist yet)
     
     #end of config
     
@@ -621,8 +623,8 @@ if(first()|duped()){
                     
                     #power
                     E:egpSetText(10,format("%01d",Num:toNumber()))
-                    E:egpSetText(40,format("%s",select(RLCPTW["Reverser",number]+2,"REV","CNTR","FWD")))
-                    E:egpSetText(45,format("%s",RLCPTW["Dynamics",number] ? select((clamp(RLCPTW["DynamicBrakingPower",number]-10,0,90))/11.25+1,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(RLCPTW["Notch",number]+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
+                    E:egpSetText(40,format("%s",select(CtlTable["SetReverser",number]+2,"REV","CNTR","FWD")))
+                    E:egpSetText(45,format("%s",CtlTable["SetDynamics",number] ? select((clamp(CtlTable["SetDynamics",number]-10,0,90))/11.25,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(CtlTable["SetThrottle",number]/12.5+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
                     E:egpSetText(50,format("%01d",ACTraction ? RLCPTW["TE_LBF",number]/1000 : abs(RLCPTW["Load1",number])))
                     
                     
@@ -644,8 +646,8 @@ if(first()|duped()){
                             
                             #power
                             E:egpSetText(10,format("%01d",Num:toNumber()))
-                            E:egpSetText(40,format("%s",select(RLCPTW["Reverser",number]+2,"REV","CNTR","FWD")))
-                            E:egpSetText(45,format("%s",RLCPTW["Dynamics",number] ? select((clamp(RLCPTW["DynamicBrakingPower",number]-10,0,90))/11.25+1,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(RLCPTW["Notch",number]+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
+                            E:egpSetText(40,format("%s",select(CtlTable["SetReverser",number]+2,"REV","CNTR","FWD")))
+                            E:egpSetText(45,format("%s",CtlTable["SetDynamics",number] ? select((clamp(CtlTable["SetDynamics",number]-10,0,90))/11.25,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(CtlTable["SetThrottle",number]/12.5+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
                             E:egpSetText(50,format("%01d",ACTraction ? RLCPTW["TE_LBF",number]/1000 : abs(RLCPTW["Load1",number])))
                             
                             
@@ -725,8 +727,8 @@ if(first()|duped()){
                             
                             #power
                             E:egpSetText(10,format("%01d",Num:toNumber()))
-                            E:egpSetText(40,format("%s",select(RLCPTW["Reverser",number]+2,"REV","CNTR","FWD")))
-                            E:egpSetText(45,format("%s",RLCPTW["Dynamics",number] ? select((clamp(RLCPTW["DynamicBrakingPower",number]-10,0,90))/11.25+1,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(RLCPTW["Notch",number]+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
+                            E:egpSetText(40,format("%s",select(CtlTable["SetReverser",number]+2,"REV","CNTR","FWD")))
+                            E:egpSetText(45,format("%s",CtlTable["SetDynamics",number] ? select((clamp(CtlTable["SetDynamics",number]-10,0,90))/11.25,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(CtlTable["SetThrottle",number]/12.5+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
                             E:egpSetText(50,format("%01d",ACTraction ? RLCPTW["TE_LBF",number]/1000 : abs(RLCPTW["Load1",number])))
                             
                             
@@ -794,8 +796,8 @@ if(first()|duped()){
                     
                     #power
                     E:egpSetText(10,format("%01d",Num:toNumber()))
-                    E:egpSetText(40,format("%s",select(RLCPTW["Reverser",number]+2,"REV","CNTR","FWD")))
-                    E:egpSetText(45,format("%s",RLCPTW["Dynamics",number] ? select((clamp(RLCPTW["DynamicBrakingPower",number]-10,0,90))/11.25,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(RLCPTW["Notch",number]+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
+                    E:egpSetText(40,format("%s",select(CtlTable["SetReverser",number]+2,"REV","CNTR","FWD")))
+                    E:egpSetText(45,format("%s",CtlTable["SetDynamics",number] ? select((clamp(CtlTable["SetDynamics",number]-10,0,90))/11.25+1,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(CtlTable["SetThrottle",number]/12.5+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
                     E:egpSetText(50,format("%01d",ACTraction ? RLCPTW["TE_LBF",number]/1000 : abs(RLCPTW["Load1",number])))
                     
                     
@@ -849,6 +851,9 @@ if(Run){
         DISPLAY_DATA_BUS["dp",table]=table()
         DISPLAY_DATA_BUS["dp",table]["lead_unit",number]=LeadUnitNumber
         DISPLAY_DATA_BUS["dp",table]["lead_trail",number]=DPType
+        if(FencePos==0){
+            PowerBrake=CtlTable["SetThrottle",number]-(CtlTable["SetDynamics",number]>0)-clamp(CtlTable["SetDynamics",number]-10,0,90)/11.25
+        }
         DISPLAY_DATA_BUS["dp",table]["power/brake",number]=PowerBrake
         DISPLAY_DATA_BUS["dp",table]["unit_list",table]=UnitList
         DISPLAY_DATA_BUS["dp",table]["travel_direction",number]=TravelDir
@@ -1020,6 +1025,10 @@ event keyPressed(P:entity, K:string, D:number, KB:string){
                                         DPType=0
                                         PG[1,number]=0
                                         PG[2,number]=0
+                                        UnitDigit=table()
+                                        UnitList=table()
+                                        LeadUnitNumber=0
+                                        TravelDir=0
                                     }
                                     if(D&K=="8"){
                                         if(DPType>0){
@@ -1029,6 +1038,8 @@ event keyPressed(P:entity, K:string, D:number, KB:string){
                                             PG[1,number]=0
                                             PG[2,number]=0
                                         }
+                                        
+                                        
                                     }
                                 }
                                 else{
@@ -1118,6 +1129,10 @@ event keyPressed(P:entity, K:string, D:number, KB:string){
                                 if(D&K=="8"){
                                     DPRunning=0
                                     DPType=0
+                                    UnitDigit=table()
+                                    UnitList=table()
+                                    LeadUnitNumber=0
+                                    TravelDir=0
                                     PG[3,number]=0
                                 }
                             break
@@ -1157,6 +1172,10 @@ event keyPressed(P:entity, K:string, D:number, KB:string){
                                     DPRunning=0
                                     DPType=0
                                     PG[3,number]=0
+                                    UnitDigit=table()
+                                    UnitList=table()
+                                    LeadUnitNumber=0
+                                    TravelDir=0
                                 }
                             break
                         }
