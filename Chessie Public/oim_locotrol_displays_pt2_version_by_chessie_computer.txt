@@ -624,7 +624,7 @@ if(first()|duped()){
                     #power
                     E:egpSetText(10,format("%01d",Num:toNumber()))
                     E:egpSetText(40,format("%s",select(CtlTable["SetReverser",number]+2,"REV","CNTR","FWD")))
-                    E:egpSetText(45,format("%s",CtlTable["SetDynamics",number] ? select((clamp(CtlTable["SetDynamics",number]-10,0,90))/11.25,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(CtlTable["SetThrottle",number]/12.5+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
+                    E:egpSetText(45,format("%s",CtlTable["SetDynamics",number] ? select((clamp(CtlTable["SetDynamics",number]-10,0,90))/11.25+1,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(CtlTable["SetThrottle",number]/12.5+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
                     E:egpSetText(50,format("%01d",ACTraction ? RLCPTW["TE_LBF",number]/1000 : abs(RLCPTW["Load1",number])))
                     
                     
@@ -647,7 +647,7 @@ if(first()|duped()){
                             #power
                             E:egpSetText(10,format("%01d",Num:toNumber()))
                             E:egpSetText(40,format("%s",select(CtlTable["SetReverser",number]+2,"REV","CNTR","FWD")))
-                            E:egpSetText(45,format("%s",CtlTable["SetDynamics",number] ? select((clamp(CtlTable["SetDynamics",number]-10,0,90))/11.25,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(CtlTable["SetThrottle",number]/12.5+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
+                            E:egpSetText(45,format("%s",CtlTable["SetDynamics",number] ? select((clamp(CtlTable["SetDynamics",number]-10,0,90))/11.25+1,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(CtlTable["SetThrottle",number]/12.5+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
                             E:egpSetText(50,format("%01d",ACTraction ? RLCPTW["TE_LBF",number]/1000 : abs(RLCPTW["Load1",number])))
                             
                             
@@ -728,7 +728,7 @@ if(first()|duped()){
                             #power
                             E:egpSetText(10,format("%01d",Num:toNumber()))
                             E:egpSetText(40,format("%s",select(CtlTable["SetReverser",number]+2,"REV","CNTR","FWD")))
-                            E:egpSetText(45,format("%s",CtlTable["SetDynamics",number] ? select((clamp(CtlTable["SetDynamics",number]-10,0,90))/11.25,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(CtlTable["SetThrottle",number]/12.5+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
+                            E:egpSetText(45,format("%s",CtlTable["SetDynamics",number] ? select((clamp(CtlTable["SetDynamics",number]-10,0,90))/11.25+1,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(CtlTable["SetThrottle",number]/12.5+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
                             E:egpSetText(50,format("%01d",ACTraction ? RLCPTW["TE_LBF",number]/1000 : abs(RLCPTW["Load1",number])))
                             
                             
