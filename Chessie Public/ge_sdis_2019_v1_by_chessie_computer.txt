@@ -60,7 +60,7 @@ if(first()|duped()){
     "system_font" = "bahnschrift light",
     "system_font_2" = "bahnschrift",
     
-    "skip_boot" = 0
+    "skip_boot" = 1
     
     )
     
@@ -572,6 +572,10 @@ if(first()|duped()){
                 E:egpColor(137,CL["blue",vector])
                 
                 E:labeledBox(138, vec2(64+31+62,380), vec2(58,30), "DP", 12, 8, CL["white",vector])
+                E:egpTextLayout(141,"--",vec2(64+31+62,380),vec2(58,30))
+                E:egpFont(141,CFG["system_font_2",string],14)
+                E:egpColor(141,CL["white",vector])
+                E:egpAlign(141,1,1)
                 
                 E:buttonGenerate(table("Air\nBrake","End Of\nTrain\0","","Distributed\nPower","Operator\nMessages\0","Speed\nControl\0","Switches\0","","Distance\nStart","Distance\nSetup","Auto\nStart/Stop\0","","Trip\nOptimizer\0","Rail\nCleaner\0","Screen\nControls","More\nMenu\0"))
             break
@@ -1295,6 +1299,11 @@ if(first()|duped()){
                 
                 E:labeledBox(130, vec2(512-95,360), vec2(120,50), "UTC Time", 12, 0, CL["white",vector])
                 
+                E:egpTextLayout(133,"Date:  1/1/1970\nTime:  00:00:00",vec2(512-95,360),vec2(120,50))
+                E:egpFont(133,CFG["system_font_2",string],14)
+                E:egpColor(133,CL["white",vector])
+                E:egpAlign(133,1,1)
+                
                 
                 
                 E:buttonGenerate(table("UP","DOWN","","","","","","Exit"))
@@ -1475,11 +1484,11 @@ if(first()|duped()){
                                     
                                     if(!ALT&K=="4"&D&PBMode==0){
                                         PBMode=1
-                                        PowerBrake=0
+                                        PowerBrake++
                                     }
                                     if(!ALT&K=="6"&D&PBMode==0){
                                         PBMode=-1
-                                        PowerBrake=0
+                                        PowerBrake--
                                     }
                                     
                                     if(ALT&K=="4"&D&(PBMode>0)&PowerBrake==0){
@@ -1802,6 +1811,7 @@ if(first()|duped()){
             #consist effort
             E:egpSetText(64,format("%01d:%01d",DP_DATA_BUS["live_unit_count",number],DP_DATA_BUS["unit_count",number]))
             E:egpSetText(65,format("%01d",DP_DATA_BUS["consist_effort",number]/1000))
+            E:egpColor(65,PowerBrake<0 ? CL["yellow",vector] : CL["green",vector])
             
             #loadmeter
             E:egpSetText(73,format("%01d",RL["TE_LBF",number]/1000))
@@ -1879,7 +1889,7 @@ if(first()|duped()){
         
         #upper data
         local Epoch = time()+(CFG["timezone",number]+(date()["isdst",number]*(CFG["daylight_savings",number]>0)))*3600
-        local Time = date(Epoch)
+        local Time = dateUTC(Epoch)
         
         E:egpSetText(100,format("%02d:%02d:%02d",Time["hour",number],Time["min",number],Time["sec",number]))
         
@@ -1942,6 +1952,7 @@ if(first()|duped()){
                 E:egpAlpha(138,(DPType!=0)*255)
                 E:egpAlpha(139,(DPType!=0)*255)
                 E:egpAlpha(140,(DPType!=0)*255)
+                E:egpAlpha(141,(DPType!=0)*255)
                 E:egpSetText(141,select(DPType+2,"Remote","--","Lead"))
 
 
@@ -2260,6 +2271,8 @@ if(first()|duped()){
             break
             case 11, #screen controls
                 E:egpPos(117,vec2(120,310-24+MAIN_GEN["preset",number]*24))
+                local Date=dateUTC(time())
+                E:egpSetText(133,format("Date:  %01d/%01d/%04d\nTime:  %02d:%02d:%02d",Date["month",number],Date["day",number],Date["year",number],Date["hour",number],Date["min",number],Date["sec",number]))
             break
         }
     }
