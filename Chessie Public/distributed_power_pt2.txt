@@ -1,0 +1,357 @@
+@name ptgamma/distributed_power_pt2
+@inputs RLCPT:entity DISPLAY_DATA_BUS:table CtlTableIn:table Num:string EngRunSw GenFldSw IsolationSw
+@outputs DP_DATA_BUS:table CtlTable:table EngRun GenFld Isolation #[UNITS:table LocalUnit:string LocalUnitN DP_DATA:table LocalPowerBrake UnitType]#
+@persist LeadUnit TrailUnit UNITS:table CON_DATA:table DISP:table Run ACTraction
+#the dp stuff
+@persist DP_DATA:table UnitType LocalPowerBrake LocalUnitN:number LocalUnit:string Railroad:string
+@trigger none
+if(first()|duped()){
+    Run=0
+}
+if(first()|dupefinished()){
+    
+    #config
+    ACTraction=1 #broadcasts K instead of A for load
+    
+    Railroad="KSXT" #railroad that will be broadcasted
+    
+    #end of config (too easy!)
+    
+    
+    #[ some basic documentation for my sake and whoever else sees this E2 (probably bean)
+    
+    INPUTS:
+    
+        The DISPLAY_DATA_BUS is solely responsible for setting up a unit to run in DP Lead/Remote. To send data to it, you will need a ["dp",table] inside your DISPLAY_DATA_BUS. Here are some keys you must know about:
+            ["lead_trail",number] : sets up a unit as lead or trail. 1 is lead, 0 is nil, and -1 is trail
+            ["travel_direction",number] : this applies for remotes only. sets the direction of travel compared to the lead unit. 0 is same, 1 is opposing
+            ["lead_unit",number] : sets the lead unit of a remote unit
+            
+            ["unit_list",table] : a list of units to have DP applied to. should be in order from front to rear. sample: table(4036,3620,5280). do not include the lead unit - it is automatically accounted for
+            ["fence_pos",number] : sets the position of the fence. 0 is offline, 1 is one behind the lead unit, and so on
+            ["unit_modes",table] : a table of all the modes set on each unit respective to the ["unit_list",table]. here are the modes you can set:
+                0 : NORM
+                1 : IDLE
+                2 : S/O (set-out)
+                3 : ISOL (isolated)
+                4 : PCS (die)
+                5 : WS (wheel-slip)
+            ["power/brake",number] : a number ranging from -9-8 that sets the power setting and brake setting on the fenced units. -9-2 is dynamics 8-1, -1 is dynamic setup, 0 is idle, 1-8 is notch 1-8
+            ["remote_sand",number] : sets all the remote units to sand (and the units linked to them)
+            
+                
+        RLCPT:entity goes to PT2
+        CtlTableIn:table goes to your stand
+        Num:string goes to your number output on your unit's number randomizer
+        The rest of the inputs are for the passthrough so you can disable engine run and gen field safely and the units can still operate. Isolation is also operated by DP when in remote mode, but it must be in the RUN position on remotes.
+        
+    OUTPUTS:
+    
+        DP_DATA_BUS:table is for the display to read information about DP. Here are some important keys inside that table:
+            ["dp",table] : the root for most DP information. here are the keys in there
+                ["received_units",table] : the units that DP was able to find in remote mode. this is unfiltered based on your unit_list so be mindful of reading other people's data (or do it idc). here are the rest of the indexes you have to worry about for these units:
+                    [Unit_Number,table]
+                        ["throttle",string] : remote unit's throttle. B8-B1, BS, Idle, N1-8 are included
+                        ["load",string] : kLb or A depending on the unit (displays as a string with the format of format("%01d A") or format("%01d K")
+                        ["te",number] : tractive effort in lb. only used in consist effort calculation
+                        ["brake_pipe",number] : brake pipe pressure in PSI
+                        ["flow",number] : brake pipe flow in CFM
+                        ["remote",string] : the units remote status as a string - NORM, IDLE, S/O, ISOL, and COMM (communication lost if TTL expires)
+                        ["equalizing",number] : equal res in PSI
+                        ["cylinder",number] : loco brake cylinder in PSI
+                        ["status",string] : consist monitor status field
+                        ["unit",string] : the unit's railroad and road number
+                        ["lead_unit",number] : the configured lead unit on the remote unit
+                        ["wheel_slip",number] : unit be slippin'
+                        ["unit_alarm",number] : any condition that can trip a unit alarm
+                        ["dp_data",table] : outputs the remote unit's DP_DATA:table, here are some keys in there:
+                            ["travel_dir",number] : direction of travel (0 is same, 1 is oppos)
+                            ["set_lead_unit",number] : the lead unit's number
+                            ["lead_trail",number] : the unit's lead/remote status (1 is lead, 0 is nil, -1 is remote)
+                            ["unit",number] : the unit's number
+                            
+                            
+            ["consist_effort",number] : the combined effort of all units in the consist in Lb
+            ["unit_count",number] : the number of configured units
+            ["live_unit_count",number] : the amount of units that are available to produce power in the consist
+            ["local_status",string] : the consist monitor status of the lead unit
+            ["local_unit",table] : contains all of the consist monitor data on the lead unit. consult the keys on line 42-51 for more info
+            
+                
+        
+        CtlTable:table goes to your PT2
+        
+        The remaining outputs are for passthrough once again. All of them should go to PT2.
+        
+    Hopefully that's all you will need to configure DP successfully on a display. Reach out to 'das.cheese@chessiecorp.com' for more information
+    
+    Warranty not included, get fucked idiot :)
+    
+    
+    
+    
+        
+        
+    
+    ]#
+    
+    
+    Run=1
+    
+    UNITS=table()
+    
+    DP_DATA_BUS=table()
+    DP_DATA=table()
+    CON_DATA=table()
+    DP_DATA["received_units",table]=table()
+    
+    TrailUnit=0
+    LeadUnit=0
+    LocalUnitN=0
+    
+    entity():setName("PT2 Distributed Power by Chessie Computer")
+}
+
+event remote(Origin:entity, Ply:entity, Table:table){
+        if((Table["type",string]=="distributed_power")){
+            if(LeadUnit){
+                DP_DATA["received_units",table][Table["unit_n",number],table] = Table["consist_monitor",table]
+                DP_DATA["received_units",table][Table["unit_n",number],table]["dp_data",table] = Table["distributed_power",table]
+            }
+            if(TrailUnit&(Table["unit_n",number]==DP_DATA["set_lead_unit",number])){
+                DP_DATA["controls",table]=table()
+                DP_DATA["controls",table] = Table["distributed_power",table]["unit_controls",table][LocalUnitN,table]
+                DP_DATA["lead_time",number] = Table["consist_monitor",table]["time_sent",number]
+            }
+        }
+        
+    }
+
+if(Run){
+    if(!timerExists("ctrl")){
+        timer("ctrl",0.1,function(){
+            
+            CtlTable=CtlTableIn:clone()
+            
+            EngRun=EngRunSw
+            GenFld=GenFldSw
+            Isolation=IsolationSw
+            
+            LocalPowerBrake = CtlTable["SetThrottle",number]/12.5 - (CtlTable["SetDynamics",number]>0) - (clamp(CtlTable["SetDynamics",number]-10,0,90)/11.25)
+            
+            
+            if(TrailUnit&DP_DATA["set_lead_unit",number]&inrange(DP_DATA["lead_time",number]-time(),-5,5)&(!EngRunSw)&(!GenFldSw)&(IsolationSw)){
+                local Ctrl = DP_DATA["controls",table]
+                
+                Ctrl["power/brake",number] = ((Ctrl["mode",number]!=1)&(Ctrl["mode",number]!=2)&(Ctrl["mode",number]!=4))*Ctrl["power/brake",number]
+                Ctrl["reverser",number] = (Ctrl["mode",number]!=2)*Ctrl["reverser",number]
+                Ctrl["independent",number] = clamp((Ctrl["mode",number]==2)+Ctrl["independent",number],Ctrl["mode",number]==4,1)
+                
+                #CONTROL_SYSTEM_OUTPUT["reverser_inserted",number] = 1
+                
+                CtlTable["SetReverser",number] = Ctrl["reverser",number]*(((!DP_DATA["travel_dir",number])-0.5)*2)
+                CtlTable["SetThrottle",number] = max(Ctrl["power/brake",number]/8,0)*100
+                CtlTable["SetNotch",number] = max(Ctrl["power/brake",number],0)
+                CtlTable["SetDynamics",number] = Ctrl["power/brake",number]<0 ? 10-(Ctrl["power/brake",number]+1)*11.1111 : 0
+                
+                #CtlTabr["ind_brake_pos",number] = Ctrl["independent",number]
+                
+                #CONTROL_SYSTEM_OUTPUT["consist_sand",number] = Ctrl["sand",number]
+                
+                EngRun=1
+                GenFld=1
+                
+                Isolation=Ctrl["mode",number]!=3
+            }
+            
+            
+            timerRestart("ctrl")
+            
+        })
+        
+    }
+    
+    if(!timerExists("clk")){
+        timer("clk",0.5,function(){
+            
+            LocalUnit=format("%s %01d",Railroad,Num:toNumber())
+            LocalUnitN=Num:toNumber()
+            
+            DISP=DISPLAY_DATA_BUS:clone()
+            
+            
+            
+            DP_DATA["unit",number] = Num:toNumber()
+            DP_DATA["lead_trail",number] = DISP["dp",table]["lead_trail",number]
+            UnitType = DP_DATA["lead_trail",number]
+            
+            LeadUnit=UnitType>0
+            TrailUnit=UnitType<0
+            
+                    local RLCPTW = RLCPT:wirelink()
+                    local Status = ""
+                    if(!Isolation){
+                        Status = "I"
+                    }
+                    elseif(RLCPTW["Dynamics",number]){
+                        Status = "D"
+                    }
+                    elseif(RLCPTW["On1",number]){
+                        Status = "P"
+                    }
+                    else{
+                        Status = "O"
+                    }
+                    
+                    if(RLCPTW["WheelSlip",number]){
+                        Status = "WS"
+                    }
+                    
+                    
+                    CON_DATA = table(
+                    "throttle" = RLCPTW["Dynamics",number] ? format("B%01d",clamp(RLCPTW["DynamicBrakingPower",number]-10,0,90)/11.25) : (RLCPTW["Throttle",number]>0 ? format("N%01d",RLCPTW["Throttle",number]/12.5) : "Idle"),
+                    "load" = ACTraction ? format("%01d K",RLCPTW["TE_LBF",number]/1000) : format("%01d A",abs(RLCPTW["Load1",number])),
+                    "te" = RLCPTW["TE_LBF",number],
+                    "brake_pipe" = RLCPTW["BrakePipe",number],
+                    "flow" = RLCPTW["CFM",number],
+                    "remote" = "NORM",
+                    "equalizing" = RLCPTW["EqualRes",number],
+                    "cylinder" = RLCPTW["Cyl",number],
+                    "main_res" = RLCPTW["MainRes",number],
+                    
+                    "status" = Status,
+                    "unit" = LocalUnit,
+                    
+                    "wheel_slip" = RLCPTW["WheelSlip",number],
+                    
+                    
+                    "lead_unit" = LeadUnit,
+                    
+                    "time_sent" = time()
+                    )
+                    
+                    
+            DP_DATA_BUS = table()
+            if(LocalUnitN!=0){
+                
+                if(TrailUnit){
+                    
+                    DP_DATA["set_lead_unit",number]=DISPLAY_DATA_BUS["dp",table]["lead_unit",number]
+                    DP_DATA["travel_dir",number]=DISPLAY_DATA_BUS["dp",table]["travel_direction",number]
+                    
+                    CON_DATA["remote",string] = select(DP_DATA["controls",table]["mode",number]+1,"NORM","IDLE","S/O","ISOL","PCS")
+                    
+                    CON_DATA["remote",string] = Status=="WS" ? "WS" : CON_DATA["remote",string]
+                    
+                    CON_DATA["unit_alarm",number] = 0
+                    
+                    local SENT_DATA = table(
+                    "unit" = LocalUnit,
+                    "unit_n" = DP_DATA["unit",number],
+                    "type" = "distributed_power",
+                    "consist_monitor" = CON_DATA,
+                    "distributed_power" = DP_DATA
+                    )
+                    
+                    broadcastRemoteEvent(SENT_DATA)
+                }
+                if(LeadUnit){
+                    
+                    
+                    local RLCPTW = RLCPT:wirelink()
+                    
+                    local ConsistEffort = RLCPTW["TE_LBF",number]
+                    local UnitCt = 1
+                    local LiveUnitCt = RLCPTW["On1",number]&(Isolation)
+                    local LinkedUnits = table()
+                    local LocalStatus = ""
+                    local UnitList = DISP["dp",table]["unit_list",table]
+                    local FencePos = DISP["dp",table]["fence_pos",number]
+                    local UnitModes = DISP["dp",table]["unit_modes",table]
+                    local PowerBrake = FencePos>0 ? DISP["dp",table]["power/brake",number] : 0
+                    
+                    if(!Isolation){
+                        LocalStatus = "I"
+                    }
+                    elseif(RLCPTW["Dynamics",number]){
+                        LocalStatus = "D"
+                    }
+                    elseif(RLCPTW["On1",number]){
+                        LocalStatus = "P"
+                    }
+                    else{
+                        LocalStatus = "O"
+                    }
+                    DP_DATA["unit_controls",table]=table()
+                    for(I=0,UnitList:count()-1){
+                        local RemotePowerBrake = 0
+                        DP_DATA["unit_controls",table][UnitList[I+1,number],table] = table()
+                        if((I>(FencePos-2))&(FencePos>0)){
+                            RemotePowerBrake=PowerBrake
+                        }
+                        else{
+                            RemotePowerBrake=LocalPowerBrake
+                        }
+                        local RECV=DP_DATA["received_units",table][UnitList[I+1,number],table]
+                        ConsistEffort+=RECV["te",number]
+                        if(((RECV["status",string]=="P")|(RECV["status",string]=="D"))&(RECV["remote",string]=="NORM")){
+                            LiveUnitCt++
+                        }
+                        UnitCt++
+                        
+                        RemoteReverser=CtlTableIn["SetReverser",number]
+                        RemoteInd=CtlTableIn["SetLocoBrakePressure",number]/72
+                        
+                        if((!inrange(RECV["time_sent",number]-time(),-5,5))|(RECV["remote",string]=="")){
+                            DP_DATA["received_units",table][UnitList[I+1,number],table]=table()
+                            DP_DATA["received_units",table][UnitList[I+1,number],table]["remote",string]="COMM"
+                            DP_DATA["received_units",table][UnitList[I+1,number],table]["unit_alarm",number]=1
+                            DP_DATA["received_units",table][UnitList[I+1,number],table]["throttle",string]="--"
+                        }
+                        
+                        DP_DATA["unit_controls",table][UnitList[I+1,number],table]["power/brake",number]=RemotePowerBrake
+                        DP_DATA["unit_controls",table][UnitList[I+1,number],table]["reverser",number]=RemoteReverser
+                        DP_DATA["unit_controls",table][UnitList[I+1,number],table]["independent",number]=RemoteInd
+                        DP_DATA["unit_controls",table][UnitList[I+1,number],table]["mode",number]=RLCPTW["Emergency",number] ? 4 : UnitModes[I+1,number]
+                        DP_DATA["unit_controls",table][UnitList[I+1,number],table]["sand",number]=DISP["remote_sand",number]
+                    }
+                    
+                    CON_DATA["remote",string] = "--"
+                    
+                    #print(DP_DATA["unit_controls",table])
+                    local SENT_DATA = table(
+                    "unit" = LocalUnit,
+                    "unit_n" = DP_DATA["unit",number],
+                    "type" = "distributed_power",
+                    "consist_monitor" = CON_DATA,
+                    "distributed_power" = DP_DATA
+                    )
+                    
+                    broadcastRemoteEvent(SENT_DATA)
+                    
+                    
+                    DP_DATA_BUS = table(
+                    "all_units" = UNITS,
+                    "units" = LinkedUnits,
+                    "consist_effort" = ConsistEffort,
+                    "live_unit_count" = LiveUnitCt,
+                    "unit_count" = UnitCt,
+                    "local_status" = LocalStatus,
+                    "local_unit" = CON_DATA,
+                    "dp" = DP_DATA
+                    )
+                    
+                    
+                }
+                
+            }
+            
+            timerRestart("clk")
+            
+            
+            
+            
+            
+        })
+    }
+}

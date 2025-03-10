@@ -1,0 +1,1192 @@
+@name OIM LOCOTROL Displays PT2 Version by Chessie Computer
+@inputs EGPMain:wirelink EGPSec:wirelink RLCPT:entity DP_DATA_BUS:table Driver:entity Num:string Battery
+@outputs DISPLAY_DATA_BUS:table BCI
+@persist NEW_EAB:table EAB_SETUP:table Run CL:table PG:table F:string F2:string Timezone DST ACTraction
+#distributed power
+@persist FencePos UnitList:table UnitDigit:table UnitSetDigit UnitDigit_S:string LeadUnitNumber DPRunning RemoteSel RemoteModes:table RemoteMode DPType TravelDir PowerBrake PBMode RemoteSand Unlink
+@trigger none
+
+if(first()|duped()){
+    Run=0
+    
+    
+    
+    #config
+    Timezone=-5 #timezone offset from UTC
+    DST=1 #does your timezone have daylight savings time
+    ACTraction=0 #is your unit equipped with AC traction (otherwise it'll be DC)
+    
+    #end of config
+    
+    CL=table()
+    CL[0,vector] = vec(24,23,20)
+    CL[1,vector] = vec(180,130,70)
+    F="bahnschrift"
+    F2="cascadia mono"
+    PG=table()
+    
+    
+    EAB_SETUP=table()
+    NEW_EAB=table()
+    
+    DP_DATA_BUS=table()
+    
+    DP_DATA_BUS["lead_trail",number]=0
+    
+    EAB_SETUP=table(
+    "set_brake_pipe_cut_in" = 0,
+    "set_loco_brake_lead" = 0,
+    "set_brake_pipe_feed_pressure" = 90/14.5
+    )
+    
+    RemoteMode=0
+    RemoteModes=table()
+    UnitList=table()
+    UnitDigit=table()
+    UnitSetDigit=0
+    UnitDigit_S=""
+    DPRunning=0
+    RemoteSel=0
+    FencePos=0
+    DPType=0
+    TravelDir=0
+    PowerBrake=0
+    Unlink=0
+    PBMode=0
+    RemoteSand=0
+    LeadUnitNumber=0
+    
+    function void wirelink:dataMeter(ID:number,POS:vector2,SCALE:vector2,TL:string,TLF:number,TLW:number,DFF:number,DEN:number){
+        local E=This
+        
+        E:egpBoxOutline(ID,POS-vec2(0,SCALE:y()/4),vec2(SCALE:x(),SCALE:y()/2))
+        E:egpSize(ID,DEN)
+        E:egpColor(ID,CL[1,vector])
+        E:egpBox(ID+1,POS+vec2(0,0),vec2(SCALE:x()+4,DEN*2))
+        E:egpColor(ID+1,CL[0,vector])
+        E:egpBox(ID+2,POS+vec2(0,-SCALE:y()/2),vec2(TLW,10))
+        E:egpColor(ID+2,CL[0,vector])
+        E:egpTextLayout(ID+3,TL,POS+vec2(0,-SCALE:y()/2),vec2(TLW,TLF))
+        E:egpFont(ID+3,F,TLF)
+        E:egpAlign(ID+3,1,1)
+        E:egpColor(ID+3,CL[1,vector])
+        E:egpTextLayout(ID+4,"888",POS,SCALE)
+        E:egpFont(ID+4,F,DFF)
+        E:egpAlign(ID+4,1,1)
+        E:egpColor(ID+4,CL[1,vector])
+    }
+    
+    function void wirelink:buttonGenerate(BT:table){
+        E=This
+        for(I=0,7){
+            E:egpRemove(280+I*2)
+            E:egpRemove(281+I*2)
+            if(BT[I+1,string]){
+                E:egpBoxOutline(280+I*2,vec2(256-250+31.25+I*62.5,486),vec2(62.5,40))
+                E:egpColor(280+I*2,CL[1,vector])
+                E:egpSize(280+I*2,2)
+                
+                E:egpTextLayout(281+I*2,BT[I+1,string],vec2(256-250+31.25+I*62.5,486),vec2(62.5,40))
+                E:egpAlign(281+I*2,1,1)
+                E:egpFont(281+I*2,F,16)
+                E:egpColor(281+I*2,CL[1,vector])
+            }
+        }
+    }
+    
+    function void wirelink:pageGenerate(S:number,PG:table){
+        E=This
+        E:egpClear()
+        
+        #backdrop
+        E:egpBox(1,vec2(256),vec2(512))
+        E:egpColor(1,CL[0,vector])
+        
+        if(!S){
+            #brake boxes
+            E:egpBoxOutline(2,vec2(300,180),vec2(360,160))
+            E:egpColor(2,CL[1,vector])
+            E:egpSize(2,4)
+            
+            E:egpBox(3,vec2(300,180),vec2(2,160))
+            E:egpColor(3,CL[1,vector])
+            E:egpBox(4,vec2(300-45,180),vec2(2,160))
+            E:egpColor(4,CL[1,vector])
+            E:egpBox(5,vec2(300-90,180),vec2(2,160))
+            E:egpColor(5,CL[1,vector])
+            E:egpBox(6,vec2(300-135,180),vec2(2,160))
+            E:egpColor(6,CL[1,vector])
+            E:egpBox(7,vec2(300+45,180),vec2(2,160))
+            E:egpColor(7,CL[1,vector])
+            E:egpBox(8,vec2(300+90,180),vec2(2,160))
+            E:egpColor(8,CL[1,vector])
+            E:egpBox(9,vec2(300+135,180),vec2(2,160))
+            E:egpColor(9,CL[1,vector])
+            
+            for(I=0,7){
+                E:egpBox(10+I*2,vec2(300-135-22.5+45*I,180-60),vec2(2,40))
+                E:egpColor(10+I*2,CL[1,vector])
+                E:egpBox(11+I*2,vec2(300-135-22.5+45*I,180+60),vec2(2,40))
+                E:egpColor(11+I*2,CL[1,vector])
+            }
+            for(I=0,8){
+                E:egpBox(26+I*2,vec2(300-180+45*I,180),vec2(40,20))
+                E:egpColor(26+I*2,CL[0,vector])
+                
+                E:egpTextLayout(27+I*2,format("%01d",40+I*10),vec2(300-180+45*I,180),vec2(40,24))
+                E:egpFont(27+I*2,F,22)
+                E:egpAlign(27+I*2,1,1)
+                E:egpColor(27+I*2,CL[1,vector])
+            }
+            
+            #brake triangles
+            E:egpTriangle(45,vec2(300-8,170),vec2(300,140),vec2(300+8,170))
+            E:egpColor(45,CL[1,vector])
+            E:egpTriangle(46,vec2(300-8,190),vec2(300,220),vec2(300+8,190))
+            E:egpColor(46,CL[1,vector])
+            
+            #brake readouts
+            #er,bp
+            E:dataMeter(47,vec2(60,180-45),vec2(70,60),"ER",22,30,40,4)
+            E:dataMeter(52,vec2(60,180+45),vec2(70,60),"BP",22,30,40,4)
+            
+            #flow, main, bc
+            E:dataMeter(57,vec2(60,320),vec2(60,50),"FLOW",18,42,36,4)
+            E:dataMeter(62,vec2(60+70,320),vec2(60,50),"MAIN",18,42,36,4)
+            E:dataMeter(67,vec2(60+140,320),vec2(60,50),"BC",18,28,36,4)
+            
+            #brake setup
+            E:dataMeter(72,vec2(60+250,320),vec2(140,50),"AUTO BRK",18,80,36,4)
+            E:dataMeter(77,vec2(60+250+130,320),vec2(100,50),"IND BRK",18,70,36,4)
+            E:dataMeter(82,vec2(60+250,380),vec2(140,50),"DP SETUP",18,80,36,4)
+        }
+        else{
+            switch(PG[1,number]){
+                case 0, #main page
+                    #top bar
+                    E:egpBox(2,vec2(256,80),vec2(500,4))
+                    E:egpColor(2,CL[1,vector])
+                    E:egpBox(3,vec2(300,43),vec2(2,70))
+                    E:egpColor(3,CL[1,vector])
+                    
+                    E:egpBox(4,vec2(150,20),vec2(260,2))
+                    E:egpColor(4,CL[1,vector])
+                    E:egpBox(5,vec2(150,20),vec2(80,4))
+                    E:egpColor(5,CL[0,vector])
+                    E:egpTextLayout(6,"AIRBRAKE",vec2(150,20),vec2(80,18))
+                    E:egpColor(6,CL[1,vector])
+                    E:egpAlign(6,1,1)
+                    E:egpFont(6,F,16)
+                    
+                    E:egpBox(7,vec2(400,20),vec2(160,2))
+                    E:egpColor(7,CL[1,vector])
+                    E:egpBox(8,vec2(400,20),vec2(130,4))
+                    E:egpColor(8,CL[0,vector])
+                    E:egpTextLayout(9,"LOCOMOTIVE:",vec2(400,20),vec2(120,18))
+                    E:egpColor(9,CL[1,vector])
+                    E:egpAlign(9,0,1)
+                    E:egpFont(9,F,16)
+                    E:egpTextLayout(10,"8888",vec2(400,20),vec2(120,18))
+                    E:egpColor(10,CL[1,vector])
+                    E:egpAlign(10,2,1)
+                    E:egpFont(10,F,16)
+                    
+                    #brakes
+                    E:dataMeter(11,vec2(150-112,58),vec2(46,40),"ER",16,24,24,2)
+                    E:dataMeter(16,vec2(150-112+48,58),vec2(46,40),"BP",16,24,24,2)
+                    E:dataMeter(21,vec2(150,58),vec2(80,40),"FLOW",16,40,24,2)
+                    E:dataMeter(26,vec2(150+112-48,58),vec2(46,40),"MAIN",16,36,24,2)
+                    E:dataMeter(31,vec2(150+112,58),vec2(46,40),"BC",16,24,24,2)
+                    
+                    #power
+                    E:dataMeter(36,vec2(400-62,58),vec2(60,40),"REV",16,36,24,2)
+                    E:dataMeter(41,vec2(400,58),vec2(60,40),"THRT",16,36,24,2)
+                    E:dataMeter(46,vec2(400+62,58),vec2(60,40),ACTraction ? "KLB" : "AMPS",16,36,24,2)
+                    
+                    #date & time
+                    E:egpTextLayout(51,"00:00 01 JAN 70",vec2(410,340),vec2(170,24))
+                    E:egpColor(51,CL[1,vector])
+                    E:egpAlign(51,2,1)
+                    E:egpFont(51,F,24)
+                    
+                    
+                    E:buttonGenerate(table("DIST\nPOWER","EAB\nSETUP","EAB\nDIAG","DATE\nTIME","LOCO\nSETUP","OIM\nINFO","","LANG\nSEL"))
+                break
+                case 1, #distributed power
+                    switch(PG[2,number]){
+                        case 0,
+                            #top bar
+                            E:egpBox(2,vec2(256,80),vec2(500,4))
+                            E:egpColor(2,CL[1,vector])
+                            E:egpBox(3,vec2(300,43),vec2(2,70))
+                            E:egpColor(3,CL[1,vector])
+                            
+                            E:egpBox(4,vec2(150,20),vec2(260,2))
+                            E:egpColor(4,CL[1,vector])
+                            E:egpBox(5,vec2(150,20),vec2(80,4))
+                            E:egpColor(5,CL[0,vector])
+                            E:egpTextLayout(6,"AIRBRAKE",vec2(150,20),vec2(80,18))
+                            E:egpColor(6,CL[1,vector])
+                            E:egpAlign(6,1,1)
+                            E:egpFont(6,F,16)
+                            
+                            E:egpBox(7,vec2(400,20),vec2(160,2))
+                            E:egpColor(7,CL[1,vector])
+                            E:egpBox(8,vec2(400,20),vec2(130,4))
+                            E:egpColor(8,CL[0,vector])
+                            E:egpTextLayout(9,"LOCOMOTIVE:",vec2(400,20),vec2(120,18))
+                            E:egpColor(9,CL[1,vector])
+                            E:egpAlign(9,0,1)
+                            E:egpFont(9,F,16)
+                            E:egpTextLayout(10,"8888",vec2(400,20),vec2(120,18))
+                            E:egpColor(10,CL[1,vector])
+                            E:egpAlign(10,2,1)
+                            E:egpFont(10,F,16)
+                            
+                            #brakes
+                            E:dataMeter(11,vec2(150-112,58),vec2(46,40),"ER",16,24,24,2)
+                            E:dataMeter(16,vec2(150-112+48,58),vec2(46,40),"BP",16,24,24,2)
+                            E:dataMeter(21,vec2(150,58),vec2(80,40),"FLOW",16,40,24,2)
+                            E:dataMeter(26,vec2(150+112-48,58),vec2(46,40),"MAIN",16,36,24,2)
+                            E:dataMeter(31,vec2(150+112,58),vec2(46,40),"BC",16,24,24,2)
+                            
+                            #power
+                            E:dataMeter(36,vec2(400-62,58),vec2(60,40),"REV",16,36,24,2)
+                            E:dataMeter(41,vec2(400,58),vec2(60,40),"THRT",16,36,24,2)
+                            E:dataMeter(46,vec2(400+62,58),vec2(60,40),ACTraction ? "KLB" : "AMPS",16,36,24,2)
+                            
+                            #date & time
+                            E:egpTextLayout(51,"00:00 01 JAN 70",vec2(410,340),vec2(170,24))
+                            E:egpColor(51,CL[1,vector])
+                            E:egpAlign(51,2,1)
+                            E:egpFont(51,F,24)
+                            
+                            
+                            E:buttonGenerate(table("","","","","OPER.\nMENU","DP MAIN\nMENU","","EXIT"))
+                        break
+                        case 1, #operations page
+                            
+                            E:egpBoxOutline(2,vec2(256,170),vec2(500,120))
+                            E:egpColor(2,CL[1,vector])
+                            E:egpSize(2,4)
+                            
+                            E:egpBox(3,vec2(40,86),vec2(50,24))
+                            E:egpColor(3,CL[1,vector])
+                            
+                            E:egpTextLayout(4,"\nRUN",vec2(116,200),vec2(200,300))
+                            E:egpColor(4,CL[0,vector])
+                            E:egpFont(4,F,24)
+                            E:egpAlign(4,0,0)
+                            
+                            
+                            
+                            E:egpTextLayout(5,"\n\n\nTHROTTLE\nLOAD\nBP\nFLOW\n\nREMOTE\nER\nCYLINDER\nMAIN RES",vec2(116,200),vec2(200,300))
+                            E:egpColor(5,CL[1,vector])
+                            E:egpFont(5,F,24)
+                            E:egpAlign(5,0,0)
+                            
+                            E:egpBox(6,vec2(205,200),vec2(4,300))
+                            E:egpColor(6,CL[1,vector])
+                            E:egpBox(7,vec2(205,280),vec2(58,24))
+                            E:egpColor(7,CL[1,vector])
+                            
+                            for(I=0,3){
+                                E:egpTextLayout(8+I*4,format("%s-1000\n\n\nIDLE\n0 A\n90\n0\n\n\n90\n72\n140",select(I+1,"A","B","C","D")),vec2(160+90*I,200),vec2(100,300))
+                                E:egpColor(8+I*4,CL[1,vector])
+                                E:egpFont(8+I*4,F,24)
+                                E:egpAlign(8+I*4,1,0)
+                                
+                                E:egpTextLayout(9+I*4,format("\n\n\n\n\n\n\n\n%s",I>0 ? "NORM" : "--"),vec2(160+90*I,200),vec2(100,300))
+                                E:egpColor(9+I*4,CL[1,vector])
+                                E:egpFont(9+I*4,F,24)
+                                E:egpAlign(9+I*4,1,0)
+                                
+                                E:egpBox(10+I*4,vec2(160+90*I,86),vec2(58,24))
+                                E:egpColor(10+I*4,CL[1,vector])
+                                E:egpFont(10+I*4,F,24)
+                                E:egpAlign(10+I*4,1,0)
+                                
+                                E:egpTextLayout(11+I*4,"\nCOMM",vec2(160+90*I,200),vec2(100,300))
+                                E:egpColor(11+I*4,CL[0,vector])
+                                E:egpFont(11+I*4,F,24)
+                                E:egpAlign(11+I*4,1,0)
+                            }
+                            
+                            
+                            E:buttonGenerate(table("","BACK","","","","REMOTE\nSAND","REMOTE\nMENU","MAIN\nMENU"))
+                        break
+                        case 2, #main menu
+                            #top bar
+                            E:egpBox(2,vec2(256,80),vec2(500,4))
+                            E:egpColor(2,CL[1,vector])
+                            E:egpBox(3,vec2(300,43),vec2(2,70))
+                            E:egpColor(3,CL[1,vector])
+                            
+                            E:egpBox(4,vec2(150,20),vec2(260,2))
+                            E:egpColor(4,CL[1,vector])
+                            E:egpBox(5,vec2(150,20),vec2(80,4))
+                            E:egpColor(5,CL[0,vector])
+                            E:egpTextLayout(6,"AIRBRAKE",vec2(150,20),vec2(80,18))
+                            E:egpColor(6,CL[1,vector])
+                            E:egpAlign(6,1,1)
+                            E:egpFont(6,F,16)
+                            
+                            E:egpBox(7,vec2(400,20),vec2(160,2))
+                            E:egpColor(7,CL[1,vector])
+                            E:egpBox(8,vec2(400,20),vec2(130,4))
+                            E:egpColor(8,CL[0,vector])
+                            E:egpTextLayout(9,"LOCOMOTIVE:",vec2(400,20),vec2(120,18))
+                            E:egpColor(9,CL[1,vector])
+                            E:egpAlign(9,0,1)
+                            E:egpFont(9,F,16)
+                            E:egpTextLayout(10,"8888",vec2(400,20),vec2(120,18))
+                            E:egpColor(10,CL[1,vector])
+                            E:egpAlign(10,2,1)
+                            E:egpFont(10,F,16)
+                            
+                            #brakes
+                            E:dataMeter(11,vec2(150-112,58),vec2(46,40),"ER",16,24,24,2)
+                            E:dataMeter(16,vec2(150-112+48,58),vec2(46,40),"BP",16,24,24,2)
+                            E:dataMeter(21,vec2(150,58),vec2(80,40),"FLOW",16,40,24,2)
+                            E:dataMeter(26,vec2(150+112-48,58),vec2(46,40),"MAIN",16,36,24,2)
+                            E:dataMeter(31,vec2(150+112,58),vec2(46,40),"BC",16,24,24,2)
+                            
+                            #power
+                            E:dataMeter(36,vec2(400-62,58),vec2(60,40),"REV",16,36,24,2)
+                            E:dataMeter(41,vec2(400,58),vec2(60,40),"THRT",16,36,24,2)
+                            E:dataMeter(46,vec2(400+62,58),vec2(60,40),ACTraction ? "KLB" : "AMPS",16,36,24,2)
+                            
+                            #date & time
+                            E:egpTextLayout(51,"00:00 01 JAN 70",vec2(410,140),vec2(170,24))
+                            E:egpColor(51,CL[1,vector])
+                            E:egpAlign(51,2,1)
+                            E:egpFont(51,F,24)
+                            
+                            E:egpBox(52,vec2(200,200),vec2(360,24))
+                            E:egpColor(52,CL[1,vector])
+                            E:egpTextLayout(53,"DISTRIBUTED POWER MAIN MENU",vec2(200,200),vec2(360,24))
+                            E:egpColor(53,CL[0,vector])
+                            E:egpAlign(53,1,1)
+                            E:egpFont(53,F,20)
+                            
+                            
+                            
+                            switch(PG[3,number]){
+                                case 0,
+                                    E:egpTextLayout(54,"DP NOT CONFIGURED, SET UP AS LEAD OR REMOTE",vec2(200,230),vec2(360,16))
+                                    E:egpColor(54,CL[1,vector])
+                                    E:egpAlign(54,0,1)
+                                    E:egpFont(54,F2,16)
+                                
+                                    E:egpTextLayout(55,"= = = = = = = = = = = = = = = = = = = = = = = = = =",vec2(200,230+20),vec2(360,16))
+                                    E:egpColor(55,CL[1,vector])
+                                    E:egpAlign(55,0,1)
+                                    E:egpFont(55,F2,16)
+                                    
+                                    if(DPRunning){
+                                        E:egpTextLayout(56,"TRAIN CONFIG  -  TRAIN CONFIGURATION/SETUP",vec2(200,230+20*2),vec2(360,16))
+                                        E:egpColor(56,CL[1,vector])
+                                        E:egpAlign(56,0,1)
+                                        E:egpFont(56,F2,16)
+                                        
+                                        E:egpTextLayout(57,"SYSTEM        -  INITIATE TESTS/VIEW LOGS",vec2(200,230+20*3),vec2(360,16))
+                                        E:egpColor(57,CL[1,vector])
+                                        E:egpAlign(57,0,1)
+                                        E:egpFont(57,F2,16)
+                                        
+                                        E:egpTextLayout(58,"MODE          -  SELECT OPERATING MODE",vec2(200,230+20*4),vec2(360,16))
+                                        E:egpColor(58,CL[1,vector])
+                                        E:egpAlign(58,0,1)
+                                        E:egpFont(58,F2,16)
+                                        
+                                        E:egpTextLayout(59,"MAINT MENU    -  MAINTENANCE MENU",vec2(200,230+20*5),vec2(360,16))
+                                        E:egpColor(59,CL[1,vector])
+                                        E:egpAlign(59,0,1)
+                                        E:egpFont(59,F2,16)
+                                        
+                                        E:egpTextLayout(60,"END DIST PWR  -  END DISTRIBUTED POWER",vec2(200,230+20*6),vec2(360,16))
+                                        E:egpColor(60,CL[1,vector])
+                                        E:egpAlign(60,0,1)
+                                        E:egpFont(60,F2,16)
+                                        
+                                        E:buttonGenerate(table("TRAIN\nCONFIG","","SYSTEM","MODE","","MAINT\nMENU","END\nDIST PWR","EXIT"))
+                                    }
+                                    else{
+                                        E:egpTextLayout(61,"LEAD SETUP    -  SET UP UNIT AS LEAD",vec2(200,230+20*2),vec2(360,16))
+                                        E:egpColor(61,CL[1,vector])
+                                        E:egpAlign(61,0,1)
+                                        E:egpFont(61,F2,16)
+                                        
+                                        E:egpTextLayout(62,"REMOTE SETUP  -  SET UP UNIT AS REMOTE",vec2(200,230+20*3),vec2(360,16))
+                                        E:egpColor(62,CL[1,vector])
+                                        E:egpAlign(62,0,1)
+                                        E:egpFont(62,F2,16)
+                                        
+                                        E:buttonGenerate(table("","LEAD\nSETUP","","","REMOTE\nSETUP","","","EXIT"))
+                                    }
+                                break
+                                case 1,
+                                    E:egpTextLayout(54,"LEAD UNIT SETUP",vec2(200,230),vec2(360,16))
+                                    E:egpColor(54,CL[1,vector])
+                                    E:egpAlign(54,0,1)
+                                    E:egpFont(54,F2,16)
+                                
+                                    E:egpTextLayout(55,"= = = = = = = = = = = = = = = = = = = = = = = = = =",vec2(200,230+20),vec2(360,16))
+                                    E:egpColor(55,CL[1,vector])
+                                    E:egpAlign(55,0,1)
+                                    E:egpFont(55,F2,16)
+                                    
+                                    for(I=0,4){
+                                        E:egpTextLayout(56+I,"0",vec2(200,230+40+I*20),vec2(360,16))
+                                        E:egpColor(56+I,CL[1,vector])
+                                        E:egpAlign(56+I,0,1)
+                                        E:egpFont(56+I,F2,16)
+                                    }
+                                    
+                                    E:egpBox(62,vec2(156,230+40),vec2(8,16))
+                                    E:egpColor(62,CL[1,vector])
+                                
+                                    E:egpTextLayout(63,"0",vec2(0,0),vec2(8,16))
+                                    E:egpParent(63,62)
+                                    E:egpColor(63,CL[0,vector])
+                                    E:egpAlign(63,1,1)
+                                    E:egpFont(63,F2,16)
+                                    
+                                    E:egpTextLayout(64,"<!WARNING!> PRESSING EXIT WILL END DP",vec2(200,230+40+120),vec2(360,16))
+                                    E:egpColor(64,CL[1,vector])
+                                    E:egpAlign(64,0,1)
+                                    E:egpFont(64,F2,16)
+                                
+                                    E:buttonGenerate(table("COUNT\nUP","COUNT\nDOWN","DIGIT\nLEFT","DIGIT\nRIGHT","LINK","ACCEPT","UNLINK\nMODE","EXIT"))
+                                break
+                                case 2,
+                                    E:egpTextLayout(54,"REMOTE UNIT SETUP",vec2(200,230),vec2(360,16))
+                                    E:egpColor(54,CL[1,vector])
+                                    E:egpAlign(54,0,1)
+                                    E:egpFont(54,F2,16)
+                                
+                                    E:egpTextLayout(55,"= = = = = = = = = = = = = = = = = = = = = = = = = =",vec2(200,230+20),vec2(360,16))
+                                    E:egpColor(55,CL[1,vector])
+                                    E:egpAlign(55,0,1)
+                                    E:egpFont(55,F2,16)
+                                    
+                                    E:egpTextLayout(56,"",vec2(200,230+40),vec2(360,16))
+                                    E:egpColor(56,CL[1,vector])
+                                    E:egpAlign(56,0,1)
+                                    E:egpFont(56,F2,16)
+                                    
+                                    E:egpTextLayout(57,"",vec2(200,230+60),vec2(360,16))
+                                    E:egpColor(57,CL[1,vector])
+                                    E:egpAlign(57,0,1)
+                                    E:egpFont(57,F2,16)
+                                    
+                                    E:egpBox(58,vec2(156+8,230+40),vec2(8,16))
+                                    E:egpColor(58,CL[1,vector])
+                                
+                                    E:egpTextLayout(59,"0",vec2(0,0),vec2(8,16))
+                                    E:egpParent(59,58)
+                                    E:egpColor(59,CL[0,vector])
+                                    E:egpAlign(59,1,1)
+                                    E:egpFont(59,F2,16)
+                                    
+                                    E:egpTextLayout(64,"<!WARNING!> PRESSING EXIT WILL END DP",vec2(200,230+40+120),vec2(360,16))
+                                    E:egpColor(64,CL[1,vector])
+                                    E:egpAlign(64,0,1)
+                                    E:egpFont(64,F2,16)
+                                
+                                    E:buttonGenerate(table("COUNT\nUP","COUNT\nDOWN","DIGIT\nLEFT","DIGIT\nRIGHT","OPPOS.\nDIR","ACCEPT","","EXIT"))
+                                break
+                            }
+                        break
+                    }
+                break
+                case 2, #eab setup
+                    #top bar
+                    E:egpBox(2,vec2(256,80),vec2(500,4))
+                    E:egpColor(2,CL[1,vector])
+                    E:egpBox(3,vec2(300,43),vec2(2,70))
+                    E:egpColor(3,CL[1,vector])
+                    
+                    E:egpBox(4,vec2(150,20),vec2(260,2))
+                    E:egpColor(4,CL[1,vector])
+                    E:egpBox(5,vec2(150,20),vec2(80,4))
+                    E:egpColor(5,CL[0,vector])
+                    E:egpTextLayout(6,"AIRBRAKE",vec2(150,20),vec2(80,18))
+                    E:egpColor(6,CL[1,vector])
+                    E:egpAlign(6,1,1)
+                    E:egpFont(6,F,16)
+                    
+                    E:egpBox(7,vec2(400,20),vec2(160,2))
+                    E:egpColor(7,CL[1,vector])
+                    E:egpBox(8,vec2(400,20),vec2(130,4))
+                    E:egpColor(8,CL[0,vector])
+                    E:egpTextLayout(9,"LOCOMOTIVE:",vec2(400,20),vec2(120,18))
+                    E:egpColor(9,CL[1,vector])
+                    E:egpAlign(9,0,1)
+                    E:egpFont(9,F,16)
+                    E:egpTextLayout(10,"8888",vec2(400,20),vec2(120,18))
+                    E:egpColor(10,CL[1,vector])
+                    E:egpAlign(10,2,1)
+                    E:egpFont(10,F,16)
+                    
+                    #brakes
+                    E:dataMeter(11,vec2(150-112,58),vec2(46,40),"ER",16,24,24,2)
+                    E:dataMeter(16,vec2(150-112+48,58),vec2(46,40),"BP",16,24,24,2)
+                    E:dataMeter(21,vec2(150,58),vec2(80,40),"FLOW",16,40,24,2)
+                    E:dataMeter(26,vec2(150+112-48,58),vec2(46,40),"MAIN",16,36,24,2)
+                    E:dataMeter(31,vec2(150+112,58),vec2(46,40),"BC",16,24,24,2)
+                    
+                    #power
+                    E:dataMeter(36,vec2(400-62,58),vec2(60,40),"REV",16,36,24,2)
+                    E:dataMeter(41,vec2(400,58),vec2(60,40),"THRT",16,36,24,2)
+                    E:dataMeter(46,vec2(400+62,58),vec2(60,40),ACTraction ? "KLB" : "AMPS",16,36,24,2)
+                    
+                    #date & time
+                    E:egpTextLayout(51,"00:00 01 JAN 70",vec2(410,340),vec2(170,24))
+                    E:egpColor(51,CL[1,vector])
+                    E:egpAlign(51,2,1)
+                    E:egpFont(51,F,24)
+                    
+                    #eab setup meters
+                    E:dataMeter(52,vec2(170,290),vec2(260,40),"CURRENT SETUP",16,120,999,2)
+                    E:dataMeter(57,vec2(170-84,310),vec2(80,40),"FEED PSI",16,60,20,2)
+                    E:dataMeter(62,vec2(170,310),vec2(80,40),"AUTO BRK",16,64,20,2)
+                    E:dataMeter(67,vec2(170+84,310),vec2(80,40),"IND BRK",16,56,20,2)
+                    
+                    E:dataMeter(72,vec2(170,290+80),vec2(260,40),"NEW SETUP",16,90,999,2)
+                    E:dataMeter(77,vec2(170-84,310+80),vec2(80,40),"FEED PSI",16,60,20,2)
+                    E:dataMeter(82,vec2(170,310+80),vec2(80,40),"AUTO BRK",16,64,20,2)
+                    E:dataMeter(87,vec2(170+84,310+80),vec2(80,40),"IND BRK",16,56,20,2)
+                    
+                    
+                    E:buttonGenerate(table("PSI\nUP","PSI\nDOWN","AUTO\nBRK","IND\nBRK","","APPLY\nSETUP","","EXIT"))
+                break
+            }
+        }
+        E:egpBoxOutline(200,vec2(256),vec2(500))
+        E:egpColor(200,CL[1,vector])
+        E:egpSize(200,2)
+    }
+    
+    function void wirelink:pageUpdate(S:number,PG:table){
+        local E=This
+        
+        local RLCPTW=RLCPT:wirelink()
+        
+        if(!S){
+            #brake triangles
+            local OS = -158+clamp(RLCPTW["EqualRes",number]-45,0,70)*4.5
+            E:egpTriangle(45,vec2(300-8+OS,170),vec2(300+OS,140),vec2(300+8+OS,170))
+            
+            OS = -158+clamp(RLCPTW["EqualRes",number]-45,0,70)*4.5
+            E:egpTriangle(46,vec2(300-8+OS,190),vec2(300+OS,220),vec2(300+8+OS,190))
+            
+            #brake readouts
+            E:egpSetText(51,format("%01d",RLCPTW["EqualRes",number]))
+            E:egpSetText(56,format("%01d",RLCPTW["BrakePipe",number]))
+            E:egpSetText(61,format("%01d",RLCPTW["CFM",number]))
+            E:egpSetText(66,format("%01d",RLCPTW["MainRes",number]))
+            E:egpSetText(71,format("%01d",RLCPTW["Cyl",number]))
+            
+            E:egpSetText(76,select(EAB_SETUP["set_brake_pipe_cut_in",number]+1,"CUT-OUT","FREIGHT","PASS."))
+            E:egpSetText(81,select(EAB_SETUP["set_loco_brake_lead",number]+1,"TRAIL","LEAD"))
+            
+            if(DPType!=0){
+                E:egpAlpha(82,255)
+                E:egpAlpha(83,255)
+                E:egpAlpha(84,255)
+                E:egpAlpha(85,255)
+                E:egpAlpha(86,255)
+                E:egpSetText(86,select(DPType+2,"REMOTE","N/A","LEAD"))
+            }
+            elseif(DPType==0){
+                E:egpAlpha(82,0)
+                E:egpAlpha(83,0)
+                E:egpAlpha(84,0)
+                E:egpAlpha(85,0)
+                E:egpAlpha(86,0)
+            }
+        }
+        else{
+            
+            local Throttle=RLCPTW["Dynamics",number] ? select((clamp(RLCPTW["DynamicBrakingPower",number]-10,0,90))/11.25,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(RLCPTW["Notch",number]+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")
+            switch(PG[1,number]){
+                case 0, #main page
+                    #brakes
+                    E:egpSetText(15,format("%01d",RLCPTW["EqualRes",number]))
+                    E:egpSetText(20,format("%01d",RLCPTW["BrakePipe",number]))
+                    E:egpSetText(25,format("%01d",RLCPTW["CFM",number]))
+                    E:egpSetText(30,format("%01d",RLCPTW["MainRes",number]))
+                    E:egpSetText(35,format("%01d",RLCPTW["Cyl",number]))
+                    
+                    #power
+                    E:egpSetText(10,format("%01d",Num:toNumber()))
+                    E:egpSetText(40,format("%s",select(RLCPTW["Reverser",number]+2,"REV","CNTR","FWD")))
+                    E:egpSetText(45,format("%s",RLCPTW["Dynamics",number] ? select((clamp(RLCPTW["DynamicBrakingPower",number]-10,0,90))/11.25+1,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(RLCPTW["Notch",number]+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
+                    E:egpSetText(50,format("%01d",ACTraction ? RLCPTW["TE_LBF",number]/1000 : abs(RLCPTW["Load1",number])))
+                    
+                    
+                    #date & time
+                    local Epoch = time()+(Timezone+(date()["isdst",number]*(DST>0)))*3600
+                    local Time = dateUTC(Epoch)
+                    
+                    E:egpSetText(51,format("%02d:%02d   %02d %s %s%s",Time["hour",number],Time["min",number],Time["day",number],select(Time["month",number],"JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"),Time["year",number]:toString()[3],Time["year",number]:toString()[4]))
+                break
+                case 1, #dp
+                    switch(PG[2,number]){
+                        case 0, #entry menu
+                            #brakes
+                            E:egpSetText(15,format("%01d",RLCPTW["EqualRes",number]))
+                            E:egpSetText(20,format("%01d",RLCPTW["BrakePipe",number]))
+                            E:egpSetText(25,format("%01d",RLCPTW["CFM",number]))
+                            E:egpSetText(30,format("%01d",RLCPTW["MainRes",number]))
+                            E:egpSetText(35,format("%01d",RLCPTW["Cyl",number]))
+                            
+                            #power
+                            E:egpSetText(10,format("%01d",Num:toNumber()))
+                            E:egpSetText(40,format("%s",select(RLCPTW["Reverser",number]+2,"REV","CNTR","FWD")))
+                            E:egpSetText(45,format("%s",RLCPTW["Dynamics",number] ? select((clamp(RLCPTW["DynamicBrakingPower",number]-10,0,90))/11.25+1,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(RLCPTW["Notch",number]+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
+                            E:egpSetText(50,format("%01d",ACTraction ? RLCPTW["TE_LBF",number]/1000 : abs(RLCPTW["Load1",number])))
+                            
+                            
+                            #date & time
+                            local Epoch = time()+(Timezone+(date()["isdst",number]*(DST>0)))*3600
+                            local Time = dateUTC(Epoch)
+                            
+                            E:egpSetText(51,format("%02d:%02d   %02d %s %s%s",Time["hour",number],Time["min",number],Time["day",number],select(Time["month",number],"JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"),Time["year",number]:toString()[3],Time["year",number]:toString()[4]))
+                        break
+                        case 1, #operating menu
+                            for(I=0,3){
+                                if(I==0){
+                                    E:egpSetText(8+I*4,format("%s-%01d\n\n\n%s\n%s\n%01d\n%01d\n\n\n%01d\n%01d\n%01d",
+                                    select(I+1,"A","B","C","D"),Num:toNumber(),Throttle,ACTraction ? format("%01d K",RLCPTW["TE_LBF",number]/1000) : format("%01d A",abs(RLCPTW["Load1",number])),RLCPTW["BrakePipe",number],RLCPTW["CFM",number],
+                                    RLCPTW["EqualRes",number],RLCPTW["Cyl",number],RLCPTW["MainRes",number]))
+                                    
+                                    E:egpSetText(9+I*4,format("\n\n\n\n\n\n\n\n%s","--"))
+                                    E:egpAlpha(10+I*4,0)
+                                }
+                                elseif(UnitList[I,number]!=0){
+                                    local RECV = DP_DATA_BUS["dp",table]["received_units",table][UnitList[I,number],table]
+                                    
+                                    E:egpSetText(8+I*4,format("%s-%01d\n\n\n%s\n%s\n%01d\n%01d\n\n\n%01d\n%01d\n%01d",
+                                    select(I+1,"A","B","C","D"),UnitList[I,number],RECV["throttle",string]:upper(),RECV["load",string],RECV["brake_pipe",number],RECV["flow",number],
+                                    RECV["equalizing",number],RECV["cylinder",number],RECV["main_res",number]))
+                                    
+                                    E:egpSetText(9+I*4,format("\n\n\n\n\n\n\n\n%s",RECV["remote",string] ? RECV["remote",string] : "COMM"))
+                                    E:egpAlpha(10+I*4,((RECV["remote",string]=="COMM")|(!RECV["remote",string]))*255)
+                                    
+                                    E:egpColor(9+I*4,RemoteMode&(RemoteSel==(I-1)) ? CL[0,vector] : CL[1,vector])
+                                }
+                                else{
+                                    E:egpSetText(8+I*4,"")
+                                    E:egpSetText(9+I*4,"")
+                                    E:egpAlpha(10+I*4,0)
+                                }
+                            }
+                            
+                            E:egpAlpha(6,(FencePos>0)*255)
+                            E:egpPos(6,vec2(115+FencePos*90,200))
+                            
+                            E:egpAlpha(7,((RemoteMode&(RemoteSel>=0))*255))
+                            E:egpPos(7,vec2(250+RemoteSel*90,254))
+                            
+                            if(changed(RemoteMode)|changed(FencePos)|changed(PBMode)|changed(PG[2,number])){
+                                if(!RemoteMode){
+                                    if(FencePos>0){
+                                        switch(PBMode){
+                                            case -1,
+                                                EGPSec:buttonGenerate(table("FORW.","BACK","BRAKE\n-","IDLE","BRAKE\n+","REMOTE\nSAND","REMOTE\nMENU","MAIN\nMENU"))
+                                            break
+                                            case 0,
+                                                EGPSec:buttonGenerate(table("FORW.","BACK","POWER","IDLE","BRAKE","REMOTE\nSAND","REMOTE\nMENU","MAIN\nMENU"))
+                                            break
+                                            case 1,
+                                                EGPSec:buttonGenerate(table("FORW.","BACK","POWER\n+","IDLE","POWER\n-","REMOTE\nSAND","REMOTE\nMENU","MAIN\nMENU"))
+                                            break
+                                        }
+                                    }
+                                    else{
+                                        EGPSec:buttonGenerate(table("","BACK","","","","REMOTE\nSAND","REMOTE\nMENU","MAIN\nMENU"))
+                                    }
+                                }
+                                else{
+                                    EGPSec:buttonGenerate(table("FORW.","BACK","IDLE","NORMAL","SET\nOUT","ISOLATE","CONTROL\nMENU","MAIN\nMENU"))
+                                }
+                            }
+                        break
+                        case 2, #main menu
+                        
+                            #brakes
+                            E:egpSetText(15,format("%01d",RLCPTW["EqualRes",number]))
+                            E:egpSetText(20,format("%01d",RLCPTW["BrakePipe",number]))
+                            E:egpSetText(25,format("%01d",RLCPTW["CFM",number]))
+                            E:egpSetText(30,format("%01d",RLCPTW["MainRes",number]))
+                            E:egpSetText(35,format("%01d",RLCPTW["Cyl",number]))
+                            
+                            #power
+                            E:egpSetText(10,format("%01d",Num:toNumber()))
+                            E:egpSetText(40,format("%s",select(RLCPTW["Reverser",number]+2,"REV","CNTR","FWD")))
+                            E:egpSetText(45,format("%s",RLCPTW["Dynamics",number] ? select((clamp(RLCPTW["DynamicBrakingPower",number]-10,0,90))/11.25+1,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(RLCPTW["Notch",number]+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
+                            E:egpSetText(50,format("%01d",ACTraction ? RLCPTW["TE_LBF",number]/1000 : abs(RLCPTW["Load1",number])))
+                            
+                            
+                            #date & time
+                            local Epoch = time()+(Timezone+(date()["isdst",number]*(DST>0)))*3600
+                            local Time = dateUTC(Epoch)
+                            
+                            E:egpSetText(51,format("%02d:%02d   %02d %s %s%s",Time["hour",number],Time["min",number],Time["day",number],select(Time["month",number],"JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"),Time["year",number]:toString()[3],Time["year",number]:toString()[4]))
+                            
+                            switch(PG[3,number]){
+                                case 0, #overview menu
+                                    if(DPRunning&DPType>0){
+                                        E:egpSetText(54,format("LEAD UNIT, REMOTES = %01d",UnitList:count()))
+                                    }
+                                    elseif(DPRunning&DPType<0){
+                                        E:egpSetText(54,format("REMOTE UNIT LINKED, LEAD UNIT %01d",LeadUnitNumber))
+                                    }
+                                    else{
+                                        E:egpSetText(54,"DP NOT CONFIGURED, SET UP AS LEAD OR REMOTE")
+                                    }
+                                    
+                                    
+                                    
+                                break
+                                case 1, #lead setup
+                                    for(I=0,4){
+                                        local RECV = DP_DATA_BUS["dp",table]["received_units",table][UnitList[I+1,number],table]
+                                        if(I<UnitList:count()){
+                                            E:egpSetText(56+I,format("LINKED UNIT      - %04d - %s",UnitList[I+1,number],RECV["remote",string]!="COMM" ? "LINKED OK" : "LINK FAILED"))
+                                        }
+                                        elseif(I==UnitList:count()){
+                                            if(Unlink){
+                                                E:egpSetText(56+I,format("UNLINK FROM UNIT - %s",UnitDigit_S))
+                                            }
+                                            else{
+                                                E:egpSetText(56+I,format("LINK TO UNIT     - %s",UnitDigit_S))
+                                            }
+                                        }
+                                        else{
+                                            E:egpSetText(56+I,"")
+                                        }
+                                    }
+                                    E:egpSetText(280+9,Unlink ? "UNLINK" : "LINK")
+                                    E:egpSetText(280+13,Unlink ? "LINK\nMODE" : "UNLINK\nMODE")
+                                    E:egpPos(62,vec2(156+7*UnitSetDigit,230+40+20*UnitList:count()))
+                                    E:egpSetText(63,format("%01d",UnitDigit[UnitSetDigit+1,number]))
+                                break
+                                case 2, #remote setup
+                                    E:egpSetText(56,format("LINK TO UNIT     - %s",UnitDigit_S))
+                                    E:egpSetText(57,format("DIRECTION        - %s LEAD",TravelDir ? "OPPOS TO" : "SAME AS"))
+                                    E:egpPos(58,vec2(156+7*UnitSetDigit,230+40))
+                                    E:egpSetText(59,format("%01d",UnitDigit[UnitSetDigit+1,number]))
+                                break
+                            }
+                        break
+                    }
+                break
+                case 2, #eab setup
+                    #brakes
+                    E:egpSetText(15,format("%01d",RLCPTW["EqualRes",number]))
+                    E:egpSetText(20,format("%01d",RLCPTW["BrakePipe",number]))
+                    E:egpSetText(25,format("%01d",RLCPTW["CFM",number]))
+                    E:egpSetText(30,format("%01d",RLCPTW["MainRes",number]))
+                    E:egpSetText(35,format("%01d",RLCPTW["Cyl",number]))
+                    
+                    #power
+                    E:egpSetText(10,format("%01d",Num:toNumber()))
+                    E:egpSetText(40,format("%s",select(RLCPTW["Reverser",number]+2,"REV","CNTR","FWD")))
+                    E:egpSetText(45,format("%s",RLCPTW["Dynamics",number] ? select((clamp(RLCPTW["DynamicBrakingPower",number]-10,0,90))/11.25,"DS","D1","D2","D3","D4","D5","D6","D7","D8") : select(RLCPTW["Notch",number]+1,"IDLE","N1","N2","N3","N4","N5","N6","N7","N8")))
+                    E:egpSetText(50,format("%01d",ACTraction ? RLCPTW["TE_LBF",number]/1000 : abs(RLCPTW["Load1",number])))
+                    
+                    
+                    #date & time
+                    local Epoch = time()+(Timezone+(date()["isdst",number]*(DST>0)))*3600
+                    local Time = dateUTC(Epoch)
+                    
+                    E:egpSetText(51,format("%02d:%02d   %02d %s %s%s",Time["hour",number],Time["min",number],Time["day",number],select(Time["month",number],"JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"),Time["year",number]:toString()[3],Time["year",number]:toString()[4]))
+                    
+                    E:egpSetText(61,format("%01d",EAB_SETUP["set_brake_pipe_feed_pressure",number]*14.5))
+                    E:egpSetText(66,select(EAB_SETUP["set_brake_pipe_cut_in",number]+1,"CUT-OUT","FREIGHT","PASS."))
+                    E:egpSetText(71,select(EAB_SETUP["set_loco_brake_lead",number]+1,"TRAIL","LEAD"))
+                    
+                    E:egpSetText(81,format("%01d",NEW_EAB["set_brake_pipe_feed_pressure",number]*14.5))
+                    E:egpSetText(86,select(NEW_EAB["set_brake_pipe_cut_in",number]+1,"CUT-OUT","FREIGHT","PASS."))
+                    E:egpSetText(91,select(NEW_EAB["set_loco_brake_lead",number]+1,"TRAIL","LEAD"))
+                break
+            }
+        }
+    }
+}
+if(first()|dupefinished()){
+    Run=1
+}
+if(Run){
+    timer("clk",0.5,function(){
+        
+        #on/off
+        if(changed(Battery>0)&Battery){
+            EGPMain:pageGenerate(0,table())
+            PG=table(0,0,0,0)
+            EGPSec:pageGenerate(1,PG)
+        }
+        elseif(!Battery){
+            EGPMain:egpClear()
+            EGPSec:egpClear()
+        }
+        
+        
+        
+        
+        if(Battery){
+            if(changed((PG[1,number])+(PG[2,number]*10)+(PG[3,number]*100)+(PG[4,number]*1000))){
+                EGPSec:pageGenerate(1,PG)
+            }
+            
+            EGPMain:pageUpdate(0,table())
+            EGPSec:pageUpdate(1,PG)
+        }
+        
+        DISPLAY_DATA_BUS["dp",table]=table()
+        DISPLAY_DATA_BUS["dp",table]["lead_unit",number]=LeadUnitNumber
+        DISPLAY_DATA_BUS["dp",table]["lead_trail",number]=DPType
+        DISPLAY_DATA_BUS["dp",table]["power/brake",number]=PowerBrake
+        DISPLAY_DATA_BUS["dp",table]["unit_list",table]=UnitList
+        DISPLAY_DATA_BUS["dp",table]["travel_direction",number]=TravelDir
+        DISPLAY_DATA_BUS["dp",table]["fence_pos",number]=FencePos
+        DISPLAY_DATA_BUS["dp",table]["unit_modes",table]=RemoteModes
+        DISPLAY_DATA_BUS["dp",table]["remote_sand",number]=RemoteSand
+        
+        BCI=EAB_SETUP["set_brake_pipe_cut_in",number]
+        
+        
+        
+        timerRestart("clk")
+    })
+}
+event keyPressed(P:entity, K:string, D:number, KB:string){
+    local RLCPTW=RLCPT:wirelink()
+    
+    if(Run&Battery&P==Driver&inrange(K:toNumber(),1,8)){
+        if(D){
+            EGPSec:entity():soundPlay("key",1,"monkssounds/buttons/button1.wav")
+            soundLevel("key",70)
+        }
+        else{
+            EGPSec:entity():soundPlay("key",1,"monkssounds/buttons/button11.wav")
+            soundLevel("key",70)
+        }
+        switch(PG[1,number]){
+            case 0, #main page
+                if(D&K=="1"){
+                    if((DPType>0)&DPRunning){
+                        PG[1,number]=1
+                    }
+                    else{
+                        PG[1,number]=1
+                        PG[2,number]=2
+                    }
+                }
+                if(D&K=="2"){
+                    PG[1,number]=2
+                    
+                    NEW_EAB=EAB_SETUP:clone()
+                }
+            break
+            case 1, #dp
+                switch(PG[2,number]){
+                    case 0,
+                        if(D&K=="5"){
+                            PG[2,number]=1
+                        }
+                        if(D&K=="6"){
+                            PG[2,number]=2
+                        }
+                        if(D&K=="8"){
+                            PG[1,number]=0
+                        }
+                    break
+                    case 1,
+                        if(D&K=="7"){
+                            RemoteMode=!RemoteMode
+                        }
+                        if(D&K=="8"){
+                            PG[2,number]=0
+                        }
+                        if(!RemoteMode){
+                            if(FencePos>0){
+                                if(D&K=="1"){
+                                    FencePos--
+                                }
+                                if(D&K=="2"){
+                                    FencePos++
+                                }
+                                switch(PBMode){
+                                    case -1,
+                                        if(D&K=="3"){
+                                            PowerBrake++
+                                        }
+                                        if(D&K=="3"&PowerBrake==0){
+                                            PBMode=0
+                                            PowerBrake=0
+                                        }
+                                        if(D&K=="4"){
+                                            PBMode=0
+                                            PowerBrake=0
+                                        }
+                                        if(D&K=="5"){
+                                            PowerBrake--
+                                        }
+                                    break
+                                    case 0,
+                                        if(D&K=="3"){
+                                            PBMode=1
+                                            PowerBrake=1
+                                        }
+                                        if(D&K=="4"){
+                                            PBMode=0
+                                            PowerBrake=0
+                                        }
+                                        if(D&K=="5"){
+                                            PBMode=-1
+                                            PowerBrake=-1
+                                        }
+                                    break
+                                    case 1,
+                                        if(D&K=="3"){
+                                            PowerBrake++
+                                        }
+                                        if(D&K=="4"){
+                                            PBMode=0
+                                            PowerBrake=0
+                                        }
+                                        if(D&K=="5"){
+                                            PowerBrake--
+                                        }
+                                        if(D&K=="5"&PowerBrake==0){
+                                            PBMode=0
+                                            PowerBrake=0
+                                        }
+                                        
+                                    break
+                                }
+                            }
+                            else{
+                                if(D&K=="2"){
+                                    FencePos++
+                                }
+                                PowerBrake=RLCPTW["Notch",number]-RLCPTW["Dynamics",number]-clamp(clamp(RLCPTW["DynamicBrakingPower",number]-10,0,90),0,90)/11.25
+                                PBMode=clamp(PowerBrake,-1,1)
+                            }
+                            
+                            FencePos=clamp(FencePos,0,UnitList:count())
+                            PowerBrake=clamp(PowerBrake,-9,8)
+                        
+                                
+                        }
+                        else{
+                            if(D&K=="1"){
+                                RemoteSel--
+                            }
+                            if(D&K=="2"){
+                                RemoteSel++
+                            }
+                                if(K=="3"&D){
+                                    RemoteModes[RemoteSel+1,number] = 1
+                                }
+                                if(K=="4"&D){
+                                    RemoteModes[RemoteSel+1,number] = 0
+                                }
+                                if(K=="5"&D){
+                                    RemoteModes[RemoteSel+1,number] = 2
+                                }
+                                if(K=="6"&D){
+                                    RemoteModes[RemoteSel+1,number] = 3
+                                }
+                            
+                            RemoteSel=clamp(RemoteSel,0,UnitList:count()-1)
+                        }
+                        
+                    break
+                    
+                    case 2, #main menu
+                        switch(PG[3,number]){
+                            case 0, #overview
+                                if(DPRunning){
+                                    if(D&K=="1"){
+                                        PG[3,number]=1+(DPType<0)
+                                    }
+                                    if(D&K=="7"){
+                                        DPRunning=0
+                                        DPType=0
+                                        PG[1,number]=0
+                                        PG[2,number]=0
+                                    }
+                                    if(D&K=="8"){
+                                        if(DPType>0){
+                                            PG[2,number]=0
+                                        }
+                                        else{
+                                            PG[1,number]=0
+                                            PG[2,number]=0
+                                        }
+                                    }
+                                }
+                                else{
+                                    if(D&K=="2"){
+                                        PG[3,number]=1
+                                        DPRunning=1
+                                        DPType=1
+                                    }
+                                    if(D&K=="5"){
+                                        PG[3,number]=2
+                                        DPType=-1
+                                    }
+                                    if(D&K=="8"){
+                                        PG[1,number]=0
+                                        PG[2,number]=0
+                                    }
+                                }
+                                
+                                if(D&K=="8"){
+                                    PG[2,number]=0
+                                }
+                            break
+                            case 1, #lead setup
+                                if(UnitList:count()<4){
+                                    if(K=="1"&D){
+                                        if(UnitDigit[UnitSetDigit+1,number]==9){
+                                            UnitDigit[UnitSetDigit+1,number] = 0
+                                        }
+                                        else{
+                                            UnitDigit[UnitSetDigit+1,number] = UnitDigit[UnitSetDigit+1,number]+1
+                                        }
+                                    }
+                                    if(K=="2"&D){
+                                        if(UnitDigit[UnitSetDigit+1,number]==0){
+                                            UnitDigit[UnitSetDigit+1,number] = 9
+                                        }
+                                        else{
+                                            UnitDigit[UnitSetDigit+1,number] = UnitDigit[UnitSetDigit+1,number]-1
+                                        }
+                                        
+                                        
+                                        
+                                    }
+                                    if(K=="3"&D){
+                                        UnitSetDigit = UnitSetDigit - 1
+                                    }
+                                    if(K=="4"&D){
+                                        UnitSetDigit = UnitSetDigit + 1
+                                    }
+                                    
+                                    
+                                    UnitDigit[UnitSetDigit+1,number] = clamp(UnitDigit[UnitSetDigit+1,number],0,9)
+                                    
+                                    UnitSetDigit=clamp(UnitSetDigit,0,3)
+                                    
+                                    UnitDigit_S=format("%01d%01d%01d%01d",UnitDigit[1,number],UnitDigit[2,number],UnitDigit[3,number],UnitDigit[4,number])
+                                    
+                                    
+                                    if(K=="5"&D){
+                                        if(!Unlink&UnitList:count()<3){
+                                            UnitList:pushNumber(UnitDigit_S:toNumber())
+                                            RemoteModes:pushNumber(0)
+                                        }
+                                        else{
+                                            for(I=1,UnitList:count()){
+                                                if(UnitList[I,number]==(UnitDigit_S:toNumber())){
+                                                    UnitList:removeNumber(I)
+                                                    RemoteModes:removeNumber(I)
+                                                }
+                                            }
+                                        }
+                                        
+                                        UnitDigit=table()
+                                        UnitSetDigit=0
+                                    }
+                                }
+                            
+                            
+                                if(D&K=="6"){
+                                    DPRunning=1
+                                    DPType=1
+                                    PG[3,number]=0
+                                }
+                                if(D&K=="7"){
+                                    Unlink=!Unlink
+                                }
+                                if(D&K=="8"){
+                                    DPRunning=0
+                                    DPType=0
+                                    PG[3,number]=0
+                                }
+                            break
+                            case 2, #remote setup
+                                
+                                    if(K=="1"&D){
+                                        UnitDigit[UnitSetDigit+1,number] = UnitDigit[UnitSetDigit+1,number]+1
+                                    }
+                                    if(K=="2"&D){
+                                        UnitDigit[UnitSetDigit+1,number] = UnitDigit[UnitSetDigit+1,number]-1
+                                    }
+                                    if(K=="3"&D){
+                                        UnitSetDigit = UnitSetDigit - 1
+                                    }
+                                    if(K=="4"&D){
+                                        UnitSetDigit = UnitSetDigit + 1
+                                    }
+                                    if(K=="5"&D){
+                                        TravelDir = (!TravelDir)
+                                    }
+                                    
+                                    
+                                    UnitDigit[UnitSetDigit+1,number] = clamp(UnitDigit[UnitSetDigit+1,number],0,9)
+                                    
+                                    UnitSetDigit=clamp(UnitSetDigit,0,3)
+                                    
+                                    UnitDigit_S=format("%01d%01d%01d%01d",UnitDigit[1,number],UnitDigit[2,number],UnitDigit[3,number],UnitDigit[4,number])
+                                
+                                    
+                                    if(K=="6"&D){
+                                        LeadUnitNumber=UnitDigit_S:toNumber()
+                                        PG[3,number]=0
+                                        DPRunning=1
+                                        DPType=-1
+                                    }
+                                if(D&K=="8"){
+                                    DPRunning=0
+                                    DPType=0
+                                    PG[3,number]=0
+                                }
+                            break
+                        }
+                    break
+                }
+            break
+            case 2, #eab setup
+                if(D&K=="1"){
+                    NEW_EAB["set_brake_pipe_feed_pressure",number] = NEW_EAB["set_brake_pipe_feed_pressure",number]+(5/14.5)
+                }
+                if(D&K=="2"){
+                    NEW_EAB["set_brake_pipe_feed_pressure",number] = NEW_EAB["set_brake_pipe_feed_pressure",number]-(5/14.5)
+                }
+                NEW_EAB["set_brake_pipe_feed_pressure",number]=clamp(NEW_EAB["set_brake_pipe_feed_pressure",number],80/14.5,110/14.5)
+                
+                if(D&K=="3"){
+                    NEW_EAB["set_brake_pipe_cut_in",number] = !NEW_EAB["set_brake_pipe_cut_in",number]
+                }
+                if(D&K=="4"){
+                    NEW_EAB["set_loco_brake_lead",number] = !NEW_EAB["set_loco_brake_lead",number]
+                }
+                
+                if(D&K=="6"){
+                    EAB_SETUP=NEW_EAB:clone()
+                }
+                
+                if(D&K=="8"){
+                    PG[1,number]=0
+                }
+            break
+        }
+    }
+}
