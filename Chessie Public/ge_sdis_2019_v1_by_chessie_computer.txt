@@ -60,7 +60,7 @@ if(first()|duped()){
     "system_font" = "bahnschrift light",
     "system_font_2" = "bahnschrift",
     
-    "skip_boot" = 1
+    "skip_boot" = 0
     
     )
     
@@ -197,61 +197,326 @@ if(first()|duped()){
         }
     }
     
-    function void wirelink:loadingCircleGenerate(INDEX:number, POS:vector2, SCALE:number, COLOR:vector, BACKGROUND_COLOR:vector){
-        E=This
-        
-        E:egpWedge(INDEX,POS,vec2(26)*SCALE)
-        E:egpColor(INDEX,COLOR)
-        E:egpCircle(INDEX+1,POS,vec2(18)*SCALE)
-        E:egpColor(INDEX+1,BACKGROUND_COLOR)
-    }
-    
-
     BOOT_DATA=table(
-        "sequence" = 0,
-        "circle" = 0
+        "sequence" = 0
     )
-    function number wirelink:w11Bootup(INDEX:number,BOOT_DATA:table){
+    function number wirelink:sdisBootup(BOOT_DATA:table){
         E=This
         local SEQ = BOOT_DATA["sequence",number]
         
         BOOT_DATA["sequence",number]=BOOT_DATA["sequence",number]+1
         
         
-        
-        if(changed(SEQ>0)&SEQ>0){
+        if(changed(BOOT_DATA["sequence",number]>0)){
             E:egpClear()
-            
-            BOOT_DATA["circle",number] = 0
-            
-            E:egpBox(INDEX,vec2(256-27,256-80-27),vec2(50))
-            E:egpBox(INDEX+1,vec2(256+27,256-80-27),vec2(50))
-            E:egpBox(INDEX+2,vec2(256-27,256-80+27),vec2(50))
-            E:egpBox(INDEX+3,vec2(256+27,256-80+27),vec2(50))
-            E:egpColor(INDEX,vec(50,120,200))
-            E:egpColor(INDEX+1,vec(50,120,200))
-            E:egpColor(INDEX+2,vec(50,120,200))
-            E:egpColor(INDEX+3,vec(50,120,200))
         }
-        BOOT_DATA["circle",number]=BOOT_DATA["circle",number]+30
-        if(changed(SEQ>15)&SEQ>15){
-            E:egpWedge(INDEX+4,vec2(256,256+80),vec2(26)*0.8)
-            E:egpColor(INDEX+4,vec(255))
-            E:egpCircle(INDEX+5,vec2(256,256+80),vec2(18)*0.8)
-            E:egpColor(INDEX+5,vec(0))
+        
+        if(changed(inrange(SEQ,0,14))|changed(inrange(SEQ,15,44))|changed(inrange(SEQ,45,89))|changed(inrange(SEQ,90,179))){
+            E:egpClear()
         }
-        local Visibility=sin(BOOT_DATA["circle",number]/2)+1
-        E:egpAngle(INDEX+4,-BOOT_DATA["circle",number])
-        E:egpSize(INDEX+4,-0.1-Visibility*85-10)
         
-        E:egpAlpha(INDEX,255*clamp(SEQ/4,0,1)-clamp((SEQ-135)*51,0,255))
-        E:egpAlpha(INDEX+1,255*clamp(SEQ/4,0,1)-clamp((SEQ-135)*51,0,255))
-        E:egpAlpha(INDEX+2,255*clamp(SEQ/4,0,1)-clamp((SEQ-135)*51,0,255))
-        E:egpAlpha(INDEX+3,255*clamp(SEQ/4,0,1)-clamp((SEQ-135)*51,0,255))
-        E:egpAlpha(INDEX+4,255*clamp(SEQ/4,0,1)-clamp((SEQ-135)*51,0,255))
-        E:egpAlpha(INDEX+5,255*clamp(SEQ/4,0,1)-clamp((SEQ-139)*255,0,255))
+        if(inrange(SEQ,0,14)){
+            
+            E:egpText(1,"_",vec2(6,6))
+            E:egpColor(1,vec(160))
+            E:egpFont(1,"Cascadia Mono",14)
+            E:egpAlpha(1,((SEQ%4)>2)*255)
+        }
+        elseif(inrange(SEQ,15,44)){
+            
+            
+            
+            
+            E:egpText(1,"GRUB loading "+(SEQ>16 ? "." : "")+(SEQ>18 ? "." : "")+(SEQ>20 ? "." : "") ,vec2(6,6))
+            E:egpColor(1,vec(160))
+            E:egpFont(1,"Cascadia Mono",14)
+            
+            if(SEQ>25){
+                local C=toUnicodeChar(9608)
+                E:egpText(2,C+C+C+C+C+C+C+C+C+C+C+C+C+C+C+C,vec2(6,6+15))
+                E:egpColor(2,vec(160))
+                E:egpFont(2,"Cascadia Mono",14)
+                
+                E:egpText(3,"Welcome to GRUB!",vec2(6,6+15))
+                E:egpColor(3,vec(0))
+                E:egpFont(3,"Cascadia Mono",14)
+            }
+        }
+        elseif(inrange(SEQ,45,89)){
+            E:egpBox(1,vec2(256),vec2(512))
+            E:egpColor(1,vec(5,71,92)/1.4)
+            
+            E:egpPoly(2,array(vec2(30,0),vec2(50,0),vec2(60,40),vec2(30,48),vec2(20,0),vec2(30,0)))
+            E:egpColor(2,vec4(50,190,255,10))
+            
+            E:egpPoly(3,array(vec2(0,220),vec2(30,250),vec2(0,360),vec2(0,220)))
+            E:egpColor(3,vec4(50,230,255,18))
+            
+            E:egpPoly(4,array(vec2(380,512),vec2(360,460),vec2(420,512),vec2(380,512)))
+            E:egpColor(4,vec4(50,220,255,14))
+            
+            E:egpPoly(5,array(vec2(490,512),vec2(400,400),vec2(420,350),vec2(512,370),vec2(512,512)))
+            E:egpColor(5,vec4(50,220,255,10))
+            
+            E:egpPoly(6,array(vec2(512,260),vec2(460,280),vec2(512,460)))
+            E:egpColor(6,vec4(50,220,255,12))
+            
+            E:egpPoly(7,array(vec2(220,0),vec2(240,80),vec2(246,120),vec2(224,110),vec2(200,36),vec2(140,0)))
+            E:egpColor(7,vec4(50,220,255,8))
+            
+            E:egpPoly(8,array(vec2(0,320),vec2(10,320),vec2(60,440),vec2(40,480),vec2(20,512),vec2(0,512)))
+            E:egpColor(8,vec4(50,220,255,6))
+            
+            E:egpText(9,"debian 12",vec2(20,480))
+            E:egpColor(9,vec4(220,240,255,40))
+            E:egpFont(9,"Cascadia Mono",18)
+            
+            E:egpText(10,"    Booting 'Debian GNU/Linux'",vec2(6,6))
+            E:egpColor(10,vec(190))
+            E:egpFont(10,"Cascadia Mono",14)
+            
+            if(SEQ>50){
+                E:egpText(11,"Loading Linux 6.1.0-34 ...",vec2(6,6+30))
+                E:egpColor(11,vec(190))
+                E:egpFont(11,"Cascadia Mono",14)
+            }
+            if(SEQ>72){
+                E:egpText(12,"Loading initial ramdisk ...",vec2(6,6+45))
+                E:egpColor(12,vec(190))
+                E:egpFont(12,"Cascadia Mono",14)
+            }
+        }
+        elseif(inrange(SEQ,90,179)){
+            local MST = table(
+            "[    0.640963] [Firmware Bug]: cpu 0, try to use APIC520 (LVT offset 2)",
+            "[    0.033274] [Firmware Bug]: cpu 1, try to use APIC520 (LVT offset 2)",
+            "/dev/sda1: clean, 167035/2035824 files, 1505952/8138240 blocks",
+            "[  OK  ] Finished plymouth-read-write.service",
+            "[  OK  ] Finished console-setup.service",
+            "[  OK  ] Started systemd-journald.service",
+            "         Starting systemd-journal-flush.service",
+            "[  OK  ] Started systemd-udevd.service",
+            "[  OK  ] Finished systemd-udev-trigger.service",
+            "         Starting ifupdown-pre.service",
+            "         Starting plymouth-start.service",
+            "[  OK  ] Finished ifupdown-pre.service",
+            "[  OK  ] Finished apparmor.service",
+            "[  OK  ] Finished systemd-journal-flush.service",
+            "         Starting networking.service",
+            "         Starting systemd-tmpfiles-setup.service",
+            "[  OK  ] Started plymouth-start.service",
+            "[  OK  ] Started systemd-ask-password-plymouth.path",
+            "[  OK  ] Reached target cryptsetup.target",
+            "[  OK  ] Finished systemd-tmpfiles-setup.service",
+            "         Starting systemd-timesyncd.service",
+            "         Starting systemd-update-utmp.service",
+            "[  OK  ] Started vgauth.service",
+            "         Starting to-touch.grass",
+            "[  OK  ] Started plymouth-start.service",
+            "[  OK  ] Started to-touch.grass",
+            "[  OK  ] Found device dev-disk-by\\x2duuid-1115806e\\x2d15de\\x2d420c",
+            "[  OK  ] Started systemd-ask-password-plymouth.path",
+            "[  OK  ] Reached target cryptsetup.target",
+            "         Activating swap dev-disk-by\\x2duuid-1115806e\\x2d15de\\x2d420c",
+            "         Mounting proc-sys-fs-binfmt_misc.mount",
+            "[  OK  ] Activated swap dev-disk-by\\x2duuid-1115806e\\x2d15de\\x2d420c",
+            "[  OK  ] Reached target swap.target",
+            "[  OK  ] Mounted proc-sys-fs-binfmt_misc.mount",
+            "[  OK  ] Finished systemd-binfmt.service",
+            "[  OK  ] Listening on systemd-rfkill.socket",
+            "[  OK  ] Started systemd-timesyncd.service",
+            "[  OK  ] Reached target sysinit.target",
+            "[  OK  ] Started cups.path",
+            "[  OK  ] Started systemd-tmpfiles-clean.timer",
+            "[  OK  ] Reached target paths.target",
+            "[  OK  ] Reached target time-set.target",
+            "[  OK  ] Started anacron.timer",
+            "[  OK  ] Started apt-daily.timer",
+            "[  OK  ] Started apt-daily-upgrade.timer",
+            "[  OK  ] Started dpkg-db-backup.timer",
+            "[  OK  ] Started e2scrub_all.timer",
+            "[  OK  ] Started fstrim.timer",
+            "[  OK  ] Started fwupd-refresh.timer",
+            "[  OK  ] Started logrotate.timer",
+            "[  OK  ] Started man-db.timer",
+            "[  OK  ] Reached target timers.target",
+            "[  OK  ] Listening on avahi-daemon.socket",
+            "[  OK  ] Listening on cups.socket",
+            "[  OK  ] Listening on dbus.socket",
+            "[  OK  ] Reached target sockets.target",
+            "[  OK  ] Reached target basic.target",
+            "         Starting accounts-daemon.service",
+            "[  OK  ] Started anacron.service",
+            "         Starting avahi-daemon.service",
+            "[  OK  ] Started cron.service",
+            "         Starting dbus.service",
+            "         Starting e2scrub_reap.service",
+            "[  OK  ] Reached target getty.target",
+            "[  OK  ] Started low-memory-monitor.service",
+            "         Starting polkit.service",
+            "         Starting power-profiles-daemon.service",
+            "         Starting switcheroo-control.service",
+            "         Starting systemd-logind.service",
+            "         Starting udisks2.service"
+            )
+                for(I=1,30){
+                    if(I<(SEQ-95)){
+                        E:egpText(I,MST[I+clamp(SEQ-130,0,40),string],vec2(6,6+15*(I-1)))
+                        E:egpColor(I,vec(160))
+                        E:egpFont(I,"Cascadia Mono",14)
+                    }
+                }
+            
+        }
+        else{
+            if(changed(SEQ>180)|changed(SEQ>179)|changed(SEQ>181)){
+                E:egpBox(1,vec2(256),vec2(512))
+                E:egpColor(1,vec(180))
+                
+                local LogoPos=vec2(256-80,150)
+                local LogoScale=0.15
+                E:egpWedge(2,LogoPos,vec2(200)*LogoScale)
+                E:egpSize(2,180)
+                E:egpAngle(2,90-10)
+                E:egpColor(2,vec(255,60,20))
+                
+                E:egpWedge(3,LogoPos,vec2(180)*LogoScale)
+                E:egpSize(3,180)
+                E:egpAngle(3,0-10)
+                E:egpColor(3,vec(255,60,20))
+                
+                E:egpCircle(4,LogoPos,vec2(170)*LogoScale)
+                E:egpColor(4,vec(180))
+                
+                E:egpWedge(5,LogoPos,vec2(140)*LogoScale)
+                E:egpSize(5,180)
+                E:egpAngle(5,180-10)
+                E:egpColor(5,vec(255,60,20))
+                
+                E:egpWedge(6,LogoPos,vec2(120)*LogoScale)
+                E:egpSize(6,180)
+                E:egpAngle(6,90-10)
+                E:egpColor(6,vec(255,60,20))
+                
+                E:egpCircle(7,LogoPos,vec2(110)*LogoScale)
+                E:egpColor(7,vec(180))
+                
+                E:egpWedge(8,LogoPos,vec2(80)*LogoScale)
+                E:egpSize(8,180)
+                E:egpAngle(8,270-10)
+                E:egpColor(8,vec(255,60,20))
+                
+                E:egpWedge(9,LogoPos,vec2(60)*LogoScale)
+                E:egpSize(9,180)
+                E:egpAngle(9,180-10)
+                E:egpColor(9,vec(255,60,20))
+                
+                E:egpCircle(10,LogoPos,vec2(50)*LogoScale)
+                E:egpColor(10,vec(180))
+                
+                E:egpTextLayout(11,"Wabtec",vec2(256+80,150),vec2(256,70))
+                E:egpFont(11,"Calibri Bold Italic",60)
+                E:egpColor(11,vec(20))
+                E:egpAlign(11,0,0)
+                
+                E:egpTextLayout(12,"CORPORATION",vec2(256+80,150),vec2(256,70))
+                E:egpFont(12,"Calibri Light Italic",20)
+                E:egpColor(12,vec(20))
+                E:egpAlign(12,0,2)
+            }
+            
+            local Load=clamp((SEQ-180)/190,0,1)
+            
+            E:egpBox(13,vec2(256-59*(1-Load),360),vec2(118*Load,18))
+            E:egpColor(13,vec(50))
+            E:egpSize(13,2)
+            
+            E:egpBoxOutline(14,vec2(256,360),vec2(120,20))
+            E:egpColor(14,vec(40))
+            E:egpSize(14,2)
+            
+            if(inrange(Load,0,0.1)){
+                E:egpTextLayout(15,"Awaiting System Config",vec2(256,330),vec2(256,20))
+                E:egpFont(15,"Calibri",12)
+                E:egpColor(15,vec(20))
+                E:egpAlign(15,1,1)
+            }
+            elseif(inrange(Load,0.1,0.15)){
+                E:egpTextLayout(15,"Applying System Config",vec2(256,330),vec2(256,20))
+                E:egpFont(15,"Calibri",12)
+                E:egpColor(15,vec(20))
+                E:egpAlign(15,1,1)
+            }
+            elseif(inrange(Load,0.15,0.25)){
+                E:egpTextLayout(15,"Configuring IF Devices",vec2(256,330),vec2(256,20))
+                E:egpFont(15,"Calibri",12)
+                E:egpColor(15,vec(20))
+                E:egpAlign(15,1,1)
+            }
+            elseif(inrange(Load,0.25,0.32)){
+                E:egpTextLayout(15,"Connecting To ECU",vec2(256,330),vec2(256,20))
+                E:egpFont(15,"Calibri",12)
+                E:egpColor(15,vec(20))
+                E:egpAlign(15,1,1)
+            }
+            elseif(inrange(Load,0.32,0.4)){
+                E:egpTextLayout(15,"Checking Trainline Signals",vec2(256,330),vec2(256,20))
+                E:egpFont(15,"Calibri",12)
+                E:egpColor(15,vec(20))
+                E:egpAlign(15,1,1)
+            }
+            elseif(inrange(Load,0.4,0.5)){
+                E:egpTextLayout(15,"Verifying Config",vec2(256,330),vec2(256,20))
+                E:egpFont(15,"Calibri",12)
+                E:egpColor(15,vec(20))
+                E:egpAlign(15,1,1)
+            }
+            elseif(inrange(Load,0.5,0.65)){
+                E:egpTextLayout(15,"Registration Starting",vec2(256,330),vec2(256,20))
+                E:egpFont(15,"Calibri",12)
+                E:egpColor(15,vec(20))
+                E:egpAlign(15,1,1)
+            }
+            elseif(inrange(Load,0.65,0.7)){
+                E:egpTextLayout(15,"Registration Passed",vec2(256,330),vec2(256,20))
+                E:egpFont(15,"Calibri",12)
+                E:egpColor(15,vec(20))
+                E:egpAlign(15,1,1)
+            }
+            elseif(inrange(Load,0.7,0.75)){
+                E:egpTextLayout(15,"Verifying Network Integrity",vec2(256,330),vec2(256,20))
+                E:egpFont(15,"Calibri",12)
+                E:egpColor(15,vec(20))
+                E:egpAlign(15,1,1)
+            }
+            elseif(inrange(Load,0.8,0.9)){
+                E:egpTextLayout(15,"Preloading Application",vec2(256,330),vec2(256,20))
+                E:egpFont(15,"Calibri",12)
+                E:egpColor(15,vec(20))
+                E:egpAlign(15,1,1)
+            }
+            elseif(inrange(Load,0.9,0.98)){
+                E:egpTextLayout(15,"Loading Application",vec2(256,330),vec2(256,20))
+                E:egpFont(15,"Calibri",12)
+                E:egpColor(15,vec(20))
+                E:egpAlign(15,1,1)
+            }
+            elseif(inrange(Load,0.98,0.99)){
+                E:egpTextLayout(15,"Are We There Yet?",vec2(256,330),vec2(256,20))
+                E:egpFont(15,"Calibri",12)
+                E:egpColor(15,vec(20))
+                E:egpAlign(15,1,1)
+            }
+            elseif(inrange(Load,0.99,1)){
+                E:egpTextLayout(15,"Starting Application",vec2(256,330),vec2(256,20))
+                E:egpFont(15,"Calibri",12)
+                E:egpColor(15,vec(20))
+                E:egpAlign(15,1,1)
+            }
+        }
         
-        if(SEQ>140){
+        
+        if(SEQ>380){
             E:egpClear()
             
             return 1
@@ -572,10 +837,6 @@ if(first()|duped()){
                 E:egpColor(137,CL["blue",vector])
                 
                 E:labeledBox(138, vec2(64+31+62,380), vec2(58,30), "DP", 12, 8, CL["white",vector])
-                E:egpTextLayout(141,"--",vec2(64+31+62,380),vec2(58,30))
-                E:egpFont(141,CFG["system_font_2",string],14)
-                E:egpColor(141,CL["white",vector])
-                E:egpAlign(141,1,1)
                 
                 E:buttonGenerate(table("Air\nBrake","End Of\nTrain\0","","Distributed\nPower","Operator\nMessages\0","Speed\nControl\0","Switches\0","","Distance\nStart","Distance\nSetup","Auto\nStart/Stop\0","","Trip\nOptimizer\0","Rail\nCleaner\0","Screen\nControls","More\nMenu\0"))
             break
@@ -1299,11 +1560,6 @@ if(first()|duped()){
                 
                 E:labeledBox(130, vec2(512-95,360), vec2(120,50), "UTC Time", 12, 0, CL["white",vector])
                 
-                E:egpTextLayout(133,"Date:  1/1/1970\nTime:  00:00:00",vec2(512-95,360),vec2(120,50))
-                E:egpFont(133,CFG["system_font_2",string],14)
-                E:egpColor(133,CL["white",vector])
-                E:egpAlign(133,1,1)
-                
                 
                 
                 E:buttonGenerate(table("UP","DOWN","","","","","","Exit"))
@@ -1484,11 +1740,11 @@ if(first()|duped()){
                                     
                                     if(!ALT&K=="4"&D&PBMode==0){
                                         PBMode=1
-                                        PowerBrake++
+                                        PowerBrake=0
                                     }
                                     if(!ALT&K=="6"&D&PBMode==0){
                                         PBMode=-1
-                                        PowerBrake--
+                                        PowerBrake=0
                                     }
                                     
                                     if(ALT&K=="4"&D&(PBMode>0)&PowerBrake==0){
@@ -1811,7 +2067,6 @@ if(first()|duped()){
             #consist effort
             E:egpSetText(64,format("%01d:%01d",DP_DATA_BUS["live_unit_count",number],DP_DATA_BUS["unit_count",number]))
             E:egpSetText(65,format("%01d",DP_DATA_BUS["consist_effort",number]/1000))
-            E:egpColor(65,PowerBrake<0 ? CL["yellow",vector] : CL["green",vector])
             
             #loadmeter
             E:egpSetText(73,format("%01d",RL["TE_LBF",number]/1000))
@@ -1889,7 +2144,7 @@ if(first()|duped()){
         
         #upper data
         local Epoch = time()+(CFG["timezone",number]+(date()["isdst",number]*(CFG["daylight_savings",number]>0)))*3600
-        local Time = dateUTC(Epoch)
+        local Time = date(Epoch)
         
         E:egpSetText(100,format("%02d:%02d:%02d",Time["hour",number],Time["min",number],Time["sec",number]))
         
@@ -2271,8 +2526,6 @@ if(first()|duped()){
             break
             case 11, #screen controls
                 E:egpPos(117,vec2(120,310-24+MAIN_GEN["preset",number]*24))
-                local Date=dateUTC(time())
-                E:egpSetText(133,format("Date:  %01d/%01d/%04d\nTime:  %02d:%02d:%02d",Date["month",number],Date["day",number],Date["year",number],Date["hour",number],Date["min",number],Date["sec",number]))
             break
         }
     }
@@ -2398,7 +2651,11 @@ if(Run){
             
             if(!Booted&Battery){
                 if(!CFG["skip_boot",number]){
-                    Booted=EGPL:w11Bootup(2,BOOT_DATA)
+                    Booted=EGPL:sdisBootup(BOOT_DATA)
+                    if(BOOT_DATA["sequence",number]>180){
+                        BOOT_DATA["sequence",number]=BOOT_DATA["sequence",number]-1
+                        EGPR:sdisBootup(BOOT_DATA)
+                    }
                 }
                 else{
                     Booted=1
