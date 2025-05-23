@@ -2146,7 +2146,7 @@ if(first()|duped()){
         
         #upper data
         local Epoch = time()+(CFG["timezone",number]+(date()["isdst",number]*(CFG["daylight_savings",number]>0)))*3600
-        local Time = date(Epoch)
+        local Time = dateUTC(Epoch)
         
         E:egpSetText(100,format("%02d:%02d:%02d",Time["hour",number],Time["min",number],Time["sec",number]))
         
