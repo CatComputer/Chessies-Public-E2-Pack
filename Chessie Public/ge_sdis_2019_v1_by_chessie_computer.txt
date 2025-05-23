@@ -51,6 +51,8 @@ if(first()|duped()){
     "timezone" = -5, #sets the timezone offset from UTC
     "daylight_savings" = 1, #if your location adheres to daylight savings, turn this on
     
+    
+    "amps_mode" = 0, #sets the max te and de to amps and changes the display
     "max_te" = 180,
     "max_de" = 100,
     
@@ -638,9 +640,9 @@ if(first()|duped()){
         E:egpAlign(69,1,1)
         E:egpColor(69,CL["white",vector])
         
-        E:labeledBox(70, vec2(390,120), vec2(100,30), "Effort Klb", 12, -6, CL["green",vector])
+        E:labeledBox(70, vec2(390,120), vec2(100,30), CFG["amps_mode",number] ? "Amps x100" : "Effort Klb", 12, -6, CL["green",vector])
         E:egpTextLayout(73,"180",vec2(390-32,120),vec2(38,30))
-        E:egpFont(73,CFG["system_font",string],16)
+        E:egpFont(73,CFG["system_font",string],CFG["amps_mode",number] ? 12 : 16)
         E:egpAlign(73,1,1)
         E:egpColor(73,CL["green",vector])
         
@@ -2069,10 +2071,10 @@ if(first()|duped()){
             E:egpSetText(65,format("%01d",DP_DATA_BUS["consist_effort",number]/1000))
             
             #loadmeter
-            E:egpSetText(73,format("%01d",RL["TE_LBF",number]/1000))
+            E:egpSetText(73,format("%01d",(CFG["amps_mode",number] ? RL["Load1",number] : RL["TE_LBF",number]/1000)))
             if(!SD["SetDynamics",number]){
-                E:egpBox(75,vec2(404-29+clamp(RL["TE_LBF",number]/CFG["max_te",number],0,1000)*0.029,119),vec2(60-59+clamp(RL["TE_LBF",number]/CFG["max_te",number],0,1000)*0.058,8))
-                E:egpSetText(77,format("%01d",CFG["max_te",number]))
+                E:egpBox(75,vec2(404-29+clamp((CFG["amps_mode",number] ? RL["Load1",number]*1000 : RL["TE_LBF",number])/CFG["max_te",number],0,1000)*0.029,119),vec2(60-59+clamp((CFG["amps_mode",number] ? RL["Load1",number]*1000 : RL["TE_LBF",number])/CFG["max_te",number],0,1000)*0.058,8))
+                E:egpSetText(77,format("%01d",CFG["max_te",number]/(CFG["amps_mode",number] ? 100 : 1)))
                 
                 E:egpColor(70,CL["green",vector])
                 E:egpColor(72,CL["green",vector])
@@ -2081,8 +2083,8 @@ if(first()|duped()){
                 
             }
             else{
-                E:egpBox(75,vec2(404-29+clamp(RL["TE_LBF",number]/CFG["max_de",number],0,1000)*0.029,119),vec2(60-59+clamp(RL["TE_LBF",number]/CFG["max_de",number],0,1000)*0.058,8))
-                E:egpSetText(77,format("%01d",CFG["max_de",number]))
+                E:egpBox(75,vec2(404-29+clamp((CFG["amps_mode",number] ? RL["Load1",number]*1000 : RL["TE_LBF",number])/CFG["max_de",number],0,1000)*0.029,119),vec2(60-59+clamp((CFG["amps_mode",number] ? RL["Load1",number]*1000 : RL["TE_LBF",number])/CFG["max_de",number],0,1000)*0.058,8))
+                E:egpSetText(77,format("%01d",CFG["max_de",number]/(CFG["amps_mode",number] ? 100 : 1)))
                 
                 E:egpColor(70,CL["yellow",vector])
                 E:egpColor(72,CL["yellow",vector])
