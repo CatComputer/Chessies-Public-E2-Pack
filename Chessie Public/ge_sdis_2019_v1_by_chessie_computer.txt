@@ -2071,9 +2071,9 @@ if(first()|duped()){
             E:egpSetText(65,format("%01d",DP_DATA_BUS["consist_effort",number]/1000))
             
             #loadmeter
-            E:egpSetText(73,format("%01d",(CFG["amps_mode",number] ? RL["Load1",number] : RL["TE_LBF",number]/1000)))
+            E:egpSetText(73,format("%01d",(CFG["amps_mode",number] ? abs(RL["Load1",number]) : RL["TE_LBF",number]/1000)))
             if(!SD["SetDynamics",number]){
-                E:egpBox(75,vec2(404-29+clamp((CFG["amps_mode",number] ? RL["Load1",number]*1000 : RL["TE_LBF",number])/CFG["max_te",number],0,1000)*0.029,119),vec2(60-59+clamp((CFG["amps_mode",number] ? RL["Load1",number]*1000 : RL["TE_LBF",number])/CFG["max_te",number],0,1000)*0.058,8))
+                E:egpBox(75,vec2(404-29+clamp((CFG["amps_mode",number] ? abs(RL["Load1",number]*1000) : RL["TE_LBF",number])/CFG["max_te",number],0,1000)*0.029,119),vec2(60-59+clamp((CFG["amps_mode",number] ? abs(RL["Load1",number]*1000) : RL["TE_LBF",number])/CFG["max_te",number],0,1000)*0.058,8))
                 E:egpSetText(77,format("%01d",CFG["max_te",number]/(CFG["amps_mode",number] ? 100 : 1)))
                 
                 E:egpColor(70,CL["green",vector])
