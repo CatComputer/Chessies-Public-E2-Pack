@@ -1185,7 +1185,7 @@ if(clk("unlock")){
     Unlock=1
     EGPMain:entity():soundPlay("keyout",1,"monkssounds/buttons/button2.wav")
 }
-if(Battery&changed(Battery)&!OSBooted&!first()&!dupefinished()){
+if(changed(Battery)&Battery&!OSBooted&!first()&!dupefinished()){
     OSBootSequence=0
     OSBooting=1
     
