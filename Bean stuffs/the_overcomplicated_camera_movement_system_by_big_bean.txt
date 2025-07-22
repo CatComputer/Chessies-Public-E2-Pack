@@ -1,164 +1,76 @@
 @name The Overcomplicated Camera Movement System by Big Bean
 @inputs [DRIVER_SEAT PASSENGER_SEAT PASSENGER2_SEAT VEHICLE_BODY]:entity
-@outputs [CAMERA_PARENT_DRIVER CAMERA_PARENT_PASSENGER CAMERA_PARENT_PASSENGER2]:entity [CameraPosition_Driver CameraPosition_Passenger CameraPosition_Passenger2]:vector CameraActive_Driver CameraActive_Passenger CameraActive_Passenger2
-@persist [E DS PS P2S VB]:entity [DriverSeatToVehiclePos PassengerSeatToVehiclePos Passenger2SeatToVehiclePos]:vector [DriverSeatAngle PassengerSeatAngle Passenger2SeatAngle]:angle Run DeltaT PlayerHeight
-@persist [SMOOTH_DATA CAM_DATA CAM_INTERPOLATION_DATA]:table [VehicleVelocity VehicleVelocity_True RawVehicleAcceleration]:vector
-@persist HeadHeight SeatHeight PlayerUpperMass [MaxAngle_Vertical MaxAngle_Side AngleIntensity  MaxPos_Forward MaxPos_Side MaxPos_Vertical]:vector2 ModelAxis FlipCameraAxes MovementIntensity:vector  
+@outputs [CAMERA_PARENT_DRIVER CAMERA_PARENT_PASSENGER CAMERA_PARENT_PASSENGER2]:entity [CameraPosition_Driver CameraPosition_Passenger CameraPosition_Passenger2]:vector CameraActive_Driver CameraActive_Passenger CameraActive_Passenger2  DCameraPosIndex PCameraPosIndex P2CameraPosIndex
+@persist [DS PS P2S VB]:entity [DriverSeatToVehiclePos PassengerSeatToVehiclePos Passenger2SeatToVehiclePos]:vector [DriverSeatAngle PassengerSeatAngle Passenger2SeatAngle]:angle Run DeltaT PlayerHeight
+@persist [SMOOTH_DATA DELTA_DATA CAM_DATA CAM_INTERPOLATION_DATA]:table [VehicleVelocity VehicleVelocity_True RawVehicleAcceleration]:vector
+@persist HeadHeight SeatHeight PlayerUpperMass [AngleIntensity  MaxPos_Forward MaxPos_Side MaxPos_Vertical]:vector2 ModelAxis FlipCameraAxes MovementIntensity:vector  
 @persist [NextCameraPosition PreviousCameraPosition]:string InitialDriverCameraPosition InitialPassengerCameraPosition InitialPassenger2CameraPosition [DriverCameraPositions PassengerCameraPositions Passenger2CameraPositions]:table
 @persist HasPassengerSeat HasSecondPassengerSeat DCameraPosIndex PCameraPosIndex P2CameraPosIndex DCamMoveUp DCamMoveDown PCamMoveUp PCamMoveDown P2CamMoveUp P2CamMoveDown CameraTransitionSmoothing
 @trigger none
 #----
-E = entity()
 if(first()|duped()){
-    
     #[
-    Setup or whatever:
-    ------------------
-    Before you start telling me how this "doesn't work", look at (and ideally edit to your liking) the fucking config, aye bud?
-
-    >Put this somewhere on your locomotive and parent the chip (so like literally every first step when using any E2-).
-    >Connect 'DRIVER_SEAT' to the driver's seat (holy shit), repeat this for all the other seats (if you have them that is).
-    >Connect 'VEHICLE_BODY' to the vehicle body (come on now).
-    >[This part is IMPORTANT] Next, go to the wire Cam Controller menu and tick:
-        >'Client side movement' and 'Localized movement'
-    -and untick:
-        >'Coords local to parent' (the other options are optional),
-    >Make sure you untick Draw player, unless you want to see your head-ass from the inside,
-    >Finally, make sure you connect the controller to the seat that it belongs to.
-
-    >Now, spawn this controller on your unit and connect it to its respective seat (do this the same way as you would do a pod controller).
-    >Connect the controller's 'Active' input to the respective 'CameraActive' output on this E2.
-    >Connect the controller's 'Position' and 'Parent' to the respective outputs on this E2 as well.
-    >Refresh the E2 once all the seats are connected.
-
-    Experience the peak locomotive (or any other vehicle for that matter) driving experience that you've been craving for 1.8 decades.
-
-    Disclaimer: for some reason, this breaks when you have 'Terminate' and 'Strip weapons' enabled on the POD controller (thanks James).
-    Another disclaimer: you cannot go into third person (it makes it more realistic so I don't care,
-        not to mention you can set a position outside of the cab if you really need that feature)
+    Setup:
+    ------
+    Before you deem this E2 broken (which is entirely possible), consider the following: have you really checked everything in the config?
+    
+    a) Put this somewhere on your locomotive and parent the chip (you already know).
+    b) Connect DRIVER_SEAT to the driver's seat, do this for every seat you have.
+    c) Connect VEHICLE_BODY to the vehicle body (come on now).
+    d) Next, go to the wire Cam Controller menu and TICK 'Client side movement' and 'Localized movement'; UNTICK 'Coordinates local to parent' (the other options shouldn't break this, so tweak those to your liking),
+        d.i   Make sure you UNTICK Draw player, unless you want to see your frontal cortex at all times while driving,
+        d.ii  Finally, make sure you connect the controller to the seat that it belongs to (same as connecting a wire Pod Controller, i.e. right click it).
+    e) Connect the controller's 'Active' input to the respective 'CameraActive_*' output on this E2,
+        e.i   Connect the controller's 'Position' and 'Parent' to the respective outputs on this E2 as well (so 'Position' on the DRIVER's controller will go to the 'CameraPosition_Driver' output on this E2, etc.).
+    f) Experience the peak locomotive (or any other vehicle for that matter) driving experience that you've been craving for 1.8 decades.
+    
+    Disclaimers:
+        -for some reason, this breaks when you have 'Terminate' and 'Strip weapons' enabled on the POD controller (thanks James).
+        -when the seat is parented to the POD controller that is linked to it, this breaks in a multitude of ways (thanks Floofy)
     ]#
     
     #Config:
     HeadHeight = 48 #Sets the height of the player's head above the seat. For sitting positions, this should be 48.
-        #for standing positions, this should be 64 (unless you're a tall motherfucker like chessie)
-    SeatHeight = 18 #The height of the seat/plate. Effectively sets how much angle is affected by camera deflection.
+        #for standing positions, this should be 64 (unless you're a tall mf like some people)
+    SeatHeight = 18 #The height of the seat/plate relative to the ground it's on. Effectively sets how much your head angle is affected by camera deflection.
         #For seats, set this to 18, for footplates, set it to 0 (or if you have your ankles welded to the ground, you can make it higher).
-    PlayerUpperMass = 40 #Upper body mass of the player - affects camera acceleration.
-    MaxAngle_Vertical = vec2(5, 25) #Sets the max vertical camera acceleration and deceleration angles.
-    MaxAngle_Side = vec2(4, 4) #Sets the max side-to-side camera acceleration and deceleration angles.
-    AngleIntensity = vec2(-0.2, 0.2) #Sets how intense the change in angle is for a given acceleration change. If the angling of the camera is wrong during movement, invert these numbers.
-    MaxPos_Forward = vec2(20, 4.5) #Sets the maximum back-to-front camera deflection.
-    MaxPos_Side = vec2(5, 5) #Sets the max side-to-side camera deflection.
-    MaxPos_Vertical = vec2(1, 1) #Sets the max bottom-to-top camera deflection.
-    ModelAxis = 0 #When set to 0, uses the X axis as the vehicle's "front", when set to 1, uses the Y axis as the vehicle's "front".
-    FlipCameraAxes = 1 #Set this to 1 when the model's forward axis is the Y axis.
-    MovementIntensity = vec(-1, -1, 0.5) #Allows you to change the velocity effects from every axis. If certain axes are flipped, try making the respective axis in this vector negative.
+    PlayerUpperMass = 40 #Upper body mass of the player (this is most likely in kilograms). This alters how smoothly the camera moves to its idle position but also how far it can deflect. 40 is a good value.
+    AngleIntensity = vec2(-0.25, -0.25) #Sets how intense the change in angle is for a given acceleration. If the direction of the angling is wrong in a certain axis (X and Y), invert the respective number and try it again.
+        #If you're wondering what "wrong angle direction" means: when accelerating FORWARD, your head should move BACKWARDS and therefor angle UPWARDS (and vice versa).
+    MaxPos_Forward = vec2(14, 4.5) #Sets the maximum camera deflection positions relative to the seat. X coordinate is maximum *forward* position, Y coordinate is maximum *backward* position.
+    MaxPos_Side = vec2(5, 5) #Sets the max side-to-side camera deflection. X coordinate is *left* position, Y coordinate is *right* position.
+    MaxPos_Vertical = vec2(1, 1) #Sets the max bottom-to-top camera deflection. X is *downward* position, Y is *upward* position.
+    ModelAxis = 0 #When set to 0, uses the X axis as the vehicle's "front" acceleration coordinate, when set to 1, uses the Y axis as the vehicle's "front".
+        #Basically, if your camera's moving in the wrong direction based on acceleration, change this.
+    FlipCameraAxes = 0 #Set this to 1 when the model's forward axis is the Y axis. This alters which axes the camera considers as left/right and forward/back.
+    MovementIntensity = vec(1, 1, 0.5) #Allows you to change the velocity effects from every axis. If certain axes are flipped (i.e. camera moves forward when accelerating forward),
+        #try making the respective axis in this vector negative.
     
     NextCameraPosition = "pad_3" #Defines the key to press that moves the camera to the next position in the list.
     PreviousCameraPosition = "pad_1" #Same but for moving the camera a position back.
     InitialDriverCameraPosition = 3 #The initial position index of the camera.
     DriverCameraPositions = table( #Define camera positions here.
-        vec(12, -4, 14),
-        vec(0, -4, 14),
+        vec(-5, -17, 8), #Position 1
+        vec(-4, 0, 12), #Position 2, etc.
         vec(0),
-        vec(-23, -3, 0.5)
+        vec(-6, 27, 2)
     )
-    InitialPassengerCameraPosition = 2
+    InitialPassengerCameraPosition = 1
     PassengerCameraPositions = table(
-        vec(0, -4, 14),
         vec(0),
-        vec(23, -3, 0.5)
+        vec(-6, -23, 2)
     )
-    InitialPassenger2CameraPosition = 2
+    InitialPassenger2CameraPosition = 1
     Passenger2CameraPositions = table(
-        vec(22, 1, 2.5),
         vec(0),
-        vec(0, -4, 14)
+        vec(0, 4, 14)
     )
     #End of config#
     
     
+    
     #Init:
-    #Making sure MaxPos_Forward actually points forward
-    if(FlipCameraAxes){
-        local MaxPosFwdSave = MaxPos_Forward
-        MaxPos_Forward = MaxPos_Side
-        MaxPos_Side = MaxPosFwdSave
-    }
-    
-    
-    function vector vecDeadzone(Val:vector, Deadzone){
-        return maxVec(Val + vec(-Deadzone), vec(0)) + minVec(Val + vec(Deadzone), vec(0))
-    }
-    
-    function void interpolateCameraMovement(CamID, SetPos:vector, InitPos:vector){
-        if(!CAM_INTERPOLATION_DATA:exists(CamID)){
-            CAM_INTERPOLATION_DATA[CamID, table] = table("cam_pos" = InitPos, "move_speed" = 0, "last_target" = SetPos)
-        }
-        local LOCAL_DATA = CAM_INTERPOLATION_DATA[CamID, table]
-        local Position = LOCAL_DATA["cam_pos", vector]
-        local MoveSpeed = LOCAL_DATA["move_speed", number]
-        if(LOCAL_DATA["last_target", vector] != SetPos){
-            LOCAL_DATA["last_target", vector] = SetPos
-            MoveSpeed = 0
-        }
-        MoveSpeed += min(1 - MoveSpeed, 0.05)
-        Position += (SetPos - Position) * MoveSpeed / CameraTransitionSmoothing
-        
-        LOCAL_DATA["cam_pos", vector] = Position
-        LOCAL_DATA["move_speed", number] = MoveSpeed
-    }
-    
-    function vector vecRangeOverlapAbs(Val:vector, XLimit:vector2, YLimit:vector2, ZLimit:vector2){
-        return vec(
-            abs(max(Val:x() - XLimit:y(), 0) + min(Val:x() + XLimit:x(), 0)),
-            abs(max(Val:y() - YLimit:y(), 0) + min(Val:y() + YLimit:x(), 0)),
-            abs(max(Val:z() - ZLimit:y(), 0) + min(Val:z() + ZLimit:x(), 0))
-        )
-    }
-    
-    function vector vecSmooth(Val:vector, SmoothLevel, ID:string, Init:vector){
-        if(!SMOOTH_DATA:exists(ID)){
-            SMOOTH_DATA[ID, vector] = Init
-        }
-        
-        local LastVal = SMOOTH_DATA[ID, vector]
-        LastVal += (Val - LastVal) / max(SmoothLevel, 1)
-        SMOOTH_DATA[ID, vector] = LastVal
-        return LastVal
-    }
-    
-    function vector entity:setCameraParentPosition(ParentIndex, Position:vector, Angle:angle){
-        holoPos(ParentIndex, This:toWorld(Position))
-        holoAng(ParentIndex, This:toWorld((FlipCameraAxes ? ang(Angle:roll(), Angle:yaw(), Angle:pitch()) : Angle)))
-        return holoEntity(ParentIndex):pos()
-    }
-    
-    function vector entity:runCameraPhysics(CamID, SystemAcceleration:vector, PosOffset:vector, AngleOffset:angle){
-        if(!CAM_DATA:exists(CamID)){
-            CAM_DATA[CamID, array] = array(vec(0), vec(0), vec(0))
-        }
-        local Camera = CAM_DATA[CamID, array]
-        local CamPosition = Camera[1, vector]
-        local CamVelocity = Camera[2, vector]
-        local HeadForceIntegralGain = Camera[3, vector]
-        
-        local HeadRawCounterForce = vecDeadzone(CamPosition, 0.4) * 0.4
-        HeadForceIntegralGain += (HeadRawCounterForce * 2 - HeadForceIntegralGain)
-        local CounterAcceleration = (HeadRawCounterForce * 0 + HeadForceIntegralGain) * 40 / PlayerUpperMass
-        
-        local CameraOverlapFactor = clamp(vec(1) - vecRangeOverlapAbs(CamPosition, MaxPos_Forward, MaxPos_Side, MaxPos_Vertical) * 0.1, vec(0), vec(1))
-        CamVelocity += (-SystemAcceleration - CounterAcceleration - CamVelocity*4) * DeltaT
-        CamPosition += clamp(CamVelocity * 39.37007874 * DeltaT, -vec(MaxPos_Forward:x(), MaxPos_Side:x(), MaxPos_Vertical:x()) - CamPosition, vec(MaxPos_Forward:y(), MaxPos_Side:y(), MaxPos_Vertical:y()) - CamPosition)
-        local CameraAngle = ang(-atan(CamPosition:y() / PlayerHeight) * AngleIntensity:x(),  AngleOffset:yaw(),  -atan(CamPosition:x() / PlayerHeight) * AngleIntensity:y())
-        
-        Camera[1, vector] = CamPosition
-        Camera[2, vector] = CamVelocity
-        Camera[3, vector] = HeadForceIntegralGain
-        return This:setCameraParentPosition(CamID, CamPosition + PosOffset + vec(0, 0, HeadHeight) + CAM_INTERPOLATION_DATA[CamID, table]["cam_pos", vector], CameraAngle)
-    }
-    
-    
+    #-----
     Run = 0
     DeltaT = 50 / 1000
     PlayerHeight = max(HeadHeight - SeatHeight, 4)
@@ -169,7 +81,116 @@ if(first()|duped()){
     P2CameraPosIndex = InitialPassenger2CameraPosition
     CAM_DATA = table()
     SMOOTH_DATA = table()
+    DELTA_DATA = table()
+    CAM_INTERPOLATION_DATA = table()
+    
+    DCamMoveUp = DCamMoveDown = 0
+    PCamMoveUp = PCamMoveDown = 0
+    P2CamMoveUp = P2CamMoveDown = 0
+    
+    
+    
+    #Making sure MaxPos_Forward actually points forward
+    if(FlipCameraAxes){
+        local MaxPosFwdSave = MaxPos_Forward
+        MaxPos_Forward = MaxPos_Side
+        MaxPos_Side = MaxPosFwdSave
+    }
 }
+
+
+#Functions:
+#----------
+function vector tickDiff(ID:string, Var:vector){
+    if(!DELTA_DATA:exists(ID)){
+        DELTA_DATA[ID, vector] = Var
+    }
+    
+    local Delta = (Var - DELTA_DATA[ID, vector])
+    DELTA_DATA[ID, vector] = Var
+    return Delta
+}
+
+#Adds a deadzone to a vector (i.e. an area where little change to the input vector doesn't affect the output).
+function vector vecDeadzone(Val:vector, Deadzone:number){
+    return maxVec(Val + vec(-Deadzone), vec(0)) + minVec(Val + vec(Deadzone), vec(0))
+}
+
+#Used to smoothly transition between user-defined camera positions.
+function void interpolateCameraMovement(CamID:number, SetPos:vector, InitPos:vector){
+    if(!CAM_INTERPOLATION_DATA:exists(CamID)){
+        CAM_INTERPOLATION_DATA[CamID, table] = table("cam_pos" = InitPos, "move_speed" = 0, "last_target" = SetPos)
+    }
+    local LOCAL_DATA = CAM_INTERPOLATION_DATA[CamID, table]
+    local Position = LOCAL_DATA["cam_pos", vector]
+    local MoveSpeed = LOCAL_DATA["move_speed", number]
+    if(LOCAL_DATA["last_target", vector] != SetPos){
+        LOCAL_DATA["last_target", vector] = SetPos
+        MoveSpeed = 0
+    }
+    MoveSpeed += min(1 - MoveSpeed, 0.05)
+    Position += (SetPos - Position) * MoveSpeed / CameraTransitionSmoothing
+    
+    LOCAL_DATA["cam_pos", vector] = Position
+    LOCAL_DATA["move_speed", number] = MoveSpeed
+}
+
+#I have no idea why this is even here.
+function vector vecRangeOverlapAbs(Val:vector, XLimit:vector2, YLimit:vector2, ZLimit:vector2){
+    return vec(
+        abs(max(Val:x() - XLimit:y(), 0) + min(Val:x() + XLimit:x(), 0)),
+        abs(max(Val:y() - YLimit:y(), 0) + min(Val:y() + YLimit:x(), 0)),
+        abs(max(Val:z() - ZLimit:y(), 0) + min(Val:z() + ZLimit:x(), 0))
+    )
+}
+
+#Smooths a given vector over time.
+function vector vecSmooth(Val:vector, SmoothLevel:number, ID:string, Init:vector){
+    if(!SMOOTH_DATA:exists(ID)){
+        SMOOTH_DATA[ID, vector] = Init
+    }
+    
+    local LastVal = SMOOTH_DATA[ID, vector]
+    LastVal += (Val - LastVal) / max(SmoothLevel, 1)
+    SMOOTH_DATA[ID, vector] = LastVal
+    return LastVal
+}
+
+#Sets the position and angles of the camera parent holo and returns the holo's position.
+function vector entity:setCameraParentPosition(ParentIndex:number, Position:vector, Angle:angle){
+    holoPos(ParentIndex, This:toWorld(Position))
+    holoAng(ParentIndex, This:toWorld((FlipCameraAxes ? ang(Angle:roll(), Angle:yaw(), Angle:pitch()) : Angle)))
+    return holoEntity(ParentIndex):pos()
+}
+
+#Makes the camera react to acceleration.
+function vector entity:runCameraPhysics(CamID:number, SystemAcceleration:vector, PosOffset:vector, AngleOffset:angle){
+    if(!CAM_DATA:exists(CamID)){
+        CAM_DATA[CamID, array] = array(vec(0), vec(0), vec(0))
+    }
+    local Camera = CAM_DATA[CamID, array]
+    local CamPosition = Camera[1, vector]
+    local CamVelocity = Camera[2, vector]
+    local HeadForceIntegralGain = Camera[3, vector]
+    
+    local HeadRawCounterForce = vecDeadzone(CamPosition, 0.4) * 0.4
+    HeadForceIntegralGain += (HeadRawCounterForce * 2 - HeadForceIntegralGain)
+    local CounterAcceleration = (HeadRawCounterForce * 0 + HeadForceIntegralGain) * 40 / PlayerUpperMass
+    
+    CamVelocity += (-SystemAcceleration - CounterAcceleration - CamVelocity*4) * DeltaT
+    CamPosition += clamp(CamVelocity * 39.37007874 * DeltaT, -vec(MaxPos_Forward:x(), MaxPos_Side:x(), MaxPos_Vertical:x()) - CamPosition, vec(MaxPos_Forward:y(), MaxPos_Side:y(), MaxPos_Vertical:y()) - CamPosition)
+    local CameraAngle = ang(-atan(CamPosition:y() / PlayerHeight) * AngleIntensity:x(),  AngleOffset:yaw(),  -atan(CamPosition:x() / PlayerHeight) * AngleIntensity:y())
+    
+    Camera[1, vector] = CamPosition
+    Camera[2, vector] = CamVelocity
+    Camera[3, vector] = HeadForceIntegralGain
+    return This:setCameraParentPosition(CamID, CamPosition + PosOffset + vec(0, 0, HeadHeight) + CAM_INTERPOLATION_DATA[CamID, table]["cam_pos", vector], CameraAngle)
+}
+
+
+
+#Pos-dupe:
+#---------
 if(first()|dupefinished()){
     
     DS = DRIVER_SEAT
@@ -181,7 +202,7 @@ if(first()|dupefinished()){
     DriverSeatToVehiclePos = VEHICLE_BODY:toLocal(DS:pos())
     DriverSeatAngle = VEHICLE_BODY:toLocal(DS:angles())
     local A = 1
-    holoCreate(A, VB:toWorld(DriverSeatToVehiclePos + vec(0, 0, HeadHeight)), vec(0.2), DS:toWorld(ang(0, 0, 0)), vec4(0), "cube")
+    holoCreate(A, VB:toWorld(DriverSeatToVehiclePos + vec(0, 0, HeadHeight)), vec(0), DS:toWorld(ang(0, 0, 0)), vec4(0), "cube")
     holoParent(A, VB)
     CAMERA_PARENT_DRIVER = holoEntity(A)
     CameraPosition_Driver = CAMERA_PARENT_DRIVER:pos()
@@ -190,7 +211,7 @@ if(first()|dupefinished()){
         PassengerSeatToVehiclePos = VEHICLE_BODY:toLocal(PS:pos())
         PassengerSeatAngle = VEHICLE_BODY:toLocal(PS:angles())
         A = 2
-        holoCreate(A, VB:toWorld(PassengerSeatToVehiclePos + vec(0, 0, HeadHeight)), vec(0.2), PS:toWorld(ang(0, 0, 0)), vec4(0), "cube")
+        holoCreate(A, VB:toWorld(PassengerSeatToVehiclePos + vec(0, 0, HeadHeight)), vec(0), PS:toWorld(ang(0, 0, 0)), vec4(0), "cube")
         holoParent(A, VB)
         CAMERA_PARENT_PASSENGER = holoEntity(A)
         CameraPosition_Passenger = CAMERA_PARENT_PASSENGER:pos()
@@ -202,7 +223,7 @@ if(first()|dupefinished()){
         Passenger2SeatToVehiclePos = VEHICLE_BODY:toLocal(P2S:pos())
         Passenger2SeatAngle = VEHICLE_BODY:toLocal(P2S:angles())
         A = 3
-        holoCreate(A, VB:toWorld(Passenger2SeatToVehiclePos + vec(0, 0, HeadHeight)), vec(0.2), P2S:toWorld(ang(0, 0, 0)), vec4(0), "cube")
+        holoCreate(A, VB:toWorld(Passenger2SeatToVehiclePos + vec(0, 0, HeadHeight)), vec(0), P2S:toWorld(ang(0, 0, 0)), vec4(0), "cube")
         holoParent(A, VB)
         CAMERA_PARENT_PASSENGER2 = holoEntity(A)
         CameraPosition_Passenger2 = CAMERA_PARENT_PASSENGER2:pos()
@@ -213,10 +234,9 @@ if(first()|dupefinished()){
     
     Run = 1
 }
-if(Run){
-    timer("clk", 50)
-}
-if(clk("clk")){
+
+
+function void main(){
     #Acceleration calculations
     VehicleVelocity = vecSmooth(VEHICLE_BODY:velL() * 0.0254 * (4/3), 3, "velocity_smooth", vec(0)) #m/s in player scaling
     if(ModelAxis){
@@ -224,7 +244,7 @@ if(clk("clk")){
     }else{
         VehicleVelocity_True = vec(VehicleVelocity:x(), -VehicleVelocity:y(), VehicleVelocity:z()) * MovementIntensity
     }
-    RawVehicleAcceleration = $VehicleVelocity_True * 20
+    RawVehicleAcceleration = tickDiff("vehicle_acceleration", VehicleVelocity_True) * 20
     
     #Driver cam
     #Custom camera movement
@@ -281,5 +301,14 @@ if(clk("clk")){
         
         CameraPosition_Passenger2 = VB:runCameraPhysics(3, RawVehicleAcceleration, Passenger2SeatToVehiclePos, Passenger2SeatAngle)
         CameraActive_Passenger2 = PASSENGER2_SEAT:driver():isPlayer()
+    }
+}
+
+if(Run){
+    if(!timerExists("clk")){
+        timer("clk", 0.05, function(){
+            main()
+            timerRestart("clk")
+        })
     }
 }
