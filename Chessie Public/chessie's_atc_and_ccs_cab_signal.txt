@@ -1,0 +1,79 @@
+@name Chessie's ATC and CCS Cab Signal
+@inputs CabSignalDisplay:entity CabSignalBox:entity
+@outputs CCS ATC NextAspect:string CAB_SIGNAL_DATA_BUS:table MaxSpeed
+@persist Run CabSignalW:wirelink MaxSpeedSettings:table
+@trigger none
+if(first()|duped()){
+    Run=0
+}
+if(first()|dupefinished()){
+    #[This E2 was designed to be used with the Grove's Wabtec cab signal display with both an ATC and CCS column. Both columns will be used during normal operation. Update: works with Linnie's cab signal tree now too
+    
+    Instructions:
+    
+    Wire CabSignalDisplay:entity to the cab signal display mounted in the cab
+    Wire CabSignalBox:entity to your TP3 cab signal box and make sure it is enabled for normal operation.
+    
+    ]#
+    
+    MaxSpeedSettings = table(
+    0, #DANGER
+    15, #RESTRICTING
+    20, #LIMITED
+    25 #MEDIUM
+    )
+    
+    timer("run",500)
+    
+    CAB_SIGNAL_DATA_BUS=table()
+}
+if(clk("run")){
+    Run=1
+}
+if(Run){
+    timer("clk",500)
+}
+if(clk("clk")){
+    CabSignalW=CabSignalBox:wirelink()
+    NextAspect=CabSignalW["NextSignalAspect",string]:lower()
+    
+    if(NextAspect:find("clear")){
+        CCS=1
+    }
+    elseif(NextAspect:find("approach")&NextAspect:find("advance")){
+        CCS=2
+    }
+    elseif(NextAspect:find("approach")&!NextAspect:find("advance")){
+        CCS=3
+    }
+    elseif(NextAspect:find("stop")|NextAspect:find("danger")|NextAspect:find("restrict")){
+        CCS=4
+    }
+    else{
+        CCS=0
+    }
+    
+    if(NextAspect:find("clear")){
+        ATC=1
+    }
+    elseif(NextAspect:find("approach")){
+        ATC=2
+    }
+    elseif(NextAspect:find("stop")|NextAspect:find("danger")|NextAspect:find("restrict")){
+        ATC=3
+    }
+    else{
+        ATC=0
+    }
+    
+    CabSignalDisplay:setBodygroup(1,CCS)
+    CabSignalDisplay:setBodygroup(2,ATC)
+    
+    CabSignalDisplay:setSkin(5-CCS)
+    
+    CAB_SIGNAL_DATA_BUS = table(
+    "CCS" = CCS,
+    "ATC" = ATC,
+    "Speed" = MaxSpeed
+    )
+}
