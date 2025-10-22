@@ -125,17 +125,17 @@ if(changed(NightMode)|first()|dupefinished()|~MEGP){
     MEGP:egpColor(21,BorderColor)
     MEGP:egpSize(21,1)
     
-    MEGP:egpTextLayout(22,"MPH",vec2(70-11,75-36),vec2(30,20))
+    MEGP:egpTextLayout(22,"MPH",vec2(85-11,85-36),vec2(30,20))
     MEGP:egpColor(22,TextColor)
     MEGP:egpSize(22,12)
     MEGP:egpAlign(22,0,0)
     
-    MEGP:egpTextLayout(23,"00",vec2(37,60),vec2(70-4,70-4))
+    MEGP:egpTextLayout(23,"00",vec2(72,95),vec2(70-4,70-4))
     MEGP:egpColor(23,TextColor)
     MEGP:egpSize(23,30)
     MEGP:egpAlign(23,1,0)
     
-    MEGP:egpTextLayout(24,"0   10  20  30  40  50  60  70  80  90 100",vec2(220-100-3,102),vec2(220-2,20))
+    MEGP:egpTextLayout(24,"0   10  20  30  40  50  60  70  80  90 100",vec2(220-100-3+109,112),vec2(220-2,20))
     MEGP:egpColor(24,TextColor)
     MEGP:egpSize(24,12)
     MEGP:egpAlign(24,0,0)
@@ -174,7 +174,7 @@ if(changed(NightMode)|first()|dupefinished()|~MEGP){
     MEGP:egpColor(32,BorderColor)
     MEGP:egpSize(32,2)
     
-    MEGP:egpTextLayout(33,"12   9    6     3    0    3     6    9   12  15  18",vec2(220-100-6,198),vec2(220-2,20))
+    MEGP:egpTextLayout(33,"12   9    6     3    0    3     6    9   12  15  18",vec2(220-100-6+109,198+10),vec2(220-2,20))
     MEGP:egpColor(33,TextColor)
     MEGP:egpSize(33,12)
     MEGP:egpAlign(33,0,0)
@@ -195,12 +195,12 @@ if(changed(NightMode)|first()|dupefinished()|~MEGP){
     MEGP:egpColor(37,BorderColor)
     MEGP:egpSize(37,1)
     
-    MEGP:egpTextLayout(38,"00",vec2(37,65+95),vec2(70-4,70-4))
+    MEGP:egpTextLayout(38,"00",vec2(72,100+95),vec2(70-4,70-4))
     MEGP:egpColor(38,vec(0))
     MEGP:egpSize(38,22)
     MEGP:egpAlign(38,1,0)
     
-    MEGP:egpTextLayout(39,"Amps",vec2(67-11,170-36),vec2(30,20))
+    MEGP:egpTextLayout(39,"Amps",vec2(82-11,180-36),vec2(30,20))
     MEGP:egpColor(39,TextColor)
     MEGP:egpSize(39,12)
     MEGP:egpAlign(39,0,0)
@@ -241,12 +241,12 @@ if(changed(NightMode)|first()|dupefinished()|~MEGP){
     MEGP:egpColor(49,BorderColor)
     MEGP:egpSize(49,1)
     
-    MEGP:egpTextLayout(50,"Brake",vec2(138-17.5,122.5+5),vec2(35,20))
+    MEGP:egpTextLayout(50,"Brake",vec2(138,132.5+5),vec2(35,20))
     MEGP:egpColor(50,TextColor)
     MEGP:egpSize(50,10)
     MEGP:egpAlign(50,1,0)
     
-    MEGP:egpTextLayout(51,"Motor",vec2(302-17.5,122.5+5),vec2(35,20))
+    MEGP:egpTextLayout(51,"Motor",vec2(302,132.5+5),vec2(35,20))
     MEGP:egpColor(51,TextColor)
     MEGP:egpSize(51,10)
     MEGP:egpAlign(51,1,0)
@@ -311,56 +311,56 @@ if(changed(NightMode)|first()|dupefinished()|~MEGP){
     MEGP:egpColor(84,BorderColor)
     MEGP:egpSize(84,2)
     
-    MEGP:egpTextLayout(85,"20  40  60  80 100 120 140",vec2(176,422),vec2(220-2,20))
+    MEGP:egpTextLayout(85,"20  40  60  80 100 120 140",vec2(176+109,432),vec2(220-2,20))
     MEGP:egpColor(85,TextColor)
     MEGP:egpSize(85,16)
     MEGP:egpAlign(85,0,0)
     
-    MEGP:egpTextLayout(86,"Eq. Reservoir",vec2(60,250),vec2(220-2,200))
+    MEGP:egpTextLayout(86,"Eq. Reservoir",vec2(60+109,350),vec2(220-2,200))
     MEGP:egpColor(86,TextColor)
     MEGP:egpSize(86,14)
     
-    MEGP:egpTextLayout(87,"Brake Pipe",vec2(60,250+30*1),vec2(220-2,200))
+    MEGP:egpTextLayout(87,"Brake Pipe",vec2(60+109,350+30*1),vec2(220-2,200))
     MEGP:egpColor(87,TextColor)
     MEGP:egpSize(87,14)
     
-    MEGP:egpTextLayout(88,"Brake Cylinder",vec2(60,250+30*2),vec2(220-2,200))
+    MEGP:egpTextLayout(88,"Brake Cylinder",vec2(60+109,350+30*2),vec2(220-2,200))
     MEGP:egpColor(88,TextColor)
     MEGP:egpSize(88,14)
     
-    MEGP:egpTextLayout(89,"Last Car",vec2(60,250+30*3),vec2(220-2,200))
+    MEGP:egpTextLayout(89,"Last Car",vec2(60+109,350+30*3),vec2(220-2,200))
     MEGP:egpColor(89,TextColor)
     MEGP:egpSize(89,14)
     
-    MEGP:egpTextLayout(90,"Air Flow Cfm",vec2(60,250+30*4),vec2(220-2,200))
+    MEGP:egpTextLayout(90,"Air Flow Cfm",vec2(60+109,350+30*4),vec2(220-2,200))
     MEGP:egpColor(90,TextColor)
     MEGP:egpSize(90,14)
     
-    MEGP:egpTextLayout(91,"Main Reservoir",vec2(60,422),vec2(220-2,200))
+    MEGP:egpTextLayout(91,"Main Reservoir",vec2(60+109,522),vec2(220-2,200))
     MEGP:egpColor(91,TextColor)
     MEGP:egpSize(91,14)
     
-    MEGP:egpTextLayout(92,"000",vec2(20,(250-4)),vec2(220-2,200))
+    MEGP:egpTextLayout(92,"000",vec2(20+109,(350-4)),vec2(220-2,200))
     MEGP:egpColor(92,TextColor)
     MEGP:egpSize(92,20)
     
-    MEGP:egpTextLayout(93,"000",vec2(20,(250+30*1)-4),vec2(220-2,200))
+    MEGP:egpTextLayout(93,"000",vec2(20+109,(350+30*1)-4),vec2(220-2,200))
     MEGP:egpColor(93,TextColor)
     MEGP:egpSize(93,20)
     
-    MEGP:egpTextLayout(94,"000",vec2(20,(250+30*2)-4),vec2(220-2,200))
+    MEGP:egpTextLayout(94,"000",vec2(20+109,(350+30*2)-4),vec2(220-2,200))
     MEGP:egpColor(94,TextColor)
     MEGP:egpSize(94,20)
     
-    MEGP:egpTextLayout(95,"000",vec2(20,(250+30*3)-4),vec2(220-2,200))
+    MEGP:egpTextLayout(95,"000",vec2(20+109,(350+30*3)-4),vec2(220-2,200))
     MEGP:egpColor(95,TextColor)
     MEGP:egpSize(95,20)
     
-    MEGP:egpTextLayout(96,"000",vec2(20,(250+30*4)-4),vec2(220-2,200))
+    MEGP:egpTextLayout(96,"000",vec2(20+109,(350+30*4)-4),vec2(220-2,200))
     MEGP:egpColor(96,TextColor)
     MEGP:egpSize(96,20)
     
-    MEGP:egpTextLayout(97,"000",vec2(20,422-4),vec2(220-2,200))
+    MEGP:egpTextLayout(97,"000",vec2(20+109,522-4),vec2(220-2,200))
     MEGP:egpColor(97,TextColor)
     MEGP:egpSize(97,20)
     
@@ -394,7 +394,7 @@ if(changed(NightMode)|first()|dupefinished()|~MEGP){
     MEGP:egpColor(69,BorderColor)
     MEGP:egpSize(69,2)
     
-    MEGP:egpTextLayout(70,"CS Inoperative",vec2(384,353),vec2(220-2,200))
+    MEGP:egpTextLayout(70,"CS Inoperative",vec2(384+109,353+100),vec2(220-2,200))
     MEGP:egpColor(70,vec(0))
     MEGP:egpSize(70,14)
     
@@ -607,42 +607,42 @@ if(changed(NightMode)|first()|dupefinished()|~OEGP){
     OEGP:egpSize(152,9)
     
     #Numbers
-    OEGP:egpTextLayout(153,"0",vec2(512-70-30-37,132-80-8),vec2(50,35))
+    OEGP:egpTextLayout(153,"0",vec2(512-70-30-37,132-80-8)+vec2(25,17.5),vec2(50,35))
     OEGP:egpAlign(153,1,0)
     OEGP:egpColor(153,vec(0))
     OEGP:egpSize(153,16)
     
-    OEGP:egpTextLayout(154,"0",vec2(512-70+30-37,132-80-8),vec2(50,35))
+    OEGP:egpTextLayout(154,"0",vec2(512-70+30-37,132-80-8)+vec2(25,17.5),vec2(50,35))
     OEGP:egpAlign(154,1,0)
     OEGP:egpColor(154,TextColor)
     OEGP:egpSize(154,16)
     
-    OEGP:egpTextLayout(155,"0",vec2(512-70-30-37,132-27.5-8),vec2(50,35))
+    OEGP:egpTextLayout(155,"0",vec2(512-70-30-37,132-27.5-8)+vec2(25,17.5),vec2(50,35))
     OEGP:egpAlign(155,1,0)
     OEGP:egpColor(155,TextColor)
     OEGP:egpSize(155,16)
     
-    OEGP:egpTextLayout(156,"0",vec2(512-70+30-37,132-27.5-8),vec2(50,35))
+    OEGP:egpTextLayout(156,"0",vec2(512-70+30-37,132-27.5-8)+vec2(25,17.5),vec2(50,35))
     OEGP:egpAlign(156,1,0)
     OEGP:egpColor(156,TextColor)
     OEGP:egpSize(156,16)
     
-    OEGP:egpTextLayout(157,"0",vec2(512-70-30-37,132+27.5-8),vec2(50,35))
+    OEGP:egpTextLayout(157,"0",vec2(512-70-30-37,132+27.5-8)+vec2(25,17.5),vec2(50,35))
     OEGP:egpAlign(157,1,0)
     OEGP:egpColor(157,TextColor)
     OEGP:egpSize(157,16)
     
-    OEGP:egpTextLayout(158,"0",vec2(512-70+30-37,132+27.5-8),vec2(50,35))
+    OEGP:egpTextLayout(158,"0",vec2(512-70+30-37,132+27.5-8)+vec2(25,17.5),vec2(50,35))
     OEGP:egpAlign(158,1,0)
     OEGP:egpColor(158,TextColor)
     OEGP:egpSize(158,16)
     
-    OEGP:egpTextLayout(159,"0",vec2(512-70-30-37,132+80-8),vec2(50,35))
+    OEGP:egpTextLayout(159,"0",vec2(512-70-30-37,132+80-8)+vec2(25,17.5),vec2(50,35))
     OEGP:egpAlign(159,1,0)
     OEGP:egpColor(159,TextColor)
     OEGP:egpSize(159,16)
     
-    OEGP:egpTextLayout(160,"***",vec2(512-70+30-37,132+80-8),vec2(50,35))
+    OEGP:egpTextLayout(160,"***",vec2(512-70+30-37,132+80-8)+vec2(25,17.5),vec2(50,35))
     OEGP:egpAlign(160,1,0)
     OEGP:egpColor(160,TextColor)
     OEGP:egpSize(160,16)
