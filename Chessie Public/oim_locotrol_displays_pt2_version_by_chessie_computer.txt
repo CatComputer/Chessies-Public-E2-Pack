@@ -823,7 +823,7 @@ if(first()|dupefinished()){
     Run=1
 }
 if(Run){
-    timer("clk",0.5,function(){
+    timer("clk",0.5,0,function(){
         
         #on/off
         if(changed(Battery>0)&Battery){
@@ -865,7 +865,6 @@ if(Run){
         
         
         
-        timerRestart("clk")
     })
 }
 event keyPressed(P:entity, K:string, D:number, KB:string){
