@@ -129,7 +129,7 @@ event remote(Origin:entity, Ply:entity, Table:table){
 
 if(Run){
     if(!timerExists("ctrl")){
-        timer("ctrl",0.1,function(){
+        timer("ctrl",0.1,0,function(){
             
             CtlTable=CtlTableIn:clone()
             
@@ -162,17 +162,13 @@ if(Run){
                 GenFld=1
                 
                 Isolation=Ctrl["mode",number]!=3
-            }
-            
-            
-            timerRestart("ctrl")
-            
+            }            
         })
         
     }
     
     if(!timerExists("clk")){
-        timer("clk",0.5,function(){
+        timer("clk",0.5,0,function(){
             
             LocalUnit=format("%s %01d",Railroad,Num:toNumber())
             LocalUnitN=Num:toNumber()
@@ -344,10 +340,7 @@ if(Run){
                     
                 }
                 
-            }
-            
-            timerRestart("clk")
-            
+            }            
             
             
             
