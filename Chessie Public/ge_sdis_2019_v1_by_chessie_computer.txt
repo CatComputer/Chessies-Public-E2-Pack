@@ -2629,16 +2629,15 @@ if(first()|dupefinished()){
 }
 if(Run){
     if(!timerExists("clk")){
-        timer("clk",(1/3),function(){
+        timer("clk",(1/3),0,function(){
             if(Booted){
                 main()
             }
-            timerRestart("clk")
         }
         )
     }
     if(!timerExists("fast")){
-        timer("fast",(1/9),function(){
+        timer("fast",(1/9),0,function(){
             
             
             
@@ -2685,7 +2684,6 @@ if(Run){
             }
             
             
-            timerRestart("fast")
         }
         )
     }
