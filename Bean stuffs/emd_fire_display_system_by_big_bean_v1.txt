@@ -4993,18 +4993,16 @@ event keyPressed(Player:entity, Key:string, Down:number, KeyBind:string) {
 
 if(Run){
     if(!timerExists("clk")){
-        timer("clk", 0.1, function(){
+        timer("clk", 0.1, 0, function(){
             main()
-            timerRestart("clk")
-            
+
             #Handling the display update timer
             if(Running){
                 if(!timerExists("clkDisp")){
                     updateDisp()
-                    timer("clkDisp", 0.5, function(){
+                    timer("clkDisp", 0.5, 0, function(){
                         updateDisp()
                         UpdateUnits = 0
-                        timerRestart("clkDisp")
                     })
                 }
             }else{
