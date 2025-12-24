@@ -13,7 +13,7 @@
 #Add-on E2 vars
 @persist LowFuel
 #RLC vars
-@persist EqualRes BrakePipe AirFlow MainRes BrakeCyl  KPH MPH  Reverser Throttle Dynamics TractiveEffort Load WheelSlip Sanding
+@persist EqualRes BrakePipe AirFlow MainRes BrakeCyl  KPH MPH  Notch Reverser Throttle Dynamics DynaBrakeNotch TractiveEffort Load WheelSlip Sanding
 @persist PCSOpen
 #Page speciffic vars
 @persist AlerterTime AlerterRunning AlerterBlink AlerterBlinkAngle AlertEmergency DynBrakeWarn UnitAlarm EOTMove  EID1 EID2 EID3 EID4 EID5 EIDStr:string  IL1 IL2 IL3 IL4 IL5 ILStr:string LengthValid
@@ -114,7 +114,7 @@ if(first()|duped()){
     #Config:
     #-------
     Units = 0 #Changes the default units of the system (you can change them any time "in-game" later [0 = Imperial, 1 = Metric]).
-    SkipBoot = 1 #Skips the boot sequence (if you're old-school, you'll want to know that this works now).
+    SkipBoot = 0 #Skips the boot sequence (if you're old-school, you'll want to know that this works now).
     UseAlerter = 1 #For those who want to sleep during driving.
     AlerterMaxVolume = 0.25 #Maximum volume of the alerter sound (set to 1 if you're deaf).
     AlerterResetKey = "T" #The key that you have to press to acknowledge that you're not dead.
@@ -222,7 +222,7 @@ if(first()|duped()){
     ForceUpdate_Main = ButtonUpdate_Main = 0
     ForceUpdate_Sec = ButtonUpdate_Sec = 0
     UpdateUnits = 0
-    User = noentity()
+    User = _NO_ENTITY
     SystemDate = table()
     TractiveEffort = 0
     
@@ -299,6 +299,7 @@ if(first()|duped()){
     
     #Misc vars that just have to be initialized, because E2 (yes I know it's proper workflow, but come on, I don't need 2000 lines of code just for initialization... right?)
     Dynamics = Notch = 0
+    DynaBrakeNotch = 0
     IL1 = IL2 = IL3 = IL4 = IL5 = 0
     EOTIDSetup = 0
     MeasuredMileRun = 0
@@ -4622,6 +4623,7 @@ function void main(){ #Display running
     
     Reverser = CtlTable["SetReverser", number]
     Throttle = CtlTable["SetThrottle", number]
+    Notch = RLCPTW["Notch", number]
     Dynamics = RLCPTW["Dynamics",number]
     DynaBrakeNotch = RLCPTW["DynaNotch",number]
     TractiveEffort = RLCPTW["TE_LBF",number]
@@ -4917,7 +4919,7 @@ if(User:isValid() & !User:isPlayer()){
     }
 }
 if(Driver:isValid() & !Driver:isPlayer()){
-    User = noentity()
+    User = _NO_ENTITY
     KeyCMD = ""
     IsShifting = 0
 }
