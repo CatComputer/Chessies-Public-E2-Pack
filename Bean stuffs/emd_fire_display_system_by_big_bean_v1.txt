@@ -1,11 +1,11 @@
 @name locomotive_displays/mfds/EMD FIRE Display System by Big Bean V1
 @inputs RLCPT:entity Pod:entity [CtlTable DISTRIBUTED_POWER_DATA_BUS]:table [EGPMain EGPSec]:wirelink Battery
-@inputs RX_EOTPSI RX_EOTID  FuelLevel Horn Bell LoadShed UnitOverride
+@inputs RX_EOTPSI RX_EOTID  FuelLevel Horn Bell LoadShed UnitOverride [Override_LocoNumber Override_LocoIdent]:string
 @outputs [DISPLAY_CONTROL_BUS DP_DATA]:table RX_EOTBrakePipe RX_EOTMPH EOTDSetID Running DrivenDistMI AlertEmergency BCI IsolatedBrakes EQResSetPressure DefoggerOn ConsistLength RailConditioner MMDrivenDistance MMSpeedChecks:table MMTimeElapsed
 #----
 #Generic variables
 @persist Run BatteryLocal  Units SkipBoot UseAlerter AlerterMaxVolume AlerterResetKey:string MaxSpeedoVelocity SpeedoRedAreaVelocity SpeedoYellowAreaVelocity SetToAmps MaxTE MaxContTE MaxTMCurrent MaxContTMCurrent MaxDynCurrent MaxContDynCurrent FuelTankCap
-@persist BrakePanelYeet TimeFormat Timezone TimezoneName:string LOCOMOTIVE_IDENT:table SetupScreenLogo [SetupLogoScale SetupLogoCol]:vector [SetupLogoMat Font_SansSerif Font_Monospace]:string ColorGrading LCDType
+@persist BrakePanelYeet TimeFormat DateFormat Timezone TimezoneName:string LOCOMOTIVE_IDENT:table SetupScreenLogo [SetupLogoScale SetupLogoCol]:vector [SetupLogoMat Font_SansSerif Font_Monospace]:string ColorGrading LCDType
 @persist [Driver User]:entity [RLCPTW]:wirelink [SYS_COLORS UNIT_DATA SMOOTH_DATA DELTA_DATA]:table MainPage SecPage CanRun OSLoaded OSLoadProgress OSLoading OSLoadSteps OS_TerminalLine OS_TerminalLineCount OS_WindowsXPLoadBarIndex
 @persist DrivenDistMI Accel FirmwareVersion:string
 @persist Brightness  [CONSIST_MONITOR_DATA DP_RECEIVED_UNITS]:table
@@ -27,7 +27,7 @@
 #Commands & buttons
 @persist [KeyCMD]:string IsShifting KeyTimeout  MB1 MB2 MB3 MB4 MB5 MB6 MB7 MB8 SB1 SB2 SB3 SB4 SB5 SB6 SB7 SB8  ForceUpdate_Main ButtonUpdate_Main ForceUpdate_Sec ButtonUpdate_Sec UpdateUnits
 @trigger none
-FirmwareVersion = "102.11"
+FirmwareVersion = "102.12"
 #----
 #[ Hello there.
 This is a recreation of the EMD FIRE locomotive displays by, you guessed it, Big Bean.
@@ -43,6 +43,8 @@ all the common discord servers (OR, NAT and FC&N) under the name 'das_bean'.
 ------------
 Version log:
 ------------
+V:102.12 - Added options to adjust the date format and change the unit identifier dynamically (use Override_LocoNumber and Override_LocoIdent for this).
+--------
 V:102.11 - Fixed DP not showing any data, because yours truly forgot to copy 5 lines of code over.
 --------
 V:102.10 - The "holy shit"(tm) update. Rewrote the main framework of the display system and changed the coloring so that it now supports color-grading.
@@ -131,6 +133,7 @@ if(first()|duped()){
     FuelTankCap = 5000 #Capacity of the locomotive's fuel tank (US-gal).
     BrakePanelYeet = 0 #YEETs the shit out of the brake panel on the main display (so that you can use it in an SD75I or something).
     TimeFormat = 0 #When 1, the time format will be set to the superior 24 hour format, otherwise it'll use the AM/PM type.
+    DateFormat = 0 #Set this to 1 to change the date readout format to the following: dd MON, yyyy. By default, the date is formatted like this: MON dd, yyyy.
     Timezone = -5 #Sets the time offset from UTC (in hours).
     TimezoneName = "EST" #The name of the timezone you are in.
     SetupScreenLogo = 0 #Creates a hologram for a logo that is sometimes present in the middle of the setup monitor main page.
@@ -455,9 +458,15 @@ function string monthNum2String(Month:number){
 
 #Returns a formatted representation of the current date, commonly used across FIRE.
 function string getDateString(Date:table){
+    if(DateFormat){
+        return format("%01d %s, %04d", Date["day", number], monthNum2String(Date["month", number]), Date["year", number])
+    }
     return format("%s %01d, %04d", monthNum2String(Date["month", number]), Date["day", number], Date["year", number])
 }
 function string getDateString(Day:number, Month:number, Year:number){
+    if(DateFormat){
+        return format("%01d %s, %04d", Day, monthNum2String(Month), Year)
+    }
     return format("%s %01d, %04d", monthNum2String(Month), Day, Year)
 }
 
@@ -4648,6 +4657,12 @@ function void main(){ #Display running
     ConsistPowerStat = (DISTRIBUTED_POWER_DATA_BUS:exists("local_status") ? DISTRIBUTED_POWER_DATA_BUS["local_status", string] : "-")
     DP_RECEIVED_UNITS = DISTRIBUTED_POWER_DATA_BUS["dp", table]["received_units", table]
     
+    if(->Override_LocoNumber){
+        LOCOMOTIVE_IDENT["number", number] = Override_LocoNumber:toNumber()
+    }
+    if(->Override_LocoIdent){
+        LOCOMOTIVE_IDENT["railroad", string] = Override_LocoIdent
+    }
     
     #Calculations
     TMCurrent = abs(Load)
