@@ -1,0 +1,48 @@
+@name EMD SW1-NW2 Instrument Panel PT2 Version
+@inputs E:entity RLCPT:entity
+@outputs 
+@persist Locomotive
+@trigger none 
+@strict
+
+if(first()|dupefinished()){
+    
+    Locomotive = 0 #0: SW1, 1: NW2
+    Material = "models/proppertextures/cabmetal_gray"
+    
+    if(E:isValid()){
+        A=1
+        holoCreate(A)
+        holoPos(A,E:toWorld(Locomotive ? vec(-35,113.1,79.5) : vec(-35,88.5,79.5)))
+        holoAng(A,E:toWorld(ang(0,90,0)))
+        holoParent(A,E)
+        holoScale(A,vec(1))
+        holoModel(A,"models/chessiecorp/parts/emd_nw2_instrument_panel.mdl")
+        holoColor(A,vec(255))
+        holoEntity(A):setSubMaterial(1,Material)
+    }
+    else{
+        error("No entity provided!")
+    }
+    
+    timer("run",0.5,function(){
+        timer("clk",0.1,0,function(){
+            local RLCPTW = wirelink()
+            
+            if(RLCPT:isValid()){
+                RLCPTW=RLCPT:wirelink()
+            }
+            
+            if(holoEntity(1):isValid()&RLCPTW){
+                holoEntity(1):setBoneAngRelative(1,ang(0,-270*RLCPTW["MainRes",number]/200,0))
+                holoEntity(1):setBoneAngRelative(2,ang(0,-270*RLCPTW["EqualRes",number]/200,0))
+                
+                holoEntity(1):setBoneAngRelative(3,ang(0,-270*RLCPTW["Cyl",number]/200,0))
+                holoEntity(1):setBoneAngRelative(4,ang(0,-270*RLCPTW["BrakePipe",number]/200,0))
+                
+                holoSkin(1,RLCPTW["WheelSlip",number])
+            }
+        })
+        
+    })
+}
