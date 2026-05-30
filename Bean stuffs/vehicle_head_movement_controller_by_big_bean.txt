@@ -1,0 +1,359 @@
+@name Vehicle head movement controller by Big Bean
+@model models/sprops/cuboids/height12/size_1/cube_12x18x12.mdl
+@inputs [SEAT1 SEAT2 SEAT3 LOCO]:entity [C1_CTRLW C2_CTRLW C3_CTRLW]:wirelink
+@outputs [C1_PARENT C2_PARENT C3_PARENT]:entity [C1_Pos C2_Pos C3_Pos Seat1Vel Balls]:vector C1_Active C2_Active C3_Active
+@persist [FUNC_DATA]:table C1Valid C2Valid C3Valid C_m2in C_in2m
+@persist Tickrate VelocitySmoothing Debug TickFreq BodyMass Damping BodyCompensation AccelViewRotation:vector2 [SEAT_BOUNDARIES SEAT_POSITIONS]:table [KeyEject MovePositionUp MovePositionDown]:string [Seat1Vel]:vector SeatPositionSmoothing
+@trigger none 
+@strict
+#----
+if (first()|duped()) {
+    #[
+    INTRO: (You should read this)
+    ------
+    Welcome to yet another iteration of the Motion Sickness Induction Device(tm), written by Big Bean.
+    This thing should hopefully be the last of its kind from me. I may add features if they make sense to me, so let me know if you thought of something neat.
+
+    SETUP: (Definitely read this)
+    ------
+    1) Do some preliminary configuration overview. You may not want to change anything right away, since many things depend on the specifics of your vehicle.
+    2) Employ the full power of your left mouse button and install this device on (or outside) the vehicle of your choosing.
+    3) Connect at least one SEAT# input to a seat entity (not a pod controller).
+    4) Connect the LOCO input to the vehicle entity.
+    5) Prepare the wire camera controller:
+        a) Coordinates local to parent: unticked [ ],
+        b) Client-side movement:        ticked   [x],
+        c) Free movement:               unticked [ ], (this can possibly be ticked, but I haven't tested that)
+        d) Localized movement:          ticked   [x],
+        e) The rest of the options can be set to your liking, I recommend ticking Auto Un-clip and unticking Render player (unless you want to see your eyeballs/visor/helmet/glasses from the inside).
+    6) Spawn the camera controller (and parent it to the vehicle).
+    7) Connect the camera controller to its respective seat by applying the power of the right mouse button (as if connecting a pod controller).
+    8) Connect C#_CTRLW to the camera controller which controls the seat with the same number. If your only option is "Create Wirelink", connect it to that, otherwise connect to an existing Wirelink output.
+    9) Refresh this E2. After playing with it a bit, check the config and set things to your liking. Das ist Alles.
+
+    DISCLAIMER: people generally build their vehicles differently, so I'll list the setup that I tested this with for reference.
+    I parent my seats to a wire gate, which is parented to the locomotive body. This allows you to use buttons (provided you set the correct inputs in the pod controller), but may break other things I am unaware of.
+    You should theoretically be completely okay if you "just" parent the seat to the carbody directly, but I have not tested this. I only use Magtrains or RLC delta seats, models which have a goofy-ass origin alignment may not be supported.
+
+    CONTACT: If you want to yell at me because I suck at programming or because I hurt your feelings, you can contact me on discord under various modifications of the name "Bean".
+    I'm probaly on the same discord server as you, so that makes your life a little easier.
+
+    Thanks for using this thing, see you when I see you.
+    ]#
+
+    #Configuration:
+    #--------------
+    BodyMass = 30 #The upper body mass of you, the player. This is in kilograms (SI FTW).
+    Damping = 6 #(6 s^-1) Sets how damp you ar- I mean the damping coefficient of your body. The higher this is, the quicker the movement stops and the less oscillations there will be.
+    BodyCompensation = 60 #(60 s^-1) Sets how much the user's body wants to compensate for the movement of it. The higher this is, the less deflection you may experience, but at the cost of oscillations.
+    AccelViewRotation = vec2(0.15, 0.25) #Determines how much your head rotates when moving in the horizontal plane.
+        #The X component determines the side-to-side movement, the Y component determines the forward-backwards movement (this one makes flying through the windshield especially immersive).
+    KeyEject = "rcontrol" #Pressing this key forces you to evacuate the seat you're sitting in, possibly sending you either to the stratosphere or onto the adjacent track,
+        #getting hit by an oncoming train. Not covered by insurance of any kind.
+
+    #[This variable allows you to configure the boundaries of every seat. The index of an array in this table corresponds to the seat it affects, and the array should have the following items:
+    [1]=vec() ... Front seat boundary. See +4 lines to (possibly) better understand how this works.
+    [2]=vec() ... Rear seat boundary.
+    [3]=number .. The height of your head, in source units, relative to the seat's origin. Unless you're a tall fuck, set this to 48. If you're using a footplate, this should be 72.
+    [4]=number .. The height of the seat base, i.e. where your ass cheeks (or feet) are planted. This only affects the intensity of your head's rotation. Seats typically have this at 18, footplates at 0.
+    The axes are defined as follows: x=L/R, y=F/B, z=U/D;  the Front boundary (the first vector) is the positive half-space of the 3 cartesian planes, analogous for the Rear boundary.
+    Was that too mathematical for you? X mean positive vibes, Y mean negative vibes (and we're only about POSITIVE vibes here, right?).
+    ]#
+    SEAT_BOUNDARIES = table(
+        array(vec(4, 15, 10), vec(-4, -3, -1), 48, 18),
+        array(vec(4, 15, 10), vec(-4, -3, -1), 32, 18),
+        array(vec(4, 15, 10), vec(-4, -3, -1), 48, 18)
+    )
+
+    #[This variable lets you choose how much you wish for your head to be dislocated from the neck. The index of an array in this table corresponds to a seat with that number and should be in the following format:
+    [1]=number .... the initial (default) position that will be used. This index starts from the first vector entry in the array _immediately following_ this number (see the next line).
+    [2..N]=vec() .. a vector specifying the relative position of the camera to the seat. You may provide as many as you'd like here, but there must be at least one.
+    The vector's XYZ components affect the L/R, F/B, U/D axes, respectively.
+    ]#
+    SEAT_POSITIONS = table(
+        array(1,  vec(0,0,0), vec(20,0,0)),
+        array(1,  vec(0,0,0), vec(0,20,0)),
+        array(1,  vec(0,0,0), vec(0,20,0))
+    )
+    MovePositionUp   = "pad_3" #Press this key to increase the position entry from the table above by 1.
+    MovePositionDown = "pad_1" #-1 line, vice versa.
+    SeatPositionSmoothing = 3  #Smoothes out the movement of your head as it moves from the previous to the next position, possibly giving you less motion sickness.
+        #If you do have motion sickness, why are you using this script?
+
+    Tickrate = 0.05 #Set this to either 0.05 (less performant, more accurate) or 0.1 (more performant, less accurate).
+    VelocitySmoothing = 3 #Sets the amount of smoothing of the velocity of individual seats. The higher you make this, the (probably) more "smooth" the movement will feel, but the reaction time will be reduced.
+    Debug = 0 #Setting this to a non-zero value will render the holograms that affect the position of the camera. Useful if you don't trust what you see and want to know what's going on in-game.
+    #End of configuration#
+    #--------------------#
+
+
+    #Init:
+    #-----
+    C_m2in = 1/0.0254
+    C_in2m = 0.0254
+    FUNC_DATA = table()
+    Tickrate = clamp(Tickrate, 0.05, 0.1)
+    TickFreq = 1 / Tickrate
+    C1Valid = C2Valid = C3Valid = 0
+    Seat1Vel = vec()
+
+    for(I = 1, SEAT_BOUNDARIES:count()) {
+        CurData = SEAT_BOUNDARIES[I, array]
+        CurData[4, number] = max(CurData[3, number] - CurData[4, number], 20) #changing the fourth config variable to the player's height
+    }
+}
+
+
+#Functions:
+#----------
+#Returns the difference between a vector passed to this call from the vector passed in the previous call. The difference is returned per-coordinate.
+function vector tickDiff(ID:string, Var:vector) {
+    local SID = "vt_"+ID
+    if (!FUNC_DATA:exists(SID)) {
+        FUNC_DATA[SID, vector] = Var
+    }
+
+    local Delta = (Var - FUNC_DATA[SID, vector])
+    FUNC_DATA[SID, vector] = Var
+    return Delta
+}
+function number tickDiff(ID:string, Var:number){
+    ID = "nt_" + ID
+    if(!FUNC_DATA:exists(ID)){
+        FUNC_DATA[ID, number] = Var
+    }
+    local Delta = (Var - FUNC_DATA[ID, number])
+    FUNC_DATA[ID, number] = Var
+    return Delta
+}
+
+#Smooths a vector over time. The smoothing is performed per-coordinate, e.g. the x coordinate is smoothed independently of the y coordinate.
+function vector vecSmooth(Val:vector, SmoothLevel:number, ID:string, Init:vector) {
+    local SID = "vs_"+ID
+    if (!FUNC_DATA:exists(SID)) {
+        FUNC_DATA[SID, vector] = Init
+    }
+
+    local LastVal = FUNC_DATA[SID, vector]
+    LastVal += (Val - LastVal) / max(SmoothLevel, 1)
+    FUNC_DATA[SID, vector] = LastVal
+    return LastVal
+}
+
+#Adds a deadzone to a vector, i.e. a volume within which a change to the input vector causes no change to the output vector.
+function vector vecDeadzone(Val:vector, FrontBoundary:vector, RearBoundary:vector){
+    return maxVec(Val - FrontBoundary, vec()) + minVec(Val - RearBoundary, vec())
+}
+
+#Used to smoothly transition between user-defined camera positions.
+function void interpolateCameraMovement(CamID:number, SetPos:vector){
+    local SID = "cam_lerp_"+CamID
+    if(!FUNC_DATA:exists(SID)){
+        FUNC_DATA[SID, array] = array(SetPos, SetPos, 0)
+    }
+    local LOCAL_DATA = FUNC_DATA[SID, array]
+    local Position = LOCAL_DATA[1, vector]
+    local MoveSpeed = LOCAL_DATA[3, number]
+    #Every time the user changes the desired position, reset the movement so that it smoothly interpolates from the current position
+    if(LOCAL_DATA[2, vector] != SetPos){
+        LOCAL_DATA[2, vector] = SetPos
+        MoveSpeed = 0
+    }
+
+    MoveSpeed += min(1 - MoveSpeed, Tickrate)
+    Position += (SetPos - Position) * MoveSpeed / SeatPositionSmoothing
+
+    LOCAL_DATA[1, vector] = Position
+    LOCAL_DATA[3, number] = MoveSpeed
+}
+
+
+
+#Connects the respective outputs from this E2 to the inputs of the passed camera controller.
+function number wirelink:setUpCamCtrlWires(ID:number) {
+    if (!This | !This:entity():isValid()) {
+        return 0
+    }
+
+    This:entity():createWire(entity(), "Activated", format("C%d_Active", ID))
+    This:entity():createWire(entity(), "Position", format("C%d_Pos", ID))
+    This:entity():createWire(entity(), "Parent", format("C%d_PARENT", ID))
+
+    return 1
+}
+
+#Creates a camera parent hologram in its default position, relative to the entity passed to this function. This entity should be the seat that the camera is related to.
+function void entity:createCameraParent(ID:number) {
+    if (!This) {
+        return
+    }
+
+    holoCreate(ID, This:toWorld(vec(0, 0, 48)), vec(1), This:toWorld(ang(0, 0, 0)), vec(255), (Debug ? "models/sprops/misc/axis_plane.mdl" : "models/sprops/misc/empty.mdl"))
+    holoParent(ID, This)
+
+    switch(ID){
+    default,
+    case 1,
+        C1_PARENT = holoEntity(ID)
+        C1_Active = 0
+        C1_Pos = C1_PARENT:pos()
+        break
+    case 2,
+        C2_PARENT = holoEntity(ID)
+        C2_Active = 0
+        C2_Pos = C2_PARENT:pos()
+        break
+    case 3,
+        C3_PARENT = holoEntity(ID)
+        C3_Active = 0
+        C3_Pos = C3_PARENT:pos()
+        break
+    }
+}
+
+#Does the funny stuff to the camera specified by ID. You should pass the seat entity that's coupled to the given camera to this function, otherwise the behavior is undefined.
+function vector entity:runCamPhysics(ID:number, Active:number, Velocity:vector) {
+    if (!This) {
+        return vec()
+    }
+    local LOCAL_BOUNDS = SEAT_BOUNDARIES[ID, array]
+    
+    if (!Active) {
+        holoPos(ID, This:toWorld(vec(0,0,LOCAL_BOUNDS[3, number])))
+        holoAng(ID, This:toWorld(ang()))
+        return This:toWorld(vec(0,0,LOCAL_BOUNDS[3, number]))
+    }
+
+    #The prep
+    local SID = "cam_"+ID
+    if (!FUNC_DATA:exists(SID)) {
+        #Variables: [1]=camera_pos, [2]=camera_velocity, [3]=seat_pos_idx
+        FUNC_DATA[SID, array] = array(vec(), vec(), SEAT_POSITIONS[1, array][1, number])
+    }
+    local FrontBounds = LOCAL_BOUNDS[1, vector]
+    local RearBounds  = LOCAL_BOUNDS[2, vector]
+    local LOCAL_DATA  = FUNC_DATA[SID, array]
+    local CamPos      = LOCAL_DATA[1, vector] #in <=> source units
+    local CamVel      = LOCAL_DATA[2, vector] #m/s
+
+
+    #The physics
+    local Accel = vecSmooth( tickDiff("accel_"+ID, Velocity) * TickFreq, 3, "accel_"+ID, vec() )
+    local AccelForce = BodyMass * Accel
+    local DampingForce = CamVel * BodyMass * Damping
+    local OutOfBoundsForce = vecDeadzone(CamPos, FrontBounds, RearBounds) * BodyMass * Damping * 0.5
+    local BodyForce = vecDeadzone(CamPos, vec(-0.1), vec(0.1)) * C_in2m * BodyMass * BodyCompensation
+
+    CamVel += (AccelForce - BodyForce - OutOfBoundsForce - DampingForce) / BodyMass * Tickrate
+    CamPos += CamVel * C_m2in * Tickrate
+    local CamAng = ang(atan(CamPos:x() / LOCAL_BOUNDS[4, number]) * AccelViewRotation:x(), 0, -atan(CamPos:y() / LOCAL_BOUNDS[4, number]) * AccelViewRotation:y())
+
+
+    #The results
+    LOCAL_DATA[1, vector] = CamPos
+    LOCAL_DATA[2, vector] = CamVel
+
+    local WorldCamPos = This:toWorld(CamPos + vec(0,0,LOCAL_BOUNDS[3, number]) + FUNC_DATA["cam_lerp_"+ID, array][1, vector])
+    holoPos(ID, WorldCamPos)
+    holoAng(ID, This:toWorld(CamAng))
+
+    return WorldCamPos
+}
+
+#Handles stuff like forced exit from seats.
+function number entity:handlePlayerInteractions(ID:number) {
+    local SID = "cam_"+ID
+    if (!This) {
+        return 0
+    }
+    local LOCAL_DATA = FUNC_DATA[SID, array]
+    local CurPos = LOCAL_DATA[3, number]
+    local POS_DATA = SEAT_POSITIONS[ID, array]
+
+    #EJ(&)Ection
+    local Driver = This:driver()
+    local BeingDriven = Driver:isValid() & Driver:isPlayer()
+    if (BeingDriven & Driver:keyPressed(KeyEject)) {
+        This:ejectPod()
+    }
+
+    #Moving the seat position
+    if (BeingDriven & tickDiff("seat_move_up_"+SID, Driver:keyPressed(MovePositionUp)) & CurPos < (POS_DATA:count() - 1)) {
+        CurPos++
+    }
+    if (BeingDriven & tickDiff("seat_move_down_"+SID, Driver:keyPressed(MovePositionDown)) & CurPos > 1) {
+        CurPos--
+    }
+    interpolateCameraMovement(ID, POS_DATA[1 + CurPos, vector])
+
+    LOCAL_DATA[3, number] = CurPos
+    return BeingDriven
+}
+
+#Returns the local velocity of a seat relative to the passed entity (the vehicle). The velocity is in m/s.
+function vector entity:calcLocalSeatVelocity(SEAT:entity) {
+    if (!SEAT | !SEAT:isValid() | !This | !This:isValid()) {
+        return vec()
+    }
+
+    #Transforms the world-space velocity vector so that:
+    #  the X component is the L/R direction
+    #  the Y component is the F/B direction
+    #  the Z component is the U/D direction
+    local TransformMatrix = matrix(SEAT:right(), -SEAT:forward(), -SEAT:up())
+    return TransformMatrix * vecSmooth( This:velAtPoint(SEAT:pos()), VelocitySmoothing, "vel_seat_"+SEAT:id(), vec() ) * C_in2m
+}
+
+
+#Post-dupe stuff
+#---------------
+if (first()|dupefinished()) {
+    if (!LOCO) {
+        exit()
+    }
+    C1Valid = C1_CTRLW:setUpCamCtrlWires(1)
+    C2Valid = C2_CTRLW:setUpCamCtrlWires(2)
+    C3Valid = C3_CTRLW:setUpCamCtrlWires(3)
+
+    SEAT1 = (C1Valid ? SEAT1 : _NO_ENTITY)
+    SEAT1:createCameraParent(1)
+    SEAT2 = (C2Valid ? SEAT2 : _NO_ENTITY)
+    SEAT2:createCameraParent(2)
+    SEAT3 = (C3Valid ? SEAT3 : _NO_ENTITY)
+    SEAT3:createCameraParent(3)
+}
+
+
+#The device:
+#-----------
+function void main() {
+    #Velocities
+    Seat1Vel = LOCO:calcLocalSeatVelocity(SEAT1)
+    Seat2Vel = LOCO:calcLocalSeatVelocity(SEAT2)
+    Seat3Vel = LOCO:calcLocalSeatVelocity(SEAT3)
+
+    #Physics
+    if (C1Valid) {
+        C1_Active = SEAT1:handlePlayerInteractions(1)
+        C1_Pos = SEAT1:runCamPhysics(1, C1_Active, Seat1Vel)
+    }
+
+    if (C2Valid) {
+        C2_Active = SEAT2:handlePlayerInteractions(2)
+        C2_Pos = SEAT2:runCamPhysics(2, C2_Active, Seat2Vel)
+    }
+
+    if (C3Valid) {
+        C3_Active = SEAT3:handlePlayerInteractions(3)
+        C3_Pos = SEAT3:runCamPhysics(3, C3_Active, Seat3Vel)
+    }
+}
+
+if (first()|dupefinished()) {
+    if(!timerExists("clk")){
+        timer("clk", Tickrate, 0, function(){
+            main()
+        })
+    }
+}
+
