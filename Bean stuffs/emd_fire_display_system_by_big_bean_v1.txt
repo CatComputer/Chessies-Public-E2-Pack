@@ -13,7 +13,7 @@
 #Add-on E2 vars
 @persist LowFuel
 #RLC vars
-@persist EqualRes BrakePipe AirFlow MainRes BrakeCyl  KPH MPH  Notch Reverser Throttle Dynamics DynaBrakeNotch TractiveEffort Load WheelSlip Sanding
+@persist EqualRes BrakePipe AirFlow MainRes BrakeCyl  KPH MPH  Notch Reverser Throttle Dynamics DynaBrakeNotch TractiveEffort TMCurrent Load WheelSlip Sanding
 @persist PCSOpen
 #Page speciffic vars
 @persist AlerterTime AlerterRunning AlerterBlink AlerterBlinkAngle AlertEmergency DynBrakeWarn UnitAlarm EOTMove  EID1 EID2 EID3 EID4 EID5 EIDStr:string  IL1 IL2 IL3 IL4 IL5 ILStr:string LengthValid
@@ -38,7 +38,7 @@ This E2 (and some of my other projects) are hosted on this repo: https://github.
 Check it out once in a while for updates, ye?
 
 If you have any suggestions or if you need help with something (that's NOT the setup... seriously, if you can't set this up on your own, you have bigger problems my guy), you can find me on
-all the common discord servers (OR, NAT and FC&N) under the name 'das_bean'.
+all the common discord servers (OR, NAT and FC&N) under the username 'das_bean'.
 
 ------------
 Version log:
@@ -67,9 +67,9 @@ V:101.xx - So old I forgot
 Setup:
 ------
 Basic wiring:
-1. Slap this E2 somewhere (but DO make sure you've configured the system before you do)
+1. Slap this E2 somewhere (but DO make sure you've configured the system prior to this step)
 2. Wire EGPMain and EGPSec to the primary and secondary displays, respectively
-3. Wire RLCPT to the RLC (wow)
+3. Wire RLCPT to the RLC
 4. Wire Pod to the Pod controller (and make sure it's the POD entity, not "Create New")
 5. Wire CtlTable to the control stand controller
 6. Wire Battery to your output of choice (this will turn the displays on)
