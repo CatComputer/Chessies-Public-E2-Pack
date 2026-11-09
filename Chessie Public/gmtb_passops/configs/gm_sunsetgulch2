@@ -1,0 +1,128 @@
+@name gmtb_passops/configs/gm_sunsetgulch2
+@persist Config:table
+
+Config = table(
+    "fare_per_mile" = 3.67,
+    "wait_time" = 15,
+    
+    "happiness_speed_multiplier" = 0.5, #adjusts how quickly passenger happiness score changes
+    "happiness_passive_gain" = 0.01, #passive gain so your passengers aren't permanently unhappy (this is the starting value from 0 and the gain goes to 0 as happiness goes to 100%)
+    "happiness_acceleration_loss" = 0.0012, #multiplies for every mph/s
+    "happiness_low_speed_loss" = 0.0002, #multiplies for every mph under the threshold
+    "happiness_low_speed_threshold" = 20, #mph
+    "happiness_high_speed_loss" = 0.0002, #multiplies for every mph over the threshold
+    "happiness_high_speed_threshold" = 60, #mph
+
+    "stations" = table(
+        table(
+            "name" = "Dragon's Rock",
+            "name_position" = vec(14000,570,10840),
+            "trigger_start" = vec(12200,-3830,10200),
+            "trigger_end" = vec(13300,4110,10640),
+            "capacity" = 600,
+            "occupy_rate" = 0.5, #per second
+            "people" = 400, #use this to set the default amount of people in the station
+            "people_postload" = 400
+        ),
+        
+        table(
+            "name" = "Sandstone",
+            "name_position" = vec(14000,570,10840),
+            "trigger_start" = vec(-14885,-6657,8926),
+            "trigger_end" = vec(-14523,-4413,9524),
+            "capacity" = 80,
+            "occupy_rate" = 0.1, #per second
+            "people" = 50, #use this to set the default amount of people in the station
+            "people_postload" = 50
+        ),
+        
+        table(
+            "name" = "Redwall",
+            "name_position" = vec(14000,570,10840),
+            "trigger_start" = vec(-1760,3930,8150),
+            "trigger_end" = vec(-920,9110,8700),
+            "capacity" = 200,
+            "occupy_rate" = 0.3, #per second
+            "people" = 100, #use this to set the default amount of people in the station
+            "people_postload" = 100
+        ),
+        
+        table(
+            "name" = "Kahuna",
+            "name_position" = vec(14000,570,10840),
+            "trigger_start" = vec(-5111,9258,3900),
+            "trigger_end" = vec(-1033,9716,4500),
+            "capacity" = 250,
+            "occupy_rate" = 0.35, #per second
+            "people" = 160, #use this to set the default amount of people in the station
+            "people_postload" = 160
+        ),
+        
+        table(
+            "name" = "Gladstone Bluff",
+            "name_position" = vec(14000,570,10840),
+            "trigger_start" = vec(3653,13062,2252),
+            "trigger_end" = vec(9786,13623,2877),
+            "capacity" = 220,
+            "occupy_rate" = 0.35, #per second
+            "people" = 140, #use this to set the default amount of people in the station
+            "people_postload" = 140
+        ),
+        
+        table(
+            "name" = "Derrickson",
+            "name_position" = vec(14000,570,10840),
+            "trigger_start" = vec(3031,-14484,776),
+            "trigger_end" = vec(6204,-13929,1245),
+            "capacity" = 80,
+            "occupy_rate" = 0.1, #per second
+            "people" = 50, #use this to set the default amount of people in the station
+            "people_postload" = 50
+        ),
+        
+        table(
+            "name" = "Chroma",
+            "name_position" = vec(-577,-13280,-2696),
+            "trigger_start" = vec(-577,-13280,-2696),
+            "trigger_end" = vec(6725,-12805,-2333),
+            "capacity" = 120,
+            "occupy_rate" = 0.15, #per second
+            "people" = 70, #use this to set the default amount of people in the station
+            "people_postload" = 70
+        ),
+        
+        table(
+            "name" = "Crucible",
+            "name_position" = vec(-577,-13280,-2696),
+            "trigger_start" = vec(1431,-99,-3848),
+            "trigger_end" = vec(2240,8421,-3485),
+            "capacity" = 340,
+            "occupy_rate" = 0.4, #per second
+            "people" = 200, #use this to set the default amount of people in the station
+            "people_postload" = 200
+        ),
+        
+        table(
+            "name" = "Broken Arrow",
+            "name_position" = vec(-577,-13280,-2696),
+            "trigger_start" = vec(11777,7023,-7800),
+            "trigger_end" = vec(12529,10330,-7200),
+            "capacity" = 100,
+            "occupy_rate" = 0.12, #per second
+            "people" = 70, #use this to set the default amount of people in the station
+            "people_postload" = 70
+        ),
+        
+        table(
+            "name" = "Rockfort Union",
+            "name_position" = vec(-577,-13280,-2696),
+            "trigger_start" = vec(-11346,521,-8806),
+            "trigger_end" = vec(-9321,13639,-8412),
+            "capacity" = 900,
+            "occupy_rate" = 0.7, #per second
+            "people" = 700, #use this to set the default amount of people in the station
+            "people_postload" = 700
+        )
+    )
+
+)
