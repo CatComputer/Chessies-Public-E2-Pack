@@ -1,0 +1,565 @@
+@name gmtb_passops/chessiecorp_passenger_ops
+@inputs EGP:wirelink
+@outputs AltHold CtrlHold ShiftHold CarTable:table UserData:table
+#global tables
+@persist CarTable:table UserData:table Stations:table CFG:table Config:table Run EGPActive
+#owner-specific keybinds
+#@persist AltHold CtrlHold ShiftHold
+@trigger none 
+#@strict
+@model models/props_lab/servers.mdl
+
+#include "gmtb_passops/configs/gm_sunsetgulch2"
+
+#[ 
+
+instructions:
+    - grab configs from github under gmtb_passops (works the same as PT2)
+    - set the include above to use your current map
+    - wire EGP:wirelink to any EGP you want to use as a status board
+    - refresh the E2
+    - ah, you're done already
+
+how to use:
+    - all inputs below require the person to use their stunstick. these keybinds work for every player
+    
+    - E: initial setup for car
+    - left-click: increase car capacity
+    - right-click: decrease car capacity
+    - E after setup: prepares car for running
+    - R: remove car (press again to immediately terminate operation)
+    
+    
+    easy! (maybe)
+
+
+
+
+
+
+
+table data:
+    UserData - 
+        steamid64 - 
+            1: name [string]
+            2: cars [table]
+            3: money [number]
+            4: passengers onboard [number]
+            5: passengers serviced [number]
+            6: number of cars [number]
+
+        
+
+    CarTable - 
+        car_ent_id - 
+            1: car entity [entity]
+            2: capacity [number]
+            3: car ready to enroll [number]
+            4: steamid64 owner [string]
+            5: car enrolled [number]
+            6: car in station [number]
+            7: mileage [number]
+            8: seconds elapsed [number]
+            9: passengers [number]
+            10: last station [string]
+            11: last speed [number]
+            12: happiness [number]
+            13: terminate on next dropoff [number]
+            14: default capacity [number]
+            
+    Stations - 
+        station_id -
+            name [string]
+            name_position [vector]
+            trigger_start [vector]
+            trigger_end [vector]
+            capacity [number]
+            occupy_rate [number]
+            people [number]
+            people_postload [number]
+
+]#
+
+function void wirelink:playerData(I:number,POS:vector2,DATA:table){
+    local E=This
+    
+    E:egpTextLayout(I,format("%s  |  $%.02f  |  %01d car(s)\n%01d/%01d pass. onboard/serviced",DATA[1,string],DATA[3,number],DATA[6,number],DATA[4,number],DATA[5,number]),POS,vec2(300,40))
+    E:egpAlign(I,0,1)
+    E:egpFont(I,"Arial",11)
+    E:egpColor(I,vec(20,22,24))
+}
+
+function void wirelink:stationData(I:number,POS:vector2,DATA:table){
+    local E=This
+    
+    E:egpCircle(I,POS,vec2(8))
+    E:egpColor(I,vec(255-(DATA["people",number]/DATA["capacity",number])*255,(DATA["people",number]/DATA["capacity",number])*255,0))
+    
+    E:egpCircleOutline(I+1,POS,vec2(12))
+    E:egpColor(I+1,vec(20,22,24))
+    
+    E:egpTextLayout(I+2,format("%s\n%01d / %01d pass. waiting",DATA["name",string],DATA["people",number],DATA["capacity",number]),POS+vec2(130,0),vec2(220,40))
+    E:egpAlign(I+2,0,1)
+    E:egpFont(I+2,"Arial",11)
+    E:egpColor(I+2,vec(20,22,24))
+}
+
+if(first()|duped()){
+    Run=0
+    EGPActive=0
+}
+if(first()|dupefinished()){
+    CarTable=table()
+    UserData=table()
+    
+    Run=1
+    
+    Version = "0.7.0"
+    
+    CFG = Config
+    
+    Stations = CFG["stations",table]
+    
+    if(EGP){
+        EGP:egpClear()
+        
+        EGPActive=1
+        
+        local E=EGP
+        
+        #backgrounds
+        E:egpBox(1,vec2(256),vec2(512))
+        E:egpColor(1,vec(200,205,210))
+        
+        E:egpRoundedBox(2,vec2(130+30,256),vec2(242+60,480))
+        E:egpColor(2,vec(180,185,190))
+        
+        E:egpRoundedBox(3,vec2(382+30,216),vec2(242-60,400))
+        E:egpColor(3,vec(180,185,190))
+        
+        #player shit
+        E:egpTextLayout(4,"PLAYER DATA",vec2(130+30,36),vec2(242+60,40))
+        E:egpAlign(4,1,1)
+        E:egpFont(4,"Arial",20)
+        E:egpColor(4,vec(20,22,24))
+        
+        #E:playerData(5,vec2(130,60),table())
+        
+        #[E:egpTextLayout(5,"CHESSIE COMPUTER\n$0000.00 | 0 mi",vec2(130,60),vec2(220,40))
+        E:egpAlign(5,0,1)
+        E:egpFont(5,"Arial",12)
+        E:egpColor(5,vec(20,22,24))]#
+        
+        #station shit
+        E:egpTextLayout(30,"STATION DATA",vec2(382+30,36),vec2(242-60,40))
+        E:egpAlign(30,1,1)
+        E:egpFont(30,"Arial",20)
+        E:egpColor(30,vec(20,22,24))
+        
+        #E:stationData(31,vec2(290,60),table())
+        
+        #decorative pieces
+        E:egpRoundedBoxOutline(100,vec2(130+30,256),vec2(242+60,480))
+        E:egpColor(100,vec(20,22,24))
+        
+        E:egpRoundedBoxOutline(101,vec2(382+30,216),vec2(242-60,400))
+        E:egpColor(101,vec(20,22,24))
+        
+        E:egpRoundedBox(102,vec2(382+30,458),vec2(242-60,76))
+        E:egpColor(102,vec(180,185,190))
+        
+        E:egpRoundedBoxOutline(103,vec2(382+30,458),vec2(242-60,76))
+        E:egpColor(103,vec(20,22,24))
+        
+        E:egpTextLayout(104,"00:00",vec2(382+30,458-24),vec2(242-60,76))
+        E:egpAlign(104,1,1)
+        E:egpFont(104,"Arial",30)
+        E:egpColor(104,vec(20,22,24))
+        
+        E:egpTextLayout(105,"0000 - 00 - 00",vec2(382+30,458-6),vec2(242-60,76))
+        E:egpAlign(105,1,1)
+        E:egpFont(105,"Arial",16)
+        E:egpColor(105,vec(20,22,24))
+        
+        E:egpTextLayout(106,"UTC",vec2(382+30,458+6),vec2(242-60,76))
+        E:egpAlign(106,1,1)
+        E:egpFont(106,"Arial",12)
+        E:egpColor(106,vec(20,22,24))
+        
+        E:egpTextLayout(107,"0 ops",vec2(382+30,458+24),vec2(242-60,76))
+        E:egpAlign(107,1,1)
+        E:egpFont(107,"Arial",18)
+        E:egpColor(107,vec(0,150,0))
+    }
+    
+    entity():setName(format("Chessie's Passenger Ops\nver. %s\n%s",Version,(!Version:find("w")) ? "Ready for Public Use" : "WIP - not ready for public use"))
+}
+
+if(Run){
+    
+    #[timer("station_setup",0.1,0,function(){
+        if(Station<Stations:count()){
+            local S = Stations[Station,table]
+            
+            local E = propSpawn("models/props_junk/PopCan01a.mdl",S["name_position",vector],ang(),1)
+            
+            E:setCarTag(S["name",string],vec(220,60,40),vec(20,30,40))
+            
+            Station++
+        }
+        
+        else{
+            stoptimer("station_setup")
+            
+            print("Initialization complete!")
+        }
+    })]#
+    
+    timer("clk",1,0,function(){
+        #passops portion
+        
+        #station lookup and person update
+        for(I=1,Stations:count()){
+            local Station = Stations[I,table]
+            
+            Stations[I,table]["people",number] = Station["people",number] + Station["occupy_rate",number]
+            
+            Stations[I,table]["people_postload",number] = Station["people",number]
+            
+            Stations[I,table]["people",number] = clamp(Station["people",number],0,Station["capacity",number])
+        }
+        
+        #car scanning loop
+        for(I=1,CarTable:count()){
+            local ID = CarTable:keys()[I,number]
+            
+            local Car = CarTable[ID,table]
+            
+            
+            #initialized check
+            if(Car[3,number]){
+                CarTable[ID,table][5,number] = 1
+                
+                local E = Car[1,entity]
+                
+                if(E:isValid()){
+                    #variable declaration
+                    local Cap = Car[2,number]
+                    local Speed = toUnit("mph",max(abs(Car[1,entity]:velL():x()),abs(Car[1,entity]:velL():y()),abs(Car[1,entity]:velL():z())))
+                    local Pos = E:pos()
+                    
+                    local Station = ""
+                    local SID = 0
+                    
+                    #speed and mileage update
+                    if(CarTable[ID,table][9,number]){
+                        CarTable[ID,table][7,number] = (Car[7,number]+Speed/3600)
+                        
+                        CarTable[ID,table][8,number] = Car[8,number] + 1
+                    }
+                    
+                    #local AvgSpeed = (Car[7,number]/max(Car[8,number],1))*3600
+                    
+                    #accelerometer
+                    local Acceleration = Speed - Car[11,number]
+                    
+                    CarTable[ID,table][11,number] = Speed
+                    
+                    
+                    #happiness system
+                    local PassiveGain = CFG["happiness_passive_gain",number]*(1-Car[12,number])
+                    
+                    local AccelLoss = CFG["happiness_acceleration_loss",number]*abs(Acceleration)
+                    
+                    local LowSpeedLoss = CFG["happiness_low_speed_loss",number] * max(CFG["happiness_low_speed_threshold",number]-Speed,0)
+                    
+                    local HighSpeedLoss = CFG["happiness_high_speed_loss",number] * max(Speed-CFG["happiness_high_speed_threshold",number],0)
+                    
+                
+                    CarTable[ID,table][12,number] = Car[12,number] + (PassiveGain - AccelLoss - LowSpeedLoss - HighSpeedLoss)*CFG["happiness_speed_multiplier",number]
+                    
+                    CarTable[ID,table][12,number] = clamp(Car[12,number],0,1)
+                    
+                    CarTable[ID,table][6,number] = 0
+                    
+                    
+                    #in-station checking
+                    for(J=1,Stations:count()){
+                        local S = Stations[J,table]
+                        
+                        if(inrange(Pos,S["trigger_start",vector],S["trigger_end",vector])){
+                            CarTable[ID,table][6,number] = 1
+                            Station = S["name",string]
+                            SID = J
+                        }
+                    }
+                    
+                    local InStation = Car[6,number]
+                    
+                    #load/unload system
+                    
+                    if(InStation&(Station!=(Car[10,string]))&SID){
+                        if(Speed>1){
+                            E:setCarTag(format("CONDUCTOR %s\nPASSENGER COUNT - %01d/%01d\nSTATION - %s\nTOO FAST TO EXCHANGE",findPlayerBySteamID64(Car[4,string]):name():upper(),Car[9,number],Cap,Station:upper()),vec(220,160,70),vec(20,30,40))
+                            
+                            if(timerExists(ID:toString())){
+                                stoptimer(ID:toString())
+                            }
+                        }
+                        else{
+                            local RNG = random(0.5,1)
+                            
+                            local ProfitEst = Car[9,number]*CFG["fare_per_mile",number]*Car[7,number]*(Car[12,number])
+                            
+                            if(Car[9,number]){
+                                E:setCarTag(format("CONDUCTOR %s\nPASSENGER COUNT - %01d/%01d\nSTATION - %s\nAWAITING PASSENGERS\nESTIMATED PROFIT - $%.02f\nPENALTY DEDUCTION - %01d%%",findPlayerBySteamID64(Car[4,string]):name():upper(),Car[9,number],Cap,Station:upper(),
+                                ProfitEst,100-Car[12,number]*100),vec(220,160,70),vec(20,30,40))
+                            }
+                            else{
+                                E:setCarTag(format("CONDUCTOR %s\nPASSENGER COUNT - %01d/%01d\nSTATION - %s\nAWAITING PASSENGERS",findPlayerBySteamID64(Car[4,string]):name():upper(),Car[9,number],Cap,Station:upper()),
+                                vec(220,160,70),vec(20,30,40))
+                            }
+                            
+                            Stations[SID,table]["people_postload",number] = Stations[SID,table]["people_postload",number] - Cap
+                            
+                            if(!timerExists(ID:toString()) & Car[3,number]){
+                                local IDF = ID
+                                local RNGF = RNG
+                                local ProfitEstF = ProfitEst
+                                
+                                timer(IDF:toString(),CFG["wait_time",number],1,function(){
+                                    
+                                    
+                                    
+                                    UserData[CarTable[IDF,table][4,string],table][3,number] = UserData[CarTable[IDF,table][4,string],table][3,number] + ProfitEstF
+                                    
+                                    UserData[CarTable[IDF,table][4,string],table][4,number] = UserData[CarTable[IDF,table][4,string],table][4,number] - CarTable[IDF,table][9,number]
+                                    UserData[CarTable[IDF,table][4,string],table][5,number] = UserData[CarTable[IDF,table][4,string],table][5,number] + CarTable[IDF,table][9,number]
+                                    
+                                    CarTable[IDF,table][7,number] = 0
+                                    CarTable[IDF,table][8,number] = 0
+                                    
+                                    if(!CarTable[IDF,table][13,number]){
+                                    
+                                        CarTable[IDF,table][9,number] = floor(clamp(floor(Stations[SID,table]["people",number]),0,Cap)*RNGF)
+                                        
+                                        UserData[CarTable[IDF,table][4,string],table][4,number] = UserData[CarTable[IDF,table][4,string],table][4,number] + CarTable[IDF,table][9,number]
+                                        
+                                        Stations[SID,table]["people",number] = Stations[SID,table]["people",number] - floor(clamp(floor(Stations[SID,table]["people",number]),0,Cap)*RNGF)
+                                        
+                                        CarTable[IDF,table][6,number] = 0
+                                        
+                                        CarTable[IDF,table][12,number] = 0.75
+                                        
+                                        
+                                        
+                                        CarTable[IDF,table][10,string] = Station
+                                    }
+                                    else{
+                                        UserData[CarTable[IDF,table][4,string],table][6,number] = UserData[E:steamID64(),table][6,number] - 1
+                                        
+                                        UserData[CarTable[IDF,table][4,string],table][2,table][IDF,table] = table()
+                                        
+                                        UserData[CarTable[IDF,table][4,string],table][2,table]:remove(IDF)
+                                        
+                                        CarTable[IDF,table][1,entity]:clearCarTag()
+                        
+                                        CarTable[IDF,table] = table()
+                                        
+                                        CarTable:remove(IDF)
+                                    }
+                                })
+                            }
+                        }
+                    }
+                    else{
+                        if(Car[9,number]){
+                            if(Car[13,number]){
+                                E:setCarTag(format("CONDUCTOR %s\nPASSENGER COUNT - %01d/%01d\nMILEAGE - %.02f\nTIME IN TRANSIT - %01d:%02d\nPASSENGER HAPPINESS - %.01f%%\nCAR SET TO TERMINATE AT NEXT STOP\nPRESS 'R' AGAIN TO FORCE TERMINATION",
+                                findPlayerBySteamID64(Car[4,string]):name():upper(),Car[9,number],Cap,CarTable[CarTable:keys()[I,number],table][7,number],
+                                floor(CarTable[CarTable:keys()[I,number],table][8,number]/60),CarTable[CarTable:keys()[I,number],table][8,number]%60,Car[12,number]*100),vec(220,60,40),vec(20,30,40))
+                            }
+                            else{
+                                E:setCarTag(format("CONDUCTOR %s\nPASSENGER COUNT - %01d/%01d\nMILEAGE - %.02f\nTIME IN TRANSIT - %01d:%02d\nPASSENGER HAPPINESS - %.01f%%",findPlayerBySteamID64(Car[4,string]):name():upper(),Car[9,number],Cap,CarTable[CarTable:keys()[I,number],table][7,number],
+                                floor(CarTable[CarTable:keys()[I,number],table][8,number]/60),CarTable[CarTable:keys()[I,number],table][8,number]%60,Car[12,number]*100),vec(90,140,240),vec(20,30,40))
+                            }
+                        }
+                        else{
+                            E:setCarTag(format("CONDUCTOR %s\nCAR CAPACITY - %01d\nNO PASSENGERS\nHEAD TO NEXT STATION",findPlayerBySteamID64(Car[4,string]):name():upper(),Cap),vec(90,140,240),vec(20,30,40))
+                        }
+                        
+                        if(timerExists(ID:toString())){
+                            stoptimer(ID:toString())
+                        }
+                    }
+                }
+                else{
+                    if(CarTable[ID,table]){
+                        
+                        if(CarTable[ID,table][4,string]){
+                            UserData[CarTable[ID,table][4,string],table][6,number] = UserData[CarTable[ID,table][4,string],table][6,number] - 1
+                            
+                            UserData[CarTable[ID,table][4,string],table][4,number] = UserData[CarTable[ID,table][4,string],table][4,number] - CarTable[ID,table][9,number]
+                            
+                            UserData[CarTable[ID,table][4,string],table][2,table][ID,table] = table()
+                            UserData[CarTable[ID,table][4,string],table][2,table]:remove(ID)
+                        }
+                        
+                        CarTable[ID,table] = table()
+                        CarTable:remove(ID)
+                    }
+                }
+            }
+        }
+    })
+    
+    timer("egp",2,0,function(){
+        #egp stuff
+        
+        if(EGP&EGPActive){
+            for(I=1,UserData:count()){
+                local UID = UserData:keys()[I,string]
+                
+                EGP:egpRemove(I+5)
+                EGP:egpRemove(I+6)
+                
+                EGP:playerData(I+5,vec2(170,24+I*28),UserData[UID,table])
+            }
+            
+            for(I=1,Stations:count()){
+                local Station = Stations[I,table]
+                
+                EGP:stationData(I*3+30,vec2(350,24+(I*32)),Station)
+                
+                if(Stations[I+1,table]){
+                    EGP:egpLine(70+I,vec2(350,36+I*32),vec2(350,44+I*32))
+                    EGP:egpColor(70+I,vec(20,22,24))
+                }
+            }
+            
+            local Date = dateUTC(time())
+            
+            EGP:egpSetText(104,format("%01d:%02d",Date["hour",number],Date["min",number]))
+            EGP:egpSetText(105,format("%04d - %02d - %02d",Date["year",number],Date["month",number],Date["day",number]))
+            
+            EGP:egpSetText(107,format("%01d ops",ops()))
+            
+            local Ops = clamp(ops(),0,900)/900
+            
+            EGP:egpColor(107,vec(Ops*200,(1-Ops)*200,40))
+        }
+    })
+}
+
+event keyPressed(E:entity,K:string,D:number,KB:string){
+    if(E & (E:weapon()) & (E:weapon():getClass()=="weapon_stunstick")){
+        
+        if(K=="mouse_left"&D){
+            local C = E:aimEntity()
+            
+            if(C&(C:getClass()=="prop_physics")&(C:mass()>1000)){
+                local VibeCheck = ((findPlayerBySteamID64(CarTable[C:id(),table][4,string]))==E)|(E==owner())
+                
+                if(CarTable[C:id(),table][1,entity]&VibeCheck&(!CarTable[C:id(),table][3,number])){
+                    if(CarTable[C:id(),table][2,number]>=20){
+                        CarTable[C:id(),table][2,number] = CarTable[C:id(),table][2,number] + 5
+                        
+                        CarTable[C:id(),table][2,number] = round(CarTable[C:id(),table][2,number]/5,0)*5
+                    }
+                    else{
+                        CarTable[C:id(),table][2,number] = CarTable[C:id(),table][2,number] + 1
+                    }
+                    
+                    CarTable[C:id(),table][2,number] = clamp(CarTable[C:id(),table][2,number],1,CarTable[C:id(),table][14,number]*2)
+                    
+                    C:setCarTag(format("CAR SET UP\nCAPACITY: %01d PEOPLE",CarTable[C:id(),table][2,number]),vec(220,60,40),vec(20,30,40))
+                }
+            }
+        }
+        
+        if(K=="mouse_right"&D){
+            local C = E:aimEntity()
+            
+            if(C&(C:getClass()=="prop_physics")&(C:mass()>1000)){
+                local VibeCheck = ((findPlayerBySteamID64(CarTable[C:id(),table][4,string]))==E)|(E==owner())
+                
+                if(CarTable[C:id(),table][1,entity]&VibeCheck&(!CarTable[C:id(),table][3,number])){
+                    if(CarTable[C:id(),table][2,number]>20){
+                        CarTable[C:id(),table][2,number] = CarTable[C:id(),table][2,number] - 5
+                        
+                        CarTable[C:id(),table][2,number] = round(CarTable[C:id(),table][2,number]/5,0)*5
+                    }
+                    else{
+                        CarTable[C:id(),table][2,number] = CarTable[C:id(),table][2,number] - 1
+                    }
+                    
+                    CarTable[C:id(),table][2,number] = clamp(CarTable[C:id(),table][2,number],1,CarTable[C:id(),table][14,number]*2)
+                    
+                    C:setCarTag(format("CAR SET UP\nCAPACITY: %01d PEOPLE",CarTable[C:id(),table][2,number]),vec(220,60,40),vec(20,30,40))
+                }
+            }
+        }
+        
+        if(K=="e"&D){
+            local C = E:aimEntity()
+            
+            if(C&(C:getClass()=="prop_physics")&(C:mass()>1000)){
+                local VibeCheck = ((findPlayerBySteamID64(CarTable[C:id(),table][4,string]))==E)|(E==owner())
+                
+                if(!CarTable[C:id(),table][1,entity]){
+                    local Box = C:boxSize()
+                    local CarSize = max(Box:x(),Box:y(),Box:z())/7
+                    
+                    CarTable[C:id(),table] = table(C,CarSize,0,E:steamID64(),0,0,0,0,0,"",0,0,0,CarSize)
+                    
+                    C:setCarTag(format("CAR SET UP\nCAPACITY: %01d PEOPLE",CarTable[C:id(),table][2,number]),vec(220,60,40),vec(20,30,40))
+                }
+                
+                elseif(VibeCheck&(!CarTable[C:id(),table][3,number])){
+                    CarTable[C:id(),table][3,number] = 1
+                    
+                    if(!UserData[E:steamID64(),table]){
+                        UserData[E:steamID64(),table] = table(E:name(),table(),0,0,0,0)
+                    }
+                    UserData[E:steamID64(),table][2,table][C:id(),table] = CarTable[C:id(),table]
+                    
+                    UserData[E:steamID64(),table][6,number] = UserData[E:steamID64(),table][6,number] + 1
+                    
+                    C:setCarTag(format("SETUP COMPLETE\nCAPACITY OF %01d PEOPLE\nAWAITING CLASSIFICATION",CarTable[C:id(),table][2,number]),vec(40,220,60),vec(20,30,40))
+                }
+            }
+        }
+        
+        if(K=="r"&D){
+            local C = E:aimEntity()
+            
+            if(C&(C:getClass()=="prop_physics")&(C:mass()>1000)){
+                local VibeCheck = ((findPlayerBySteamID64(CarTable[C:id(),table][4,string]))==E)|(E==owner())
+                
+                if((CarTable[C:id(),table][1,entity]|C:readCarTag())&VibeCheck){
+                    
+                    if((!CarTable[C:id(),table][13,number])&(CarTable[C:id(),table][9,number])){
+                        CarTable[C:id(),table][13,number] = 1
+                    }
+                    else{
+                        UserData[E:steamID64(),table][4,number] = UserData[E:steamID64(),table][4,number] - CarTable[C:id(),table][9,number]
+                    
+                        UserData[E:steamID64(),table][6,number] = UserData[E:steamID64(),table][6,number] - 1
+                        
+                        CarTable[C:id(),table] = table()
+                        
+                        CarTable:remove(C:id())
+                        
+                        UserData[E:steamID64(),table][2,table][C:id(),table] = table()
+                        
+                        UserData[E:steamID64(),table][2,table]:remove(C:id())
+                    }
+                    
+                    
+                    
+                    C:clearCarTag()
+                }
+            }
+        }
+    }
+}
